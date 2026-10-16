@@ -59,13 +59,13 @@ struct LiveView: View {
                 if !gripRight { PointWheel(controller: controller) }
                 Button { controller.panic() } label: {
                     VStack(spacing: 2) {
-                        Text("PANIC").font(.system(size: 15, weight: .heavy).width(.expanded))
+                        Text("PANIC").font(.themed(15, .heavy))
                         Text("T/O").font(.sectionLabel)
                     }
                     .foregroundStyle(Tokens.accent.color)
                     .frame(width: Tokens.targetLiveCritical, height: Tokens.targetLiveCritical)
-                    .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: 4))
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Tokens.accent.color, lineWidth: 2))
+                    .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+                    .overlay(RoundedRectangle(cornerRadius: Tokens.radiusSmall).stroke(Tokens.accent.color, lineWidth: 2))
                 }
                 .accessibilityLabel("Panic time-out")
                 if gripRight { PointWheel(controller: controller) }
@@ -86,20 +86,20 @@ struct LiveView: View {
                 if controller.undoChipVisible {
                     Button { controller.undo() } label: {
                         Label("Undo", systemImage: "arrow.uturn.backward")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.themed(15, .semibold))
                             .padding(.horizontal, 16).frame(height: 44)
                             .background(Tokens.canvasRaised.color, in: Capsule())
                             .overlay(Capsule().stroke(Tokens.hairline.color))
                     }
-                    .foregroundStyle(Tokens.white.color)
+                    .foregroundStyle(Tokens.text.color)
                 }
                 if let card = controller.matchupCard {
                     Text(card)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Tokens.white.color)
+                        .font(.themed(13, .semibold))
+                        .foregroundStyle(Tokens.text.color)
                         .padding(.horizontal, 12).frame(height: 36)
-                        .background(Tokens.canvasBase.withAlpha(0.9).color, in: RoundedRectangle(cornerRadius: 4))
-                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Tokens.accent.withAlpha(0.6).color))
+                        .background(Tokens.canvasBase.withAlpha(0.9).color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+                        .overlay(RoundedRectangle(cornerRadius: Tokens.radiusSmall).stroke(Tokens.accent.withAlpha(0.6).color))
                 }
                 Spacer()
             }
@@ -129,10 +129,10 @@ struct PointWheel: View {
                 .font(.sectionLabel)
                 .foregroundStyle(Tokens.textSecondary.color)
                 HStack(spacing: 18) {
-                    Text("R\(controller.homeRotation)").foregroundStyle(Tokens.accent.color)
+                    Text("R\(controller.homeRotation)").foregroundStyle(Tokens.home.color)
                     Text("R\(controller.opponentRotation)").foregroundStyle(Tokens.opponent.color)
                 }
-                .font(.system(size: 22, weight: .bold).width(.expanded).monospacedDigit())
+                .font(.themed(22, .bold).monospacedDigit())
             }
             .padding(.horizontal, 18)
             .padding(.top, 22)
@@ -175,13 +175,18 @@ struct StatusStrip: View {
 
     var body: some View {
         HStack(spacing: 18) {
-            Text("SET \(controller.setNumber)").font(.sectionLabel)
-            Text("\(controller.score.home) : \(controller.score.opponent)")
-                .font(.system(size: 20, weight: .bold).width(.expanded).monospacedDigit())
+            Text("SET \(controller.setNumber)").font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
+            // The score is what a glance at the sideline is for: big, with each team in its colour.
+            HStack(spacing: 10) {
+                Text(controller.homeName.uppercased()).font(.themed(15, .heavy)).foregroundStyle(Tokens.home.color).lineLimit(1)
+                Text("\(controller.score.home) : \(controller.score.opponent)").font(.liveScore)
+                Text(controller.opponentName.uppercased()).font(.themed(15, .heavy)).foregroundStyle(Tokens.opponent.color).lineLimit(1)
+            }
             HStack(spacing: 6) {
-                Circle().fill(controller.serving == .home ? Tokens.accent.color : Tokens.opponent.color).frame(width: 8, height: 8)
-                Text("\(controller.serving == .home ? controller.homeName : controller.opponentName) SERVES #\(controller.serverLabel)")
+                Circle().fill(Tokens.team(controller.serving).color).frame(width: 8, height: 8)
+                Text("SERVE #\(controller.serverLabel)")
                     .font(.sectionLabel)
+                    .lineLimit(1)
             }
             Text("R\(controller.homeRotation) \u{21C4} R\(controller.opponentRotation)")
                 .font(.dataMono)
@@ -203,11 +208,11 @@ struct StatusStrip: View {
             Text(controller.state.mode == .solo ? "SOLO" : "ADV")
                 .font(.sectionLabel)
                 .padding(.horizontal, 10).frame(height: 24)
-                .overlay(RoundedRectangle(cornerRadius: 3).stroke(Tokens.accent.color))
+                .overlay(RoundedRectangle(cornerRadius: Tokens.radiusSmall).stroke(Tokens.accent.color))
                 .onLongPressGesture(minimumDuration: 0.6) { controller.toggleMode() }
                 .accessibilityHint("Long-press to switch between Solo and Advanced")
         }
-        .foregroundStyle(Tokens.white.color)
+        .foregroundStyle(Tokens.text.color)
         .padding(.horizontal, 16)
         .frame(height: Tokens.statusHeight)
         .background(Tokens.canvasRaised.color)
@@ -240,12 +245,12 @@ struct Rail: View {
     private func railButton(_ title: String, _ symbol: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
-                Image(systemName: symbol).font(.system(size: 20, weight: .semibold))
-                Text(title).font(.system(size: 9, weight: .semibold).width(.expanded))
+                Image(systemName: symbol).font(.themed(20, .semibold))
+                Text(title).font(.themed(9, .semibold))
             }
             .frame(width: Tokens.targetLivePrimary, height: Tokens.targetLivePrimary)
         }
-        .foregroundStyle(Tokens.white.color)
+        .foregroundStyle(Tokens.text.color)
     }
 }
 
@@ -258,7 +263,7 @@ struct RouteChips: View {
             let geometry = controller.geometry
             ForEach(controller.routePlan.filter(\.late)) { r in
                 Text(String(format: "LATE %.1f s", -(r.slack ?? 0)))
-                    .font(.system(size: 12, weight: .heavy).width(.expanded))
+                    .font(.themed(12, .heavy))
                     .padding(.horizontal, 8).frame(height: 24)
                     .background(Tokens.accent.color, in: Capsule())
                     .foregroundStyle(Tokens.canvasBase.color)
@@ -283,8 +288,8 @@ struct PanicOverlay: View {
                             .stroke(Tokens.accentActive.color, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                         Text(String(format: "0:%02d", Int(remaining.rounded(.up))))
-                            .font(.system(size: 20, weight: .bold).width(.expanded).monospacedDigit())
-                            .foregroundStyle(Tokens.white.color)
+                            .font(.themed(20, .bold).monospacedDigit())
+                            .foregroundStyle(Tokens.text.color)
                     }
                     .frame(width: 88, height: 88)
                 }
@@ -304,12 +309,12 @@ struct PanicOverlay: View {
 
     private func panicButton(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title).font(.system(size: 13, weight: .bold).width(.expanded))
+            Text(title).font(.themed(13, .bold))
                 .padding(.horizontal, 16).frame(height: Tokens.targetLivePrimary)
-                .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: 4))
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Tokens.accentActive.color, lineWidth: 1.5))
+                .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+                .overlay(RoundedRectangle(cornerRadius: Tokens.radiusSmall).stroke(Tokens.accentActive.color, lineWidth: 1.5))
         }
-        .foregroundStyle(Tokens.white.color)
+        .foregroundStyle(Tokens.text.color)
     }
 }
 

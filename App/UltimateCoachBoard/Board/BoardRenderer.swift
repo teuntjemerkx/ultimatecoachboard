@@ -123,10 +123,15 @@ extension ZoneGPU {
 struct FloorUniforms {
     var viewSize: SIMD2<Float>
     var center: SIMD2<Float>
+    var toWorld: SIMD4<Float>
     var scale: Float
-    var flipped: UInt32
     var zoneCount: UInt32
-    var pad: UInt32 = 0
+    var pad: SIMD2<Float> = .zero
+    var court: SIMD4<Float>
+    var freeZone: SIMD4<Float>
+    var hall: SIMD4<Float>
+    var tintA: SIMD4<Float>
+    var tintB: SIMD4<Float>
 }
 
 struct HatchInstance {
@@ -224,7 +229,7 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
     weak var view: MTKView?
 
     init?(view: MTKView) {
-        assert(MemoryLayout<ZoneGPU>.stride == 176 && MemoryLayout<FloorUniforms>.stride == 32, "must match Shaders.metal")
+        assert(MemoryLayout<ZoneGPU>.stride == 176 && MemoryLayout<FloorUniforms>.stride == 128, "must match Shaders.metal")
         guard let device = view.device ?? MTLCreateSystemDefaultDevice(), let queue = device.makeCommandQueue() else { return nil }
         self.device = device
         self.queue = queue
@@ -234,7 +239,7 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
         self.view = view
         view.device = device
         view.colorPixelFormat = .bgra8Unorm
-        view.clearColor = MTLClearColor(red: Tokens.canvasBase.r, green: Tokens.canvasBase.g, blue: Tokens.canvasBase.b, alpha: 1)
+        view.clearColor = MTLClearColor(red: Tokens.hall.r, green: Tokens.hall.g, blue: Tokens.hall.b, alpha: 1)
         view.preferredFramesPerSecond = 120
         view.enableSetNeedsDisplay = true
         view.isPaused = true
@@ -304,6 +309,7 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
     }
 
     func draw(in view: MTKView) {
+        view.clearColor = MTLClearColor(red: Tokens.hall.r, green: Tokens.hall.g, blue: Tokens.hall.b, alpha: 1)
         let now = CACurrentMediaTime()
         if now - animationStart > animationDuration, !view.isPaused {
             fromPositions = [:]
@@ -331,8 +337,8 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
             enc.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: items.count)
         }
 
+        encodeFloor(enc)
         encode(court, pipeline: segmentPipeline)
-        encodeZones(enc)
         encode(hatches, pipeline: hatchPipeline)
         encode(overlays, pipeline: segmentPipeline)
         encode(tokens, pipeline: tokenPipeline)
@@ -342,20 +348,26 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
         cmd.commit()
     }
 
-    /// The zone floor pass: one full-view quad whose fragments evaluate every zone (Section 3.5.4).
-    private func encodeZones(_ enc: MTLRenderCommandEncoder) {
-        guard !scene.zones.isEmpty else { return }
+    /// The floor pass: one full-view quad that paints the hall, the free zone and the court in the template's
+    /// colours and evaluates every zone (Section 3.5.4).
+    private func encodeFloor(_ enc: MTLRenderCommandEncoder) {
         var (gpu, verts) = ZoneGPU.pack(scene.zones, selected: scene.selectedZone, morphs: scene.zoneMorphs,
                                         intensities: scene.zoneIntensities)
-        guard !gpu.isEmpty else { return }
         if verts.isEmpty { verts = [.zero] }
-        if !loggedZonePass {
+        let zoneCount = gpu.count
+        if gpu.isEmpty {
+            gpu = [ZoneGPU(kind: 0, pattern: 0, vertexOffset: 0, vertexCount: 0, toLocal0: .zero, toLocal1: .zero, params: .zero,
+                           color: .zero, spacing: 1, lineWidth: 0, angle: 0, glow: 0, dashed: 0, selected: 0, tint: 0)]
+        }
+        if !loggedZonePass && zoneCount > 0 {
             loggedZonePass = true
-            DemoMode.note("zone pass: \(gpu.count) zones, \(verts.count) vertices, kinds \(gpu.map(\.kind))")
+            DemoMode.note("zone pass: \(zoneCount) zones, \(verts.count) vertices, kinds \(gpu.map(\.kind))")
         }
         var u = FloorUniforms(viewSize: SIMD2(Float(geometry.size.width), Float(geometry.size.height)),
                               center: SIMD2(Float(geometry.center.x), Float(geometry.center.y)),
-                              scale: Float(geometry.scale), flipped: geometry.isFlipped ? 1 : 0, zoneCount: UInt32(gpu.count))
+                              toWorld: geometry.toWorldRows, scale: Float(geometry.scale), zoneCount: UInt32(zoneCount),
+                              court: Tokens.court.simd, freeZone: Tokens.freeZone.simd, hall: Tokens.hall.simd,
+                              tintA: Tokens.zoneA.simd, tintB: Tokens.zoneB.simd)
         guard let zoneBuffer = gpu.withUnsafeBytes({ device.makeBuffer(bytes: $0.baseAddress!, length: $0.count, options: .storageModeShared) }),
               let vertexBuffer = verts.withUnsafeBytes({ device.makeBuffer(bytes: $0.baseAddress!, length: $0.count, options: .storageModeShared) })
         else { return }
@@ -395,50 +407,50 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
             court.append(segment(FloorPoint(x: -4.5, z: z), FloorPoint(x: 4.5, z: z), width: lineWidth, color: Tokens.courtLine))
         }
         // Net (drawn beyond the sidelines to the posts) and antennas.
-        court.append(segment(FloorPoint(x: -5.0, z: 0), FloorPoint(x: 5.0, z: 0), width: max(lineWidth * 2.2, 3.5), color: Tokens.white.withAlpha(0.9)))
+        court.append(segment(FloorPoint(x: -5.0, z: 0), FloorPoint(x: 5.0, z: 0), width: max(lineWidth * 2.2, 3.5), color: Tokens.net.withAlpha(0.9)))
         for x in [-4.55, 4.55] {
-            court.append(segment(FloorPoint(x: x, z: -0.08), FloorPoint(x: x, z: 0.08), width: 4, color: Tokens.accent))
+            court.append(segment(FloorPoint(x: x, z: -0.08), FloorPoint(x: x, z: 0.08), width: 4, color: Tokens.fault))
         }
 
         var overlays: [SegmentInstance] = []
         // Snap highlights: the line, cell edge or point a zone snapped to.
         for h in scene.highlights {
-            overlays.append(segment(h.a, h.b, width: 3, color: Tokens.white.withAlpha(0.9)))
+            overlays.append(segment(h.a, h.b, width: 3, color: Tokens.text.withAlpha(0.9)))
         }
         // Routes (Section 2.6): dashed when on time, solid pink when late.
         for route in scene.routes {
-            let color = route.late ? Tokens.accent : Tokens.white.withAlpha(0.55)
+            let color = route.late ? Tokens.fault : Tokens.text.withAlpha(0.6)
             overlays.append(segment(route.a, route.b, width: route.late ? 3 : 2, color: color,
                                     dash: route.late ? 0 : 7, gap: route.late ? 0 : 6))
             overlays += arrowhead(from: route.a, to: route.b, width: route.late ? 3 : 2, color: color, size: 0.3)
         }
         // Micro-Scouting vectors with arrowheads.
         for (o, t, opacity) in scene.scoutLines {
-            let color = Tokens.accent.withAlpha(opacity)
+            let color = Tokens.opponent.withAlpha(opacity)
             overlays.append(segment(o, t, width: 3, color: color))
             overlays += arrowhead(from: o, to: t, width: 3, color: color, size: 0.45)
         }
         // Overlap tethers (Section 3.4.4).
         for tether in scene.tethers {
             if tether.margin <= 0 {
-                overlays.append(segment(tether.a, tether.b, width: 3, color: Tokens.accentActive))
+                overlays.append(segment(tether.a, tether.b, width: 3, color: Tokens.fault))
                 if let (b0, b1) = tether.boundary {
-                    overlays.append(segment(b0, b1, width: 2, color: Tokens.accentActive, dash: 6, gap: 5))
+                    overlays.append(segment(b0, b1, width: 2, color: Tokens.fault, dash: 6, gap: 5))
                 }
             } else {
                 let alpha = max(0.15, 1 - tether.margin / 0.25)
-                overlays.append(segment(tether.a, tether.b, width: 1.5 + 1.5 * CGFloat(alpha), color: Tokens.accent.withAlpha(alpha)))
+                overlays.append(segment(tether.a, tether.b, width: 1.5 + 1.5 * CGFloat(alpha), color: Tokens.fault.withAlpha(alpha)))
             }
         }
         // Ball flights: their floor track, dashed white.
         for path in scene.ballPaths where path.count > 1 {
             for i in stride(from: 1, to: path.count, by: 1) {
-                overlays.append(segment(path[i - 1], path[i], width: 1.5, color: Tokens.white.withAlpha(0.45)))
+                overlays.append(segment(path[i - 1], path[i], width: 1.5, color: Tokens.text.withAlpha(0.45)))
             }
         }
         // Ink in #FF1493, 4 pt.
         for stroke in scene.ink where stroke.count > 1 {
-            for i in 1..<stroke.count { overlays.append(segment(stroke[i - 1], stroke[i], width: 4, color: Tokens.accentActive)) }
+            for i in 1..<stroke.count { overlays.append(segment(stroke[i - 1], stroke[i], width: 4, color: Tokens.ink)) }
         }
         return (court, overlays)
     }
@@ -461,10 +473,10 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
             let p = currentPosition(of: t.id, target: t.point, now: now)
             let c = v(p)
             let home = t.side == .home
-            let ringColor = (home ? Tokens.accent : Tokens.opponent).simd
+            let ringColor = Tokens.team(t.side).simd
             let scale: Float = t.selected ? 1.15 : 1
             tokens.append(TokenInstance(center: c, radius: Float(radius) * scale, ring: 3, shape: home ? 0 : 1,
-                                        glow: t.selected ? 1 : 0, fill: Tokens.canvasBase.withAlpha(0.8).simd, ringColor: ringColor))
+                                        glow: t.selected ? 1 : 0, fill: Tokens.tokenFill.simd, ringColor: ringColor))
             if t.isLibero {
                 tokens.append(TokenInstance(center: c, radius: Float(radius) * scale - 6, ring: 1.5, shape: home ? 0 : 1,
                                             glow: 0, fill: SIMD4(0, 0, 0, 0), ringColor: ringColor))
@@ -476,7 +488,7 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
             }
             if let atlas {
                 glyphs += atlas.layout(t.label, center: CGPoint(x: CGFloat(c.x), y: CGFloat(c.y)),
-                                       height: radius * 1.45, color: Tokens.white.simd)
+                                       height: radius * 1.45, color: Tokens.tokenLabel.simd)
             }
         }
         if let b = scene.ball {
@@ -484,7 +496,7 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
             let c = v(b)
             let r = Float(6 + min(scene.ballHeight, 8) * 0.8)
             tokens.append(TokenInstance(center: c, radius: r, ring: 2, shape: 0, glow: 1,
-                                        fill: Tokens.white.simd, ringColor: Tokens.accent.simd))
+                                        fill: Tokens.ball.simd, ringColor: Tokens.text.simd))
         }
         return (tokens, glyphs)
     }
@@ -496,6 +508,6 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
         let half = SIMD2<Float>(abs(pb.x - pa.x), abs(pb.y - pa.y)) / 2
         guard half.x > 1, half.y > 1 else { return [] }
         return [HatchInstance(center: center, halfSize: half, angle: .pi / 4, spacing: 9, lineWidth: 1.5,
-                              color: Tokens.accent.withAlpha(0.45).simd)]
+                              color: Tokens.home.withAlpha(0.45).simd)]
     }
 }

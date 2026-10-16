@@ -8,8 +8,20 @@ struct Scene3DUniforms {
     float4x4 viewProjection;
     float4 eye;          // xyz
     float4 light;        // xyz: direction toward the light; w: ambient
+    // Template colours (rgb).
+    float4 hall;
+    float4 freeZone;
+    float4 court;
+    float4 lines;
+    float4 tintA;
+    float4 tintB;
+    float4 skin;
+    float4 shorts;
+    float4 pads;
+    float4 shoes;
+    float4 hair;
     uint zoneCount;
-    float3 pad;
+    uint pad0, pad1, pad2;
 };
 
 // MARK: - Floor: navy hall, court, analytic court lines, zone grid and zones in one pass.
@@ -43,18 +55,18 @@ fragment float4 floor3DFragment(Floor3DOut in [[stage_in]],
                                 constant Scene3DUniforms &u [[buffer(1)]],
                                 const device float2 *verts [[buffer(2)]]) {
     float2 w = in.world;
-    float3 hall = float3(0.0196, 0.0314, 0.0784);        // #050814
-    float3 court = float3(0.039, 0.059, 0.141);          // #0A0F24
     float dCourt = sdBox(w, float2(4.5, 9.0));
+    float dFree = sdBox(w, float2(7.5, 12.0));
     float aa = max(fwidth(dCourt), 1e-5);
-    float3 col = mix(hall, court, 1.0 - smoothstep(-aa, aa, dCourt));
+    float3 col = mix(u.hall.rgb, u.freeZone.rgb, 1.0 - smoothstep(-aa, aa, dFree));
+    col = mix(col, u.court.rgb, 1.0 - smoothstep(-aa, aa, dCourt));
     // Faint nine-zone grid (Micro-Scouting orientation aid).
     float grid = min(min(abs(abs(w.x) - 1.5), abs(abs(w.y) - 6.0)), 10.0);
     col = mix(col, float3(1.0), 0.06 * lineCoverage(grid, 0.012) * step(dCourt, 0.0));
-    // Court lines, 5 cm: boundary, attack lines and centre line, in #FF007F at 72%.
+    // Court lines, 5 cm: boundary, attack lines and centre line, in the template's line colour.
     float lines = min(abs(dCourt + 0.025), min(crossLine(w, 3.0), min(crossLine(w, -3.0), crossLine(w, 0.0))));
-    col = mix(col, float3(1.0, 0.0, 0.498), 0.72 * lineCoverage(lines, 0.025));
-    float4 z = zoneColor(evaluateZones(w, zones, u.zoneCount, verts));
+    col = mix(col, u.lines.rgb, u.lines.a * lineCoverage(lines, 0.025));
+    float4 z = zoneColor(evaluateZones(w, zones, u.zoneCount, verts), u.tintA.rgb, u.tintB.rgb);
     col = col * (1.0 - z.a) + z.rgb;
     return float4(col, 1.0);
 }
@@ -190,12 +202,12 @@ fragment float4 avatarFragment(AvatarOut in [[stage_in]], constant Scene3DUnifor
     float3 base;
     switch (in.material) {
         case 1: base = in.color.rgb; break;
-        case 2: base = float3(0.067, 0.094, 0.227); break;
-        case 3: base = float3(0.118, 0.153, 0.322); break;
-        case 4: base = float3(0.91, 0.925, 0.96); break;
-        case 5: base = float3(0.043, 0.063, 0.141); break;
-        case 6: base = float3(0.85, 0.87, 0.92); break;
-        default: base = float3(0.42, 0.47, 0.60); break;
+        case 2: base = u.shorts.rgb; break;
+        case 3: base = u.pads.rgb; break;
+        case 4: base = u.shoes.rgb; break;
+        case 5: base = u.hair.rgb; break;
+        case 6: base = mix(u.shoes.rgb, u.shorts.rgb, 0.12); break;
+        default: base = u.skin.rgb; break;
     }
     // A soft wrap term keeps the shadow side readable on a dark floor.
     float wrap = saturate((dot(n, l) + 0.35) / 1.35);

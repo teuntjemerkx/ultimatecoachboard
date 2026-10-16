@@ -149,10 +149,10 @@ static inline float2 evaluateZones(float2 w, const device ZoneGPU *zones, uint c
     return float2(pink, cyan);
 }
 
-// Premultiplied colour of the zone coverage.
-static inline float4 zoneColor(float2 cov) {
+// Premultiplied colour of the zone coverage in the template's two zone tints.
+static inline float4 zoneColor(float2 cov, float3 tintA, float3 tintB) {
     float alpha = saturate(max(cov.x, cov.y));
-    float3 rgb = float3(1.0, 0.0, 0.498) * cov.x + float3(0.0, 0.941, 1.0) * cov.y;
+    float3 rgb = tintA * cov.x + tintB * cov.y;
     return float4(min(rgb, float3(alpha)), alpha);
 }
 

@@ -75,9 +75,9 @@ struct StudioView: View {
         HStack(spacing: 16) {
             Text("STUDIO").font(.sectionLabel).foregroundStyle(Tokens.accent.color)
             Button { newTitle = controller.scene.title; renaming = true } label: {
-                Text(controller.scene.title).font(.system(size: 15, weight: .semibold))
+                Text(controller.scene.title).font(.themed(15, .semibold))
             }
-            .foregroundStyle(Tokens.white.color)
+            .foregroundStyle(Tokens.text.color)
             Text("\(controller.scene.zones.count) zone\(controller.scene.zones.count == 1 ? "" : "s")")
                 .font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
             Spacer()
@@ -92,7 +92,7 @@ struct StudioView: View {
             Button("SWITCH ENDS") { controller.homeOnLeft.toggle() }.font(.sectionLabel)
             Button("SCENES") { showScenes = true }.font(.sectionLabel)
         }
-        .foregroundStyle(Tokens.white.color)
+        .foregroundStyle(Tokens.text.color)
         .padding(.horizontal, 16)
         .frame(height: Tokens.statusHeight + 8)
         .background(Tokens.canvasRaised.color)
@@ -122,24 +122,24 @@ struct StudioView: View {
         let on = controller.tool == tool
         return Button { controller.tool = tool } label: {
             VStack(spacing: 4) {
-                Image(systemName: symbol).font(.system(size: 20, weight: .semibold))
-                Text(title).font(.system(size: 9, weight: .semibold).width(.expanded))
+                Image(systemName: symbol).font(.themed(20, .semibold))
+                Text(title).font(.themed(9, .semibold))
             }
             .frame(width: Tokens.targetLivePrimary, height: Tokens.targetLivePrimary)
-            .background(on ? Tokens.accent.withAlpha(0.2).color : .clear, in: RoundedRectangle(cornerRadius: 6))
+            .background(on ? Tokens.accent.withAlpha(0.2).color : .clear, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
         }
-        .foregroundStyle(on ? Tokens.accent.color : Tokens.white.color)
+        .foregroundStyle(on ? Tokens.accent.color : Tokens.text.color)
     }
 
     private func railButton(_ title: String, _ symbol: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
-                Image(systemName: symbol).font(.system(size: 18, weight: .semibold))
-                Text(title).font(.system(size: 9, weight: .semibold).width(.expanded))
+                Image(systemName: symbol).font(.themed(18, .semibold))
+                Text(title).font(.themed(9, .semibold))
             }
             .frame(width: Tokens.targetLivePrimary, height: 52)
         }
-        .foregroundStyle(Tokens.white.color)
+        .foregroundStyle(Tokens.text.color)
         .disabled(!enabled)
         .opacity(enabled ? 1 : 0.35)
     }
@@ -195,14 +195,14 @@ struct ZoneStrip: View {
                 .font(.system(size: 11)).foregroundStyle(Tokens.textSecondary.color)
         }
         .padding(12)
-        .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.accent.withAlpha(0.5).color))
+        .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+        .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.accent.withAlpha(0.5).color))
         .frame(maxWidth: 660, alignment: .leading)
     }
 
     private func row<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         HStack(spacing: 6) {
-            Text(title).font(.system(size: 10, weight: .semibold).width(.expanded))
+            Text(title).font(.themed(10, .semibold))
                 .foregroundStyle(Tokens.textSecondary.color)
                 .frame(width: 64, alignment: .leading)
             content()
@@ -211,10 +211,10 @@ struct ZoneStrip: View {
 
     private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title).font(.system(size: 11, weight: .bold).width(.expanded))
+            Text(title).font(.themed(11, .bold))
                 .padding(.horizontal, 8).frame(minHeight: 32)
-                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 4))
-                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.white.color)
+                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.text.color)
         }
         .buttonStyle(.plain)
     }
@@ -229,9 +229,9 @@ struct AlternativeChip: View {
             let p = controller.geometry.toView(alt.anchor)
             Button { controller.acceptAlternative() } label: {
                 Text("\(alt.kind.rawValue.uppercased())?")
-                    .font(.system(size: 12, weight: .heavy).width(.expanded))
+                    .font(.themed(12, .heavy))
                     .padding(.horizontal, 12).frame(height: 36)
-                    .background(Tokens.white.color, in: Capsule())
+                    .background(Tokens.text.color, in: Capsule())
                     .foregroundStyle(Tokens.canvasBase.color)
             }
             .position(x: p.x, y: max(p.y - 56, 24))
@@ -275,12 +275,12 @@ struct SceneListSheet: View {
                             dismiss()
                         } label: {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(s.title).font(.system(size: 15, weight: .semibold))
+                                Text(s.title).font(.themed(15, .semibold))
                                 Text("\(s.zones.count) zones \u{00B7} \(s.modifiedAt.formatted(date: .abbreviated, time: .shortened))")
                                     .font(.system(size: 12)).foregroundStyle(Tokens.textSecondary.color)
                             }
                         }
-                        .foregroundStyle(Tokens.white.color)
+                        .foregroundStyle(Tokens.text.color)
                     }
                     .onDelete { offsets in
                         for i in offsets where scenes[i].id != controller.scene.id { SceneStore.delete(scenes[i].id) }
@@ -324,6 +324,7 @@ struct StudioBoardView: UIViewRepresentable {
     }
 
     func updateUIView(_ view: BoardMTKView, context: Context) {
+        _ = Tokens.theme.id                    // a template change redraws the board
         guard let renderer = context.coordinator.renderer else { return }
         var geometry = controller.geometry
         geometry.size = view.bounds.size
@@ -434,16 +435,19 @@ struct Studio3DBoardView: UIViewRepresentable {
                 coordinator.introduced = true
                 if c.povPlayer != nil {
                     // Opened straight into a POV: the orbit rests at the bench, the camera flies into the player's eyes.
-                    r.setCamera(.bench(aspect: aspect, homeOnLeft: c.homeOnLeft))
+                    r.setCamera(.bench(aspect: aspect, homeOnLeft: c.homeOnLeft, vertical: Self.upright(aspect)))
                     r.flyToPOV()
                 } else {
-                    r.setCamera(.topDown(aspect: aspect, homeOnLeft: c.homeOnLeft))
-                    r.animateCamera(to: .bench(aspect: aspect, homeOnLeft: c.homeOnLeft))
+                    r.setCamera(.topDown(aspect: aspect, homeOnLeft: c.homeOnLeft, vertical: Self.upright(aspect)))
+                    r.animateCamera(to: .bench(aspect: aspect, homeOnLeft: c.homeOnLeft, vertical: Self.upright(aspect)))
                 }
             }
         }
         return view
     }
+
+    /// Upright views stand the court upright, as the 2D board does (Settings > Court).
+    static func upright(_ aspect: Double) -> Bool { ThemeStore.shared.courtOrientation == .auto && aspect < 1 / 1.1 }
 
     /// Horizontal drag turns around the court, vertical drag tilts (about 0.35 degree per point).
     static func orbit(_ r: Board3DRenderer, by d: CGPoint) {
@@ -451,6 +455,7 @@ struct Studio3DBoardView: UIViewRepresentable {
     }
 
     func updateUIView(_ view: BoardMTKView, context: Context) {
+        _ = Tokens.theme.id                    // a template change redraws the board
         let coordinator = context.coordinator
         guard let renderer = coordinator.renderer else { return }
         renderer.scene = controller.scene3D
@@ -459,13 +464,13 @@ struct Studio3DBoardView: UIViewRepresentable {
         let c = controller
         if controller.exiting3D && !coordinator.exiting {
             coordinator.exiting = true
-            renderer.animateCamera(to: .topDown(aspect: aspect, homeOnLeft: controller.homeOnLeft), duration: 0.8) {
+            renderer.animateCamera(to: .topDown(aspect: aspect, homeOnLeft: controller.homeOnLeft, vertical: Self.upright(aspect)), duration: 0.8) {
                 DispatchQueue.main.async { c.finishExit3D() }
             }
         } else if coordinator.homeOnLeft != controller.homeOnLeft || coordinator.resetCount != controller.cameraResetCount {
             coordinator.homeOnLeft = controller.homeOnLeft
             coordinator.resetCount = controller.cameraResetCount
-            renderer.animateCamera(to: .bench(aspect: aspect, homeOnLeft: controller.homeOnLeft))
+            renderer.animateCamera(to: .bench(aspect: aspect, homeOnLeft: controller.homeOnLeft, vertical: Self.upright(aspect)))
         }
         if coordinator.povPlayer != controller.povPlayer {
             coordinator.povPlayer = controller.povPlayer
@@ -485,7 +490,7 @@ struct PostureStrip: View {
     var body: some View {
         if let token = controller.selectedTokenValue {
             HStack(spacing: 6) {
-                Text("#\(token.label) POSTURE").font(.system(size: 10, weight: .semibold).width(.expanded))
+                Text("#\(token.label) POSTURE").font(.themed(10, .semibold))
                     .foregroundStyle(Tokens.textSecondary.color)
                 let explicit = controller.selectedExplicitPosture
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -499,17 +504,17 @@ struct PostureStrip: View {
                 .frame(maxWidth: 760)
             }
             .padding(10)
-            .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.accent.withAlpha(0.5).color))
+            .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+            .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.accent.withAlpha(0.5).color))
         }
     }
 
     private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title).font(.system(size: 11, weight: .bold).width(.expanded))
+            Text(title).font(.themed(11, .bold))
                 .padding(.horizontal, 8).frame(minHeight: 36)
-                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 4))
-                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.white.color)
+                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.text.color)
         }
         .buttonStyle(.plain)
     }
@@ -528,9 +533,9 @@ struct TimelineStrip: View {
             } else {
                 Button { controller.togglePlay() } label: {
                     Image(systemName: controller.playing ? "stop.fill" : "play.fill")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.themed(16, .bold))
                         .frame(width: 44, height: 36)
-                        .background(Tokens.accent.color, in: RoundedRectangle(cornerRadius: 4))
+                        .background(Tokens.accent.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
                         .foregroundStyle(Tokens.canvasBase.color)
                 }
                 .buttonStyle(.plain)
@@ -539,13 +544,13 @@ struct TimelineStrip: View {
                     let on = controller.currentPhase == phase
                     Button { controller.go(to: phase) } label: {
                         VStack(spacing: 2) {
-                            Text(phase.title).font(.system(size: 11, weight: .bold).width(.expanded))
+                            Text(phase.title).font(.themed(11, .bold))
                             Circle().frame(width: 5, height: 5)
                                 .opacity(controller.selectionHasKey(at: phase) ? 1 : 0)
                         }
                         .padding(.horizontal, 8).frame(minHeight: 36)
-                        .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 4))
-                        .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.white.color)
+                        .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+                        .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.text.color)
                     }
                     .buttonStyle(.plain)
                 }
@@ -567,16 +572,16 @@ struct TimelineStrip: View {
             }
         }
         .padding(10)
-        .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.hairline.color))
+        .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+        .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.hairline.color))
     }
 
     private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title).font(.system(size: 11, weight: .bold).width(.expanded))
+            Text(title).font(.themed(11, .bold))
                 .padding(.horizontal, 8).frame(minHeight: 36)
-                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 4))
-                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.white.color)
+                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.text.color)
         }
         .buttonStyle(.plain)
     }
@@ -590,7 +595,7 @@ struct POVStrip: View {
         HStack(spacing: 6) {
             if let pov = controller.povPlayer {
                 let label = controller.scene.tokens.first { $0.id == pov }?.label ?? ""
-                Text("POV \(label) \u{00B7} HEAD-LOCKED").font(.system(size: 10, weight: .semibold).width(.expanded))
+                Text("POV \(label) \u{00B7} HEAD-LOCKED").font(.themed(10, .semibold))
                     .foregroundStyle(Tokens.textSecondary.color)
                 chip("LOOK AHEAD", on: controller.povYaw == 0 && controller.povPitch == 0) { controller.look(dx: controller.povYaw, dy: -controller.povPitch) }
                 if controller.selectedToken != nil && controller.selectedToken != pov {
@@ -605,16 +610,16 @@ struct POVStrip: View {
             }
         }
         .padding(10)
-        .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.accent.withAlpha(0.5).color))
+        .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+        .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.accent.withAlpha(0.5).color))
     }
 
     private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title).font(.system(size: 11, weight: .bold).width(.expanded))
+            Text(title).font(.themed(11, .bold))
                 .padding(.horizontal, 8).frame(minHeight: 36)
-                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 4))
-                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.white.color)
+                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.text.color)
         }
         .buttonStyle(.plain)
     }
@@ -627,7 +632,7 @@ struct GazePanel: View {
     var body: some View {
         let readouts = controller.gazeReadouts
         VStack(alignment: .leading, spacing: 6) {
-            Text("LINE OF SIGHT").font(.system(size: 10, weight: .semibold).width(.expanded))
+            Text("LINE OF SIGHT").font(.themed(10, .semibold))
                 .foregroundStyle(Tokens.textSecondary.color)
             if readouts.isEmpty {
                 Text(controller.povPlayer != nil ? "Tap a player to add a target" : "No targets")
@@ -635,8 +640,8 @@ struct GazePanel: View {
             }
             ForEach(readouts, id: \.self) { r in
                 HStack(spacing: 6) {
-                    Circle().fill((r.visibility.fraction >= 0.5 ? Tokens.white : RGBA(hex: 0xFF3B1A)).color).frame(width: 8, height: 8)
-                    Text(r.text).font(.system(size: 12, weight: .medium)).foregroundStyle(Tokens.white.color)
+                    Circle().fill((r.visibility.fraction >= 0.5 ? Tokens.text : RGBA(hex: 0xFF3B1A)).color).frame(width: 8, height: 8)
+                    Text(r.text).font(.themed(12, .medium)).foregroundStyle(Tokens.text.color)
                 }
             }
             if controller.povPlayer != nil {
@@ -646,8 +651,8 @@ struct GazePanel: View {
             }
         }
         .padding(10)
-        .background(Tokens.canvasRaised.withAlpha(0.92).color, in: RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.hairline.color))
+        .background(Tokens.canvasRaised.withAlpha(0.92).color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+        .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.hairline.color))
         .frame(maxWidth: 420, alignment: .trailing)
     }
 }
@@ -662,7 +667,7 @@ struct FieldRings: View {
             ZStack {
                 Circle().stroke(Tokens.accent.withAlpha(0.55).color, lineWidth: 1.5)
                     .frame(width: central * 2, height: central * 2)
-                Circle().stroke(Tokens.white.withAlpha(0.7).color, lineWidth: 1)
+                Circle().stroke(Tokens.text.withAlpha(0.7).color, lineWidth: 1)
                     .frame(width: foveal * 2, height: foveal * 2)
             }
             .position(x: g.size.width / 2, y: g.size.height / 2)
@@ -677,7 +682,7 @@ struct BallStrip: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Text("BALL").font(.system(size: 10, weight: .semibold).width(.expanded))
+            Text("BALL").font(.themed(10, .semibold))
                 .foregroundStyle(Tokens.textSecondary.color)
             if let phase = controller.currentPhase, let selected = controller.selectedTokenValue {
                 let contact = controller.currentContact
@@ -699,20 +704,20 @@ struct BallStrip: View {
                     .font(.system(size: 12)).foregroundStyle(Tokens.textSecondary.color)
             }
             if let summary = controller.ballSummary {
-                Text(summary).font(.dataMono).foregroundStyle(Tokens.white.color).lineLimit(1)
+                Text(summary).font(.dataMono).foregroundStyle(Tokens.text.color).lineLimit(1)
             }
         }
         .padding(10)
-        .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.hairline.color))
+        .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+        .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.hairline.color))
     }
 
     private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title).font(.system(size: 11, weight: .bold).width(.expanded))
+            Text(title).font(.themed(11, .bold))
                 .padding(.horizontal, 8).frame(minHeight: 36)
-                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 4))
-                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.white.color)
+                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.text.color)
         }
         .buttonStyle(.plain)
     }

@@ -29,11 +29,11 @@ struct SetBreakPanel: View {
                     controls.frame(width: 260)
                 }
             }
-            .foregroundStyle(Tokens.white.color)
+            .foregroundStyle(Tokens.text.color)
             .padding(28)
             .frame(maxWidth: 1080)
-            .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.accent.withAlpha(0.6).color))
+            .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+            .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.accent.withAlpha(0.6).color))
             .padding(24)
         }
         .sheet(item: Binding(get: { rallyListRotation.map(RotationID.init) }, set: { rallyListRotation = $0?.id })) { r in
@@ -67,7 +67,7 @@ struct SetBreakPanel: View {
                         VStack(spacing: 6) {
                             Text(r.receiveTotal == 0 ? "–" : "\(r.receiveWon)/\(r.receiveTotal)").font(.dataMono)
                             VStack(spacing: 2) {
-                                Rectangle().fill(Tokens.white.withAlpha(0.28).color)
+                                Rectangle().fill(Tokens.text.withAlpha(0.28).color)
                                     .frame(height: 140 * CGFloat(r.receiveLost) / CGFloat(maxTotal))
                                 Rectangle().fill(Tokens.accent.color)
                                     .frame(height: 140 * CGFloat(r.receiveWon) / CGFloat(maxTotal))
@@ -75,7 +75,7 @@ struct SetBreakPanel: View {
                             .frame(width: 34, height: 140, alignment: .bottom)
                             .background(Tokens.hairline.color)
                             Text("R\(r.rotation)").font(.sectionLabel)
-                                .foregroundStyle(r.rotation == suggested?.rotation ? Tokens.accent.color : Tokens.white.color)
+                                .foregroundStyle(r.rotation == suggested?.rotation ? Tokens.accent.color : Tokens.text.color)
                         }
                     }
                     .buttonStyle(.plain)
@@ -115,9 +115,9 @@ struct SetBreakPanel: View {
         VStack(alignment: .leading, spacing: 16) {
             if over {
                 Button { controller.close(); onExit() } label: {
-                    Text("BACK TO START").font(.system(size: 15, weight: .heavy).width(.expanded))
+                    Text("BACK TO START").font(.themed(15, .heavy))
                         .frame(maxWidth: .infinity, minHeight: Tokens.targetLivePrimary)
-                        .background(Tokens.accent.color, in: RoundedRectangle(cornerRadius: 6))
+                        .background(Tokens.accent.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
                         .foregroundStyle(Tokens.canvasBase.color)
                 }
                 Button("Undo last action") { controller.undo() }
@@ -125,7 +125,7 @@ struct SetBreakPanel: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("SUGGESTED START").font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
                     if let s = suggested {
-                        Text("R\(s.rotation): \(s.receiveWon) of \(s.receiveTotal)").font(.system(size: 22, weight: .bold).width(.expanded))
+                        Text("R\(s.rotation): \(s.receiveWon) of \(s.receiveTotal)").font(.themed(22, .bold))
                     } else {
                         Text("No receptions yet").font(.system(size: 15))
                     }
@@ -135,11 +135,11 @@ struct SetBreakPanel: View {
                     HStack(spacing: 6) {
                         ForEach(1...6, id: \.self) { r in
                             Button("R\(r)") { startRotation = r }
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.themed(13, .bold))
                                 .frame(width: 38, height: Tokens.targetStandard)
                                 .background(startRotation == r ? Tokens.accent.color : Tokens.canvasBase.color,
-                                            in: RoundedRectangle(cornerRadius: 4))
-                                .foregroundStyle(startRotation == r ? Tokens.canvasBase.color : Tokens.white.color)
+                                            in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+                                .foregroundStyle(startRotation == r ? Tokens.canvasBase.color : Tokens.text.color)
                         }
                     }
                 }
@@ -153,9 +153,9 @@ struct SetBreakPanel: View {
                     .pickerStyle(.segmented)
                 }
                 Button { controller.nextSet(firstServer: firstServer, homeStartRotation: startRotation) } label: {
-                    Text("NEXT SET").font(.system(size: 17, weight: .heavy).width(.expanded))
+                    Text("NEXT SET").font(.themed(17, .heavy))
                         .frame(maxWidth: .infinity, minHeight: Tokens.targetLiveCritical)
-                        .background(firstServer == nil ? Tokens.hairline.color : Tokens.accent.color, in: RoundedRectangle(cornerRadius: 6))
+                        .background(firstServer == nil ? Tokens.hairline.color : Tokens.accent.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
                         .foregroundStyle(Tokens.canvasBase.color)
                 }
                 .disabled(firstServer == nil)
@@ -185,7 +185,7 @@ struct MiniFan: View {
             var net = Path()
             net.move(to: CGPoint(x: size.width / 2, y: 0))
             net.addLine(to: CGPoint(x: size.width / 2, y: size.height))
-            ctx.stroke(net, with: .color(Tokens.white.withAlpha(0.8).color), lineWidth: 1.5)
+            ctx.stroke(net, with: .color(Tokens.text.withAlpha(0.8).color), lineWidth: 1.5)
             for line in lines {
                 let a = pt(CourtFrame.world(line.originRaw, of: .opponent))
                 let b = pt(CourtFrame.world(line.landingRaw, of: .home))
@@ -213,7 +213,7 @@ struct RallyListSheet: View {
         NavigationStack {
             List(rallies) { r in
                 HStack {
-                    Circle().fill(r.winner == .home ? Tokens.accent.color : Tokens.opponent.color).frame(width: 10, height: 10)
+                    Circle().fill(Tokens.team(r.winner).color).frame(width: 10, height: 10)
                     Text("\(r.scoreBefore.home):\(r.scoreBefore.opponent) → \(r.scoreAfter.home):\(r.scoreAfter.opponent)").font(.dataMono)
                     Spacer()
                     Text(r.winner == .home ? "side-out" : "lost").foregroundStyle(Tokens.textSecondary.color)

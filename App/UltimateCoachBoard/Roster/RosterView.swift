@@ -23,10 +23,10 @@ struct RosterView: View {
             List {
                 Section {
                     HStack(spacing: 12) {
-                        Text("#").font(.system(size: 28, weight: .bold).width(.expanded)).foregroundStyle(Tokens.accent.color)
+                        Text("#").font(.themed(28, .bold)).foregroundStyle(Tokens.accent.color)
                         TextField("Add a jersey number", text: $newJersey)
                             .keyboardType(.numberPad)
-                            .font(.system(size: 22, weight: .semibold).monospacedDigit())
+                            .font(.themed(22, .semibold).monospacedDigit())
                             .focused($addFocused)
                             .submitLabel(.next)
                             .onSubmit(add)
@@ -34,7 +34,7 @@ struct RosterView: View {
                     }
                     .frame(minHeight: Tokens.targetLivePrimary)
                     if let problem {
-                        Text(problem).foregroundStyle(Tokens.accentActive.color)
+                        Text(problem).foregroundStyle(Tokens.fault.color)
                     }
                 } footer: {
                     Text("Type a number and press return; the field stays ready for the next player. Names and roles are optional.")
@@ -42,7 +42,7 @@ struct RosterView: View {
                 Section(team.map { "\($0.name) · \($0.players.count) players" } ?? "Team") {
                     ForEach(team?.sortedPlayers ?? []) { player in
                         Button { detail = player } label: { PlayerRow(player: player) }
-                            .foregroundStyle(Tokens.white.color)
+                            .foregroundStyle(Tokens.text.color)
                     }
                     .onDelete(perform: delete)
                 }
@@ -125,10 +125,10 @@ struct PlayerRow: View {
     var body: some View {
         HStack(spacing: 16) {
             Text("\(player.jersey)")
-                .font(.system(size: 28, weight: .bold).width(.expanded).monospacedDigit())
+                .font(.themed(28, .bold).monospacedDigit())
                 .frame(width: 64, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
-                Text(player.displayName ?? "—").font(.system(size: 16, weight: .semibold))
+                Text(player.displayName ?? "—").font(.themed(16, .semibold))
                 Text(player.role.label).font(.system(size: 13)).foregroundStyle(Tokens.textSecondary.color)
             }
             Spacer()
@@ -190,7 +190,7 @@ struct PlayerDetailView: View {
                     Text("Used for the 3D avatars and block geometry from Phase 2 on. Empty fields use estimates.")
                 }
                 if let problem {
-                    Section { Text(problem).foregroundStyle(Tokens.accentActive.color) }
+                    Section { Text(problem).foregroundStyle(Tokens.fault.color) }
                 }
             }
             .navigationTitle("#\(player.jersey)")

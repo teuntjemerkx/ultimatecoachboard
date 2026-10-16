@@ -7,8 +7,20 @@ struct Scene3DUniforms {
     var viewProjection: simd_float4x4
     var eye: SIMD4<Float>
     var light: SIMD4<Float>            // xyz toward the light, w ambient
+    // Template colours.
+    var hall: SIMD4<Float>
+    var freeZone: SIMD4<Float>
+    var court: SIMD4<Float>
+    var lines: SIMD4<Float>
+    var tintA: SIMD4<Float>
+    var tintB: SIMD4<Float>
+    var skin: SIMD4<Float>
+    var shorts: SIMD4<Float>
+    var pads: SIMD4<Float>
+    var shoes: SIMD4<Float>
+    var hair: SIMD4<Float>
     var zoneCount: UInt32
-    var pad: SIMD3<UInt32> = .zero
+    var pad0: UInt32 = 0, pad1: UInt32 = 0, pad2: UInt32 = 0
 }
 
 struct Quad3D {
@@ -164,7 +176,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
     private(set) var inPOV = false
 
     init?(view: MTKView) {
-        assert(MemoryLayout<Scene3DUniforms>.stride == 128 && MemoryLayout<Quad3D>.stride == 80 && MemoryLayout<AvatarVertexGPU>.stride == 48
+        assert(MemoryLayout<Scene3DUniforms>.stride == 288 && MemoryLayout<Quad3D>.stride == 80 && MemoryLayout<AvatarVertexGPU>.stride == 48
                && MemoryLayout<AvatarInstanceGPU>.stride == 48 && MemoryLayout<WallVertexGPU>.stride == 32
                && MemoryLayout<Decal3D>.stride == 80, "must match Shaders3D.metal")
         guard let device = view.device ?? MTLCreateSystemDefaultDevice(), let queue = device.makeCommandQueue() else { return nil }
@@ -178,7 +190,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         view.depthStencilPixelFormat = .depth32Float
         view.sampleCount = Self.sampleCount
         view.clearDepth = 0            // reversed-Z (Section 3.2): near is 1, infinity 0
-        view.clearColor = MTLClearColor(red: Tokens.canvasBase.r, green: Tokens.canvasBase.g, blue: Tokens.canvasBase.b, alpha: 1)
+        view.clearColor = MTLClearColor(red: Tokens.hall.r, green: Tokens.hall.g, blue: Tokens.hall.b, alpha: 1)
         view.preferredFramesPerSecond = 120
         view.enableSetNeedsDisplay = true
         view.isPaused = true
@@ -373,9 +385,14 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         let l = simd_normalize(light)
         let (zones, zoneVerts) = ZoneGPU.pack(scene.zones, selected: scene.selectedZone, morphs: scene.zoneMorphs,
                                               intensities: scene.zoneIntensities)
+        view.clearColor = MTLClearColor(red: Tokens.hall.r, green: Tokens.hall.g, blue: Tokens.hall.b, alpha: 1)
         var u = Scene3DUniforms(viewProjection: simd_float4x4(pose.viewProjection(aspect: aspect)),
                                 eye: SIMD4(Float(eye.x), Float(eye.y), Float(eye.z), 1),
-                                light: SIMD4(l.x, l.y, l.z, 0.35), zoneCount: UInt32(zones.count))
+                                light: SIMD4(l.x, l.y, l.z, Tokens.theme.isDark ? 0.35 : 0.5),
+                                hall: Tokens.hall.simd, freeZone: Tokens.freeZone.simd, court: Tokens.court.simd,
+                                lines: Tokens.courtLine.simd, tintA: Tokens.zoneA.simd, tintB: Tokens.zoneB.simd,
+                                skin: Tokens.theme.skin.simd, shorts: Tokens.theme.shorts.simd, pads: Tokens.theme.pads.simd,
+                                shoes: Tokens.theme.shoes.simd, hair: Tokens.theme.hair.simd, zoneCount: UInt32(zones.count))
 
         func buffer<T>(_ items: [T]) -> MTLBuffer? {
             guard !items.isEmpty else { return nil }
@@ -434,7 +451,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
             var glyphs: [GlyphInstance] = []
             for p in scene.players where !(inPOV && p.id == scene.pov?.player) {
                 guard let s = screenPoint(V3(p.point, y: p.stature + 0.32)) else { continue }
-                glyphs += atlas.layout(p.label, center: s, height: 20, color: (p.selected ? Tokens.white : Tokens.white.withAlpha(0.85)).simd)
+                glyphs += atlas.layout(p.label, center: s, height: 20, color: (p.selected ? Tokens.text : Tokens.text.withAlpha(0.85)).simd)
             }
             if let gb = buffer(glyphs) {
                 var vs = viewSize
@@ -496,8 +513,8 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
                 dqs.append(SIMD4(Float(dq.dual.x), Float(dq.dual.y), Float(dq.dual.z), Float(dq.dual.w)))
             }
             // The libero wears a contrasting (white) jersey; the rim keeps the team colour.
-            let team = p.side == .home ? Tokens.accent : Tokens.opponent
-            let jersey = p.isLibero ? Tokens.white : team
+            let team = Tokens.team(p.side)
+            let jersey = p.isLibero ? Tokens.liberoJersey : team
             let hideHead: UInt32 = inPOV && transition == nil && p.id == scene.pov?.player ? 1 : 0
             groups[key, default: []].append(AvatarInstanceGPU(color: jersey.simd, rim: team.simd, dqOffset: offset,
                                                               selected: p.selected ? 1 : 0, hideHead: hideHead))
@@ -544,17 +561,17 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         var q: [Quad3D] = []
         for p in scene.players {
             let r = p.selected ? 0.55 : 0.45
-            let color = p.isLibero ? Tokens.white : (p.side == .home ? Tokens.accent : Tokens.opponent)
+            let color = p.isLibero ? Tokens.liberoJersey : Tokens.team(p.side)
             q.append(quad(origin: V3(p.point.x - r, 0.012, p.point.z - r), u: V3(2 * r, 0, 0), v: V3(0, 0, 2 * r),
                           color: color.withAlpha(p.selected ? 1 : 0.8), pattern: 3))
         }
         for stroke in scene.ink where stroke.count > 1 {
             for i in 1..<stroke.count {
-                if let r = ribbon(stroke[i - 1], stroke[i], width: 0.06, color: Tokens.accentActive) { q.append(r) }
+                if let r = ribbon(stroke[i - 1], stroke[i], width: 0.06, color: Tokens.ink) { q.append(r) }
             }
         }
         for h in scene.highlights {
-            if let r = ribbon(h.a, h.b, width: 0.05, color: Tokens.white.withAlpha(0.9)) { q.append(r) }
+            if let r = ribbon(h.a, h.b, width: 0.05, color: Tokens.text.withAlpha(0.9)) { q.append(r) }
         }
         return q
     }
@@ -564,9 +581,9 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         let nh = scene.netHeight
         let up = V3(0, 1, 0)
         var q: [Quad3D] = [
-            quad(origin: V3(-4.95, nh - 1, 0), u: V3(9.9, 0, 0), v: up * 0.93, color: Tokens.white.withAlpha(0.75), pattern: 1),
-            quad(origin: V3(-4.95, nh - 0.07, 0), u: V3(9.9, 0, 0), v: up * 0.07, color: Tokens.white.withAlpha(0.95)),
-            quad(origin: V3(-4.95, nh - 1, 0), u: V3(9.9, 0, 0), v: up * 0.05, color: Tokens.white.withAlpha(0.8)),
+            quad(origin: V3(-4.95, nh - 1, 0), u: V3(9.9, 0, 0), v: up * 0.93, color: Tokens.net.withAlpha(0.75), pattern: 1),
+            quad(origin: V3(-4.95, nh - 0.07, 0), u: V3(9.9, 0, 0), v: up * 0.07, color: Tokens.white.withAlpha(0.97)),
+            quad(origin: V3(-4.95, nh - 1, 0), u: V3(9.9, 0, 0), v: up * 0.05, color: Tokens.white.withAlpha(0.9)),
         ]
         for s in [-1.0, 1.0] {
             // Antennas: 1.8 m, 0.8 m above the tape, on the outer edge of the side bands.
@@ -575,7 +592,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
             q.append(quad(origin: V3(x, nh - 1, -0.015), u: V3(0, 0, 0.03), v: up * 1.8, color: Tokens.white, pattern: 2))
             // Cables to the posts and the posts themselves.
             for y in [nh - 0.02, nh - 0.98] {
-                q.append(quad(origin: V3(s * 4.95, y, 0), u: V3(s * 0.55, 0, 0), v: up * 0.02, color: Tokens.white.withAlpha(0.6)))
+                q.append(quad(origin: V3(s * 4.95, y, 0), u: V3(s * 0.55, 0, 0), v: up * 0.02, color: Tokens.net.withAlpha(0.6)))
             }
             let px = s * 5.5
             q.append(quad(origin: V3(px - 0.05, 0, 0), u: V3(0.1, 0, 0), v: up * (nh + 0.12), color: RGBA(hex: 0x8A93B8)))
@@ -594,7 +611,9 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
             let label = p.label
             guard label.allSatisfy(\.isNumber) else { continue }
             let chest = joints[Joint.chest.rawValue]
-            let ink = p.isLibero ? RGBA(hex: 0x11183A) : Tokens.white
+            // Numbers in white or ink, whichever stands out against the jersey.
+            let jersey = p.isLibero ? Tokens.liberoJersey : Tokens.team(p.side)
+            let ink = jersey.r * 0.299 + jersey.g * 0.587 + jersey.b * 0.114 > 0.62 ? RGBA(hex: 0x11183A) : Tokens.white
             let up = chest.rotation.rotate(V3(0, 1, 0))
             for front in [false, true] {
                 let centre = chest.apply(front ? V3(0, -0.012 * h, 0.075 * h) : V3(0, -0.03 * h, -0.074 * h))
@@ -662,7 +681,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         let dq = DualQuat(Rigid(translation: b))
         var dqs: [SIMD4<Float>] = [SIMD4(Float(dq.real.x), Float(dq.real.y), Float(dq.real.z), Float(dq.real.w)),
                                    SIMD4(Float(dq.dual.x), Float(dq.dual.y), Float(dq.dual.z), Float(dq.dual.w))]
-        var instance = AvatarInstanceGPU(color: RGBA(hex: 0xFFE14D).simd, rim: RGBA(hex: 0xFFE14D).simd, dqOffset: 0, selected: 1)
+        var instance = AvatarInstanceGPU(color: Tokens.ball.simd, rim: Tokens.ball.simd, dqOffset: 0, selected: 1)
         enc.setDepthStencilState(depthWrite)
         enc.setRenderPipelineState(avatarPipeline)
         enc.setVertexBuffer(m.vertices, offset: 0, index: 0)
@@ -679,13 +698,13 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         var q: [Quad3D] = []
         for path in scene.ballPaths where path.count > 1 {
             for i in 1..<path.count {
-                if let r = billboard(path[i - 1], path[i], width: 0.025, eye: eye, color: Tokens.white.withAlpha(0.5), pattern: 4) { q.append(r) }
+                if let r = billboard(path[i - 1], path[i], width: 0.025, eye: eye, color: Tokens.text.withAlpha(0.55), pattern: 4) { q.append(r) }
             }
         }
         if let b = scene.ball {
             let r = 0.16
             q.append(quad(origin: V3(b.x - r, 0.013, b.z - r), u: V3(2 * r, 0, 0), v: V3(0, 0, 2 * r),
-                          color: RGBA(hex: 0xFFE14D).withAlpha(0.7), pattern: 3))
+                          color: Tokens.ball.withAlpha(0.7), pattern: 3))
         }
         return q
     }
@@ -705,7 +724,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         var q: [Quad3D] = []
         let red = RGBA(hex: 0xFF3B1A)
         for ray in scene.gaze {
-            let team = ray.side == .home ? Tokens.accent : Tokens.opponent
+            let team = Tokens.team(ray.side)
             let dir = (ray.to - ray.from).normalized
             let start = ray.from + dir * 0.12           // out of the head
             if ray.visible || ray.occlusion == nil {
@@ -731,7 +750,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         let fw = f.forward.normalized
         let right = fw.cross(.up).normalized
         let up = right.cross(fw)
-        let tint = f.side == .home ? Tokens.accent : Tokens.opponent
+        let tint = Tokens.team(f.side)
         func fan(_ directions: [V3], length: Double, alpha: Double) -> [WallVertexGPU] {
             let c = tint.withAlpha(alpha).simd
             func v(_ p: V3) -> WallVertexGPU { WallVertexGPU(position: SIMD4(Float(p.x), Float(p.y), Float(p.z), 0), color: c) }
@@ -777,7 +796,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
             guard outline.count >= 2 else { continue }
             let intensity = scene.zoneIntensities[zone.id] ?? 1
             guard intensity > 0.001 else { continue }
-            let tint = zone.style.tint == .pink ? Tokens.accent : Tokens.opponent
+            let tint = zone.style.tint == .pink ? Tokens.zoneA : Tokens.zoneB
             let alpha = (zone.id == scene.selectedZone ? 0.55 : 0.38) * intensity
             let color = tint.withAlpha(alpha).simd
             func v(_ p: FloorPoint, _ f: Double) -> WallVertexGPU {

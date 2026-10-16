@@ -15,18 +15,18 @@ struct BenchStrip: View {
             ForEach(controller.benchChips, id: \.id) { chip in
                 Button { controller.substitute(with: chip.id) } label: {
                     Text(chip.label)
-                        .font(.system(size: 20, weight: .bold).width(.expanded).monospacedDigit())
+                        .font(.themed(20, .bold).monospacedDigit())
                         .frame(minWidth: Tokens.targetLivePrimary, minHeight: Tokens.targetLivePrimary)
-                        .background(Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 6))
-                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Tokens.accent.withAlpha(0.6).color))
+                        .background(Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+                        .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.accent.withAlpha(0.6).color))
                 }
-                .foregroundStyle(Tokens.white.color)
+                .foregroundStyle(Tokens.text.color)
                 .accessibilityLabel("Substitute number \(chip.label)")
             }
         }
         .padding(10)
-        .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.accent.color, lineWidth: 1.5))
+        .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+        .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.accent.color, lineWidth: 1.5))
     }
 }
 
@@ -48,10 +48,10 @@ struct RingPanel: View {
                 ForEach(1...6, id: \.self) { r in
                     let on = controller.preview?.rotation == r
                     Button("R\(r)") { controller.showPreview(rotation: r, phase: phase) }
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.themed(14, .bold))
                         .frame(width: 40, height: Tokens.targetStandard)
-                        .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 4))
-                        .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.white.color)
+                        .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+                        .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.text.color)
                 }
             }
             HStack {
@@ -68,8 +68,8 @@ struct RingPanel: View {
         }
         .padding(12)
         .frame(width: 300)
-        .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.accent.withAlpha(0.6).color))
+        .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+        .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.accent.withAlpha(0.6).color))
         .onChange(of: phase) { _, newPhase in
             if let r = controller.preview?.rotation { controller.showPreview(rotation: r, phase: newPhase) }
         }
@@ -109,7 +109,7 @@ struct SkillPad: View {
             HStack {
                 Text("#\(controller.labels[pad.player] ?? "?") \u{00B7} \(skill.name.uppercased())")
                     .font(.sectionLabel)
-                    .foregroundStyle(pad.side == .home ? Tokens.accent.color : Tokens.opponent.color)
+                    .foregroundStyle(Tokens.team(pad.side).color)
                 Spacer()
                 Button { controller.closeSkillPad() } label: {
                     Image(systemName: "xmark").frame(width: 32, height: 32)
@@ -120,10 +120,10 @@ struct SkillPad: View {
             HStack(spacing: 6) {
                 ForEach(Skill.allCases, id: \.self) { s in
                     Button(s.rawValue) { skill = s }
-                        .font(.system(size: 15, weight: .bold).width(.expanded))
+                        .font(.themed(15, .bold))
                         .frame(width: 52, height: 36)
-                        .background(s == skill ? Tokens.white.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 4))
-                        .foregroundStyle(s == skill ? Tokens.canvasBase.color : Tokens.white.color)
+                        .background(s == skill ? Tokens.text.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+                        .foregroundStyle(s == skill ? Tokens.canvasBase.color : Tokens.text.color)
                         .accessibilityLabel(s.name)
                 }
             }
@@ -131,26 +131,26 @@ struct SkillPad: View {
                 ForEach(SkillGrade.allCases, id: \.self) { grade in
                     Button { controller.code(skill: skill, grade: grade) } label: {
                         Text(skill.rawValue + grade.symbol)
-                            .font(.system(size: 20, weight: .heavy).width(.expanded))
+                            .font(.themed(20, .heavy))
                             .frame(width: 64, height: Tokens.targetLivePrimary)
-                            .background(Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 6))
-                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(gradeColor(grade).color, lineWidth: 1.5))
+                            .background(Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+                            .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(gradeColor(grade).color, lineWidth: 1.5))
                     }
-                    .foregroundStyle(Tokens.white.color)
+                    .foregroundStyle(Tokens.text.color)
                     .accessibilityLabel("\(skill.name) \(grade.symbol)")
                 }
             }
         }
         .padding(12)
-        .background(Tokens.canvasRaised.withAlpha(0.97).color, in: RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.accent.withAlpha(0.7).color))
+        .background(Tokens.canvasRaised.withAlpha(0.97).color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+        .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.accent.withAlpha(0.7).color))
     }
 
     private func gradeColor(_ g: SkillGrade) -> RGBA {
         switch g {
         case .perfect, .positive: return Tokens.accent
-        case .fair: return Tokens.white.withAlpha(0.5)
-        case .negative, .poor: return Tokens.white.withAlpha(0.3)
+        case .fair: return Tokens.text.withAlpha(0.5)
+        case .negative, .poor: return Tokens.text.withAlpha(0.3)
         case .error: return Tokens.fault
         }
     }
@@ -165,19 +165,19 @@ struct LiveStatStrip: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Text("SIDE-OUT, LAST 10").font(.system(size: 9, weight: .semibold).width(.expanded))
+            Text("SIDE-OUT, LAST 10").font(.themed(9, .semibold))
                 .foregroundStyle(Tokens.textSecondary.color)
                 .padding(.horizontal, 10)
             ForEach(controller.rotationCells) { c in
                 Button { detail = c.id } label: {
                     HStack(spacing: 6) {
                         Text("R\(c.id)").font(.sectionLabel)
-                            .foregroundStyle(c.id == controller.homeRotation ? Tokens.accent.color : Tokens.textSecondary.color)
+                            .foregroundStyle(c.id == controller.homeRotation ? Tokens.home.color : Tokens.textSecondary.color)
                         Text(Self.percent(c.sideOutWon, c.sideOutTotal)).font(.dataMono)
                     }
                     .frame(maxWidth: .infinity, minHeight: Tokens.statusHeight)
                 }
-                .foregroundStyle(Tokens.white.color)
+                .foregroundStyle(Tokens.text.color)
                 .popover(isPresented: Binding(get: { detail == c.id }, set: { if !$0 { detail = nil } })) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("R\(c.id) \u{00B7} last 10 rallies").font(.sectionLabel)

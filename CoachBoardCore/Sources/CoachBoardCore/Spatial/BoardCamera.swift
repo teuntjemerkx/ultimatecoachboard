@@ -72,8 +72,16 @@ public struct BoardCamera: Hashable, Sendable {
 
     /// The 2D view as a camera: straight down, a 1 degree field of view (practically orthographic), framing
     /// `courtWidth` x `courtHeight` metres. `homeOnLeft` matches the 2D sideline-true orientation.
-    public static func topDown(aspect: Double, homeOnLeft: Bool = true, frameLength: Double = 22.8, frameWidth: Double = 13.8) -> BoardCamera {
+    /// `vertical` matches the upright 2D court of portrait views: the court length runs down the screen with the
+    /// home half at the bottom (heading pi/2) unless `homeOnLeft` is false (ends switched).
+    public static func topDown(aspect: Double, homeOnLeft: Bool = true, vertical: Bool = false,
+                               frameLength: Double = 22.8, frameWidth: Double = 13.8) -> BoardCamera {
         let fov = 1.0 * Double.pi / 180
+        if vertical {
+            let neededHeight = max(frameLength, frameWidth / aspect)
+            return BoardCamera(heading: homeOnLeft ? .pi / 2 : -.pi / 2, pitch: .pi / 2,
+                               distance: neededHeight / (2 * tan(fov / 2)), fovY: fov)
+        }
         // Screen width shows the court length (Z); screen height the width (X).
         let neededHeight = max(frameWidth, frameLength / aspect)
         return BoardCamera(heading: homeOnLeft ? 0 : .pi, pitch: .pi / 2, distance: neededHeight / (2 * tan(fov / 2)), fovY: fov)
@@ -85,8 +93,16 @@ public struct BoardCamera: Hashable, Sendable {
 
     /// The default 3D view from the home bench: 32 degrees above the floor, 45 degree field of view, the eye
     /// turned `benchOffset` toward the home half (world +Z).
-    public static func bench(aspect: Double, homeOnLeft: Bool = true) -> BoardCamera {
+    public static func bench(aspect: Double, homeOnLeft: Bool = true, vertical: Bool = false) -> BoardCamera {
         let fov = 45.0 * Double.pi / 180
+        if vertical {
+            // Upright screens: from behind the home end line, 38 degrees up, the court's width across the screen.
+            let pitch = 38.0 * Double.pi / 180
+            let width = 12.5
+            let distance = width / (2 * tan(fov / 2) * aspect) * 1.15
+            return BoardCamera(target: V3(0, 0, homeOnLeft ? 1.5 : -1.5), heading: homeOnLeft ? .pi / 2 : -.pi / 2,
+                               pitch: pitch, distance: distance, fovY: fov)
+        }
         let pitch = 32.0 * Double.pi / 180
         // Frame the court length across the screen width.
         let width = 20.0, height = width / aspect

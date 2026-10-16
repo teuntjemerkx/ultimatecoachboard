@@ -65,7 +65,7 @@ jobs:
             | while IFS= read -r line; do echo "::error::${line:0:900}"; done
       - name: Screenshots in demo mode
         if: steps.sim.outputs.udid != ''
-        timeout-minutes: 20
+        timeout-minutes: 30
         env:
           UDID: ${{ steps.sim.outputs.udid }}
         run: |
@@ -79,18 +79,25 @@ jobs:
           # The first launch after boot can take minutes while the Simulator finishes setting up; warm it up once.
           limit 240 xcrun simctl launch "$UDID" app.ultimatecoachboard.ipad || echo "warm-up launch failed or timed out" >> shots/ci-log.txt
           sleep 5
-          for s in launcher setup live advanced setbreak log studio studio3d pov gallery; do
-            launched=no
+          # shot <file> <screen> [extra launch arguments]
+          shot() {
+            local name=$1 screen=$2; shift 2
+            local launched=no
             for attempt in 1 2; do
-              if limit 90 xcrun simctl launch --terminate-running-process "$UDID" app.ultimatecoachboard.ipad -demoScreen "$s"; then
+              if limit 90 xcrun simctl launch --terminate-running-process "$UDID" app.ultimatecoachboard.ipad -demoScreen "$screen" "$@"; then
                 launched=yes; break
               fi
-              echo "$s: launch attempt $attempt failed or timed out" >> shots/ci-log.txt
+              echo "$name: launch attempt $attempt failed or timed out" >> shots/ci-log.txt
             done
             if [ "$launched" = yes ]; then
               sleep 10
-              limit 30 xcrun simctl io "$UDID" screenshot "shots/$s.png" || echo "$s: screenshot timed out" >> shots/ci-log.txt
+              limit 30 xcrun simctl io "$UDID" screenshot "shots/$name.png" || echo "$name: screenshot timed out" >> shots/ci-log.txt
             fi
+          }
+          # Every screen in the default (recommended) template, then Live and 3D Studio in each other template.
+          for s in launcher setup live advanced setbreak log studio studio3d pov gallery; do shot "$s" "$s"; done
+          for t in night broadcast whiteboard neon; do
+            for s in launcher live studio3d; do shot "${t}_${s}" "$s" -theme "$t"; done
           done
           DATA=$(limit 30 xcrun simctl get_app_container "$UDID" app.ultimatecoachboard.ipad data || true)
           cp "$DATA/Documents/demo-diagnostics.txt" shots/diagnostics.txt 2>/dev/null || echo "no diagnostics" > shots/diagnostics.txt

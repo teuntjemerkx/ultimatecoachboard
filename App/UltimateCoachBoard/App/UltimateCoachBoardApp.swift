@@ -8,8 +8,6 @@ struct UltimateCoachBoardApp: App {
     var body: some Scene {
         WindowGroup {
             RootView(model: model)
-                .preferredColorScheme(.dark)
-                .tint(Tokens.accent.color)
         }
         .modelContainer(for: [Team.self, Player.self])
     }
@@ -20,7 +18,7 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
-            Tokens.canvasBase.color.ignoresSafeArea()
+            Tokens.background.color.ignoresSafeArea()
             switch model.screen {
             case .launcher:
                 LauncherView(model: model)
@@ -37,6 +35,10 @@ struct RootView: View {
                 StudioView(controller: controller, onExit: { model.backToLauncher() })
             }
         }
+        // The template decides light or dark for system controls and sheets; Tokens are read here, so a template
+        // change re-renders the whole tree.
+        .preferredColorScheme(Tokens.theme.isDark ? .dark : .light)
+        .tint(Tokens.accent.color)
         .sheet(isPresented: $model.showSettings) { SettingsView() }
         .alert("Something went wrong", isPresented: Binding(get: { model.errorMessage != nil },
                                                              set: { if !$0 { model.errorMessage = nil } })) {

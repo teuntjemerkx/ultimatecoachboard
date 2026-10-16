@@ -99,7 +99,7 @@ struct MatchSetupView: View {
     private var lineupColumn: some View {
         VStack(alignment: .leading, spacing: 18) {
             TextField("Our team", text: $setup.homeName)
-                .font(.system(size: 24, weight: .bold).width(.expanded))
+                .font(.themed(24, .bold))
             VStack(spacing: 10) {
                 HStack {
                     Text("NET").font(.sectionLabel).foregroundStyle(Tokens.accent.color)
@@ -116,8 +116,8 @@ struct MatchSetupView: View {
                 }
             }
             .padding(16)
-            .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.courtLine.color, lineWidth: 1))
+            .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+            .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.courtLine.color, lineWidth: 1))
             rosterStrip
             Text(hint).font(.system(size: 13)).foregroundStyle(Tokens.textSecondary.color)
         }
@@ -141,14 +141,14 @@ struct MatchSetupView: View {
             VStack(spacing: 4) {
                 Text(pos.label).font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
                 Text(player.map { "\($0.jersey)" } ?? "—")
-                    .font(.system(size: 34, weight: .bold).width(.expanded).monospacedDigit())
+                    .font(.themed(34, .bold).monospacedDigit())
                 Text(roles[pos] ?? "").font(.sectionLabel)
                     .foregroundStyle(isSetter ? Tokens.accent.color : Tokens.textSecondary.color)
             }
-            .foregroundStyle(Tokens.white.color)
+            .foregroundStyle(Tokens.text.color)
             .frame(maxWidth: .infinity, minHeight: 112)
-            .background(Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6)
+            .background(Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+            .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius)
                 .stroke(highlighted || isSetter ? Tokens.accent.color : Tokens.hairline.color,
                         lineWidth: armed == .slot(index) ? 3 : (highlighted || isSetter ? 1.5 : 1)))
         }
@@ -163,13 +163,13 @@ struct MatchSetupView: View {
             HStack(spacing: 10) {
                 Text("L").font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
                 Text(setup.homeLibero.map { "\($0.jersey)" } ?? "—")
-                    .font(.system(size: 26, weight: .bold).width(.expanded).monospacedDigit())
+                    .font(.themed(26, .bold).monospacedDigit())
                 Text("LIBERO").font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
             }
-            .foregroundStyle(Tokens.white.color)
+            .foregroundStyle(Tokens.text.color)
             .frame(maxWidth: .infinity, minHeight: 60)
-            .background(Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(armed == .slot(-1) ? Tokens.accent.color : Tokens.hairline.color,
+            .background(Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+            .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(armed == .slot(-1) ? Tokens.accent.color : Tokens.hairline.color,
                                                              lineWidth: armed == .slot(-1) ? 3 : 1))
         }
         .buttonStyle(.plain)
@@ -192,16 +192,16 @@ struct MatchSetupView: View {
                     .draggable(p.id.uuidString)
                 }
                 HStack(spacing: 4) {
-                    Text("+#").font(.system(size: 15, weight: .bold)).foregroundStyle(Tokens.accent.color)
+                    Text("+#").font(.themed(15, .bold)).foregroundStyle(Tokens.accent.color)
                     TextField("new", text: $quickJersey)
                         .keyboardType(.numberPad)
-                        .font(.system(size: 20, weight: .semibold).monospacedDigit())
+                        .font(.themed(20, .semibold).monospacedDigit())
                         .frame(width: 60)
                         .onSubmit(quickAdd)
                 }
                 .padding(.horizontal, 12)
                 .frame(height: Tokens.targetLivePrimary)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Tokens.hairline.color))
+                .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.hairline.color))
             }
             .padding(.vertical, 2)
         }
@@ -211,13 +211,13 @@ struct MatchSetupView: View {
         Button(action: action) {
             VStack(spacing: 0) {
                 Text(title).font(.system(size: title.count > 3 ? 13 : 22, weight: .bold).width(.expanded).monospacedDigit())
-                Text(subtitle).font(.system(size: 10, weight: .semibold)).foregroundStyle(Tokens.textSecondary.color)
+                Text(subtitle).font(.themed(10, .semibold)).foregroundStyle(Tokens.textSecondary.color)
             }
-            .foregroundStyle(selected ? Tokens.canvasBase.color : Tokens.white.color)
+            .foregroundStyle(selected ? Tokens.canvasBase.color : Tokens.text.color)
             .frame(minWidth: Tokens.targetLivePrimary, minHeight: Tokens.targetLivePrimary)
             .padding(.horizontal, 6)
-            .background(selected ? Tokens.accent.color : Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Tokens.hairline.color))
+            .background(selected ? Tokens.accent.color : Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+            .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.hairline.color))
         }
         .buttonStyle(.plain)
     }
@@ -340,15 +340,15 @@ struct MatchSetupView: View {
                 Stepper(String(format: "Custom %.2f m", setup.netHeight), value: $setup.netHeight, in: 2.00...2.43, step: 0.01)
             }
             group("RULES") {
-                Text(Self.profile?.name ?? "FIVB senior indoor").font(.system(size: 15, weight: .semibold))
+                Text(Self.profile?.name ?? "FIVB senior indoor").font(.themed(15, .semibold))
             }
             Toggle("Working alone today?", isOn: Binding(get: { setup.mode == .solo },
                                                           set: { setup.mode = $0 ? .solo : .advanced }))
             if let problem = validationProblem {
-                Text(problem).font(.system(size: 14, weight: .semibold)).foregroundStyle(Tokens.accentActive.color)
+                Text(problem).font(.themed(14, .semibold)).foregroundStyle(Tokens.fault.color)
             } else {
                 Label(templateBadge, systemImage: "checkmark.seal.fill")
-                    .font(.system(size: 14, weight: .semibold)).foregroundStyle(Tokens.accent.color)
+                    .font(.themed(14, .semibold)).foregroundStyle(Tokens.accent.color)
             }
             ForEach(roleWarnings, id: \.self) { w in
                 Text(w).font(.system(size: 13)).foregroundStyle(Tokens.textSecondary.color)
@@ -356,9 +356,9 @@ struct MatchSetupView: View {
             Spacer(minLength: 8)
             Button { onStart(withBench(setup)) } label: {
                 Text("START")
-                    .font(.system(size: 20, weight: .heavy).width(.expanded))
+                    .font(.themed(20, .heavy))
                     .frame(maxWidth: .infinity, minHeight: Tokens.targetLiveCritical)
-                    .background(validationProblem == nil ? Tokens.accent.color : Tokens.hairline.color, in: RoundedRectangle(cornerRadius: 6))
+                    .background(validationProblem == nil ? Tokens.accent.color : Tokens.hairline.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
                     .foregroundStyle(Tokens.canvasBase.color)
             }
             .disabled(validationProblem != nil)

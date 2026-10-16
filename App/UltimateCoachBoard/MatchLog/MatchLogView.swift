@@ -81,10 +81,10 @@ struct MatchLogView: View {
             HStack(spacing: 8) {
                 ForEach(LogFilter.allCases) { f in
                     Button(f.rawValue) { filter = f }
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.themed(13, .semibold))
                         .padding(.horizontal, 12).frame(height: 36)
                         .background(filter == f ? Tokens.accent.color : Tokens.canvasBase.color, in: Capsule())
-                        .foregroundStyle(filter == f ? Tokens.canvasBase.color : Tokens.white.color)
+                        .foregroundStyle(filter == f ? Tokens.canvasBase.color : Tokens.text.color)
                 }
             }
             .padding(12)
@@ -96,7 +96,7 @@ struct MatchLogView: View {
         let sets = Dictionary(grouping: visible, by: \.rally.setNumber)
         return List(selection: $selected) {
             if let loadError {
-                Text(loadError).foregroundStyle(Tokens.accentActive.color)
+                Text(loadError).foregroundStyle(Tokens.fault.color)
             }
             ForEach(sets.keys.sorted(), id: \.self) { n in
                 Section(header: Text(setHeader(n))) {
@@ -143,15 +143,15 @@ struct MatchLogView: View {
                     Spacer()
                     Text(row.rally.winner == .home ? "\(summary.homeName) won" : "\(summary.opponentName) won")
                         .font(.sectionLabel)
-                        .foregroundStyle(row.rally.winner == .home ? Tokens.accent.color : Tokens.opponent.color)
+                        .foregroundStyle(Tokens.team(row.rally.winner).color)
                 }
-                .foregroundStyle(Tokens.white.color)
+                .foregroundStyle(Tokens.text.color)
                 .padding(.horizontal, 16).padding(.top, 12)
                 if !row.skills.isEmpty {
                     Text(row.skills.map { "\($0.side == .home ? "" : "them ")#\(labels[$0.player] ?? "?") \($0.skill.rawValue)\($0.grade.symbol)" }
                         .joined(separator: "   "))
                         .font(.dataMono)
-                        .foregroundStyle(Tokens.white.color)
+                        .foregroundStyle(Tokens.text.color)
                         .padding(.horizontal, 16)
                 }
                 StaticBoardView(scene: BoardScene.snapshot(before, labels: labels, lines: lines))
@@ -208,13 +208,13 @@ struct LogRowView: View {
     var body: some View {
         let r = row.rally
         HStack(spacing: 10) {
-            Circle().fill(r.winner == .home ? Tokens.accent.color : Tokens.opponent.color).frame(width: 10, height: 10)
-            Text("\(r.scoreAfter.home):\(r.scoreAfter.opponent)").font(.system(size: 17, weight: .bold).monospacedDigit())
+            Circle().fill(Tokens.team(r.winner).color).frame(width: 10, height: 10)
+            Text("\(r.scoreAfter.home):\(r.scoreAfter.opponent)").font(.themed(17, .bold).monospacedDigit())
                 .frame(width: 58, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
                 Text((r.serving == .home ? "Us" : "Them") + " serve" + (r.server.flatMap { labels[$0] }.map { " #\($0)" } ?? "")
                      + (r.sideOut ? " · side-out" : " · break"))
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.themed(13, .semibold))
                 Text("R\(r.homeRotation) \u{21C4} R\(r.opponentRotation)").font(.dataMono).foregroundStyle(Tokens.textSecondary.color)
             }
             Spacer()
@@ -272,7 +272,7 @@ struct PlayerStatsSheet: View {
                         Divider()
                         ForEach(players, id: \.self) { p in
                             GridRow {
-                                Text(labels[p] ?? "?").font(.system(size: 20, weight: .bold).width(.expanded).monospacedDigit())
+                                Text(labels[p] ?? "?").font(.themed(20, .bold).monospacedDigit())
                                 ForEach(skills, id: \.self) { s in cell(table[p]?[s]) }
                             }
                         }

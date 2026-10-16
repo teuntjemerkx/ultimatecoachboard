@@ -205,3 +205,26 @@ final class PostureLibraryTests: XCTestCase {
         XCTAssertNil(PostureLibrary.position(forRole: nil))
     }
 }
+
+final class UprightCameraTests: XCTestCase {
+    /// Portrait boards stand the court upright: home at the bottom, home's right (+X) to the right, in 2D and 3D alike.
+    func testVerticalTopDownAndEndViewPutHomeAtTheBottom() throws {
+        for cam in [BoardCamera.topDown(aspect: 0.75, vertical: true), BoardCamera.bench(aspect: 0.75, vertical: true)] {
+            let home = try XCTUnwrap(cam.project(V3(0, 0, 6), aspect: 0.75))
+            let away = try XCTUnwrap(cam.project(V3(0, 0, -6), aspect: 0.75))
+            XCTAssertLessThan(home.y, away.y, "home half lower on the screen")
+            let right = try XCTUnwrap(cam.project(V3(4, 0, 0), aspect: 0.75))
+            XCTAssertGreaterThan(right.x, 0)
+        }
+        // The whole court fits the top-down view.
+        let cam = BoardCamera.topDown(aspect: 0.75, vertical: true)
+        for p in [V3(4.5, 0, 9), V3(-4.5, 0, -9)] {
+            let c = try XCTUnwrap(cam.project(p, aspect: 0.75))
+            XCTAssertLessThanOrEqual(abs(c.x), 1)
+            XCTAssertLessThanOrEqual(abs(c.y), 1)
+        }
+        // Switched ends: home on top.
+        let flipped = BoardCamera.topDown(aspect: 0.75, homeOnLeft: false, vertical: true)
+        XCTAssertGreaterThan(try XCTUnwrap(flipped.project(V3(0, 0, 6), aspect: 0.75)).y, 0)
+    }
+}

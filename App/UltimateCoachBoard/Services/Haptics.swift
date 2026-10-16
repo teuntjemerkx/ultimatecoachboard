@@ -38,13 +38,13 @@ final class Feedback {
         switch pattern {
         case .originAccepted: spec = (1, Tokens.accent)
         case .landingAccepted: spec = (2, Tokens.accent)
-        case .rejected: spec = (1, Tokens.white.withAlpha(0.35))
-        case .point: spec = (1, Tokens.white)
-        case .sideOut: spec = (3, Tokens.white)
-        case .overlapWarning: spec = (1, Tokens.accentActive)
+        case .rejected: spec = (1, Tokens.text.withAlpha(0.35))
+        case .point: spec = (1, Tokens.text)
+        case .sideOut: spec = (3, Tokens.text)
+        case .overlapWarning: spec = (1, Tokens.fault)
         case .overlapFault: spec = (2, Tokens.fault)
-        case .panic: spec = (1, Tokens.accentActive)
-        case .undo: spec = (1, Tokens.white.withAlpha(0.5))
+        case .panic: spec = (1, Tokens.fault)
+        case .undo: spec = (1, Tokens.text.withAlpha(0.5))
         }
         cue = Cue(pattern: pattern, pulses: spec.0, color: spec.1)
         if soundEnabled && pattern != .rejected {

@@ -236,10 +236,15 @@ fragment float4 hatchFragment(HatchOut in [[stage_in]]) {
 struct FloorUniforms {
     float2 viewSize;
     float2 center;
+    float4 toWorld;     // world x = dot(toWorld.xy, d), world z = dot(toWorld.zw, d), d = (view - center) / scale
     float scale;
-    uint flipped;
     uint zoneCount;
-    uint pad;
+    float2 pad;
+    float4 court;       // template colours (rgb)
+    float4 freeZone;
+    float4 hall;
+    float4 tintA;
+    float4 tintB;
 };
 
 struct FloorOut {
@@ -255,12 +260,18 @@ vertex FloorOut floorVertex(uint vid [[vertex_id]], constant FloorUniforms &u [[
     return o;
 }
 
+// The floor pass: hall, free zone (3 m) and court in the template's colours, then every zone (Section 3.5.4).
 fragment float4 zoneFragment(FloorOut in [[stage_in]],
                              const device ZoneGPU *zones [[buffer(0)]],
                              constant FloorUniforms &u [[buffer(1)]],
                              const device float2 *verts [[buffer(2)]]) {
-    float2 vp = in.viewPoint;
-    float2 w = u.flipped == 0 ? float2((vp.y - u.center.y) / u.scale, (u.center.x - vp.x) / u.scale)
-                              : float2((u.center.y - vp.y) / u.scale, (vp.x - u.center.x) / u.scale);
-    return zoneColor(evaluateZones(w, zones, u.zoneCount, verts));
+    float2 d = (in.viewPoint - u.center) / u.scale;
+    float2 w = float2(dot(u.toWorld.xy, d), dot(u.toWorld.zw, d));
+    float dCourt = sdBox(w, float2(4.5, 9.0));
+    float dFree = sdBox(w, float2(7.5, 12.0));
+    float aa = max(fwidth(dCourt), 1e-5);
+    float3 col = mix(u.hall.rgb, u.freeZone.rgb, 1.0 - smoothstep(-aa, aa, dFree));
+    col = mix(col, u.court.rgb, 1.0 - smoothstep(-aa, aa, dCourt));
+    float4 z = zoneColor(evaluateZones(w, zones, u.zoneCount, verts), u.tintA.rgb, u.tintB.rgb);
+    return float4(col * (1.0 - z.a) + z.rgb, 1.0);
 }

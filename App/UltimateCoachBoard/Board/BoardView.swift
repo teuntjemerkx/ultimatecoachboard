@@ -184,6 +184,7 @@ struct BoardView: UIViewRepresentable {
     }
 
     func updateUIView(_ view: BoardMTKView, context: Context) {
+        _ = Tokens.theme.id                    // a template change redraws the board
         var geometry = controller.geometry
         geometry.size = view.bounds.size
         if case .panicTimeOut = controller.state.context { view.drawingEnabled = true } else { view.drawingEnabled = false }
