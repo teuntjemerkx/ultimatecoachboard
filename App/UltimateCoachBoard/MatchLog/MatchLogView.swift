@@ -2,6 +2,8 @@ import SwiftUI
 import CoachBoardCore
 
 /// Screen 7, Match Log: rows grouped by set; tapping a row shows the board as it stood before that rally.
+/// Simple keeps the everyday filters and plain wording; Advanced adds the side-out, break and scouting filters,
+/// the compact rotation labels and player stats even before any touch was coded.
 struct MatchLogView: View {
     let summary: MatchSummary
     var onClose: () -> Void
@@ -22,6 +24,21 @@ struct MatchLogView: View {
         case scouting = "Scouting", substitutions = "Substitutions"
         var id: String { rawValue }
 
+        /// The chip label.
+        var title: String {
+            switch self {
+            case .all: return "All"
+            case .sideOuts: return "Side-outs"
+            case .breaks: return "Break points"
+            case .timeOuts: return "Timeouts"
+            case .scouting: return "Scouted attacks"
+            case .substitutions: return "Substitutions"
+            }
+        }
+
+        /// Filters every coach needs; the others are for Advanced.
+        var everyday: Bool { self == .all || self == .timeOuts || self == .substitutions }
+
         func includes(_ row: MatchLogRow) -> Bool {
             switch self {
             case .all: return true
@@ -33,6 +50,12 @@ struct MatchLogView: View {
             }
         }
     }
+
+    private var advanced: Bool { ThemeStore.shared.advanced }
+    private var filters: [LogFilter] { LogFilter.allCases.filter { advanced || $0.everyday } }
+    /// A filter hidden in Simple (chosen in Advanced before switching) falls back to All.
+    private var activeFilter: LogFilter { filters.contains(filter) ? filter : .all }
+    private var hasSkillCodes: Bool { state?.skillCodes.isEmpty == false }
 
     var body: some View {
         NavigationStack {
@@ -47,20 +70,24 @@ struct MatchLogView: View {
                 boardPane
             }
             .background(Tokens.canvasBase.color)
+            .foregroundStyle(Tokens.text.color)
             .navigationTitle(summary.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Close", action: onClose) }
                 ToolbarItemGroup(placement: .primaryAction) {
-                    Button { showStats = true } label: { Label("Player stats", systemImage: "tablecells") }
-                        .disabled(state == nil)
+                    if advanced || hasSkillCodes {
+                        Button("Player stats") { showStats = true }
+                            .disabled(state == nil)
+                    }
+                    ShareLink(item: summary.url) { Label("Share match file", systemImage: "square.and.arrow.up") }
                     if !summary.finished {
                         Button("Resume match") { onResume(summary.url) }
+                            .fontWeight(.bold)
                     }
-                    ShareLink(item: summary.url) { Label("Export journal", systemImage: "square.and.arrow.up") }
                 }
             }
-            .alert("Note", isPresented: Binding(get: { noteTarget != nil }, set: { if !$0 { noteTarget = nil } })) {
+            .alert("Add a note", isPresented: Binding(get: { noteTarget != nil }, set: { if !$0 { noteTarget = nil } })) {
                 TextField("What happened?", text: $noteText)
                 Button("Save") { saveNote() }
                 Button("Cancel", role: .cancel) {}
@@ -79,12 +106,19 @@ struct MatchLogView: View {
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(LogFilter.allCases) { f in
-                    Button(f.rawValue) { filter = f }
-                        .font(.themed(13, .semibold))
-                        .padding(.horizontal, 12).frame(height: 36)
-                        .background(filter == f ? Tokens.accent.color : Tokens.canvasBase.color, in: Capsule())
-                        .foregroundStyle(filter == f ? Tokens.canvasBase.color : Tokens.text.color)
+                ForEach(filters) { f in
+                    let on = activeFilter == f
+                    Button { filter = f } label: {
+                        Text(f.title)
+                            .font(.themed(16, .semibold))
+                            .padding(.horizontal, 16).frame(height: Tokens.targetStandard)
+                            .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: Capsule())
+                            .overlay(Capsule().stroke(Tokens.hairline.color))
+                            .foregroundStyle(on ? Tokens.onAccent.color : Tokens.text.color)
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(on ? .isSelected : [])
                 }
             }
             .padding(12)
@@ -92,36 +126,48 @@ struct MatchLogView: View {
     }
 
     private var rowList: some View {
-        let visible = rows.filter(filter.includes)
+        let visible = rows.filter(activeFilter.includes)
         let sets = Dictionary(grouping: visible, by: \.rally.setNumber)
         return List(selection: $selected) {
             if let loadError {
-                Text(loadError).foregroundStyle(Tokens.fault.color)
+                Text(loadError).font(.scaled(.body)).foregroundStyle(Tokens.fault.color)
             }
             ForEach(sets.keys.sorted(), id: \.self) { n in
-                Section(header: Text(setHeader(n))) {
+                Section {
                     ForEach(sets[n] ?? []) { row in
                         LogRowView(row: row, labels: labels)
                             .tag(row.rally.seq)
                             .listRowBackground(row.rally.seq == selected ? Tokens.accent.withAlpha(0.16).color : Color.clear)
                             .swipeActions(edge: .trailing) {
-                                Button("Note") { noteText = ""; noteTarget = row }.tint(Tokens.accent.color)
+                                Button("Add note") { noteText = ""; noteTarget = row }.tint(Tokens.accent.color)
                             }
                     }
+                } header: {
+                    Text(setHeader(n)).font(.groupTitle).foregroundStyle(Tokens.textSecondary.color).textCase(nil)
                 }
             }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .overlay {
-            if rows.isEmpty && loadError == nil { Text("No rallies logged.").foregroundStyle(Tokens.textSecondary.color) }
+            if rows.isEmpty && loadError == nil {
+                if summary.finished {
+                    EmptyHint(symbol: "list.bullet", message: "No points in this match.")
+                } else {
+                    EmptyHint(symbol: "list.bullet", message: "No points in this match yet.",
+                              actionTitle: "Resume match", action: { onResume(summary.url) })
+                }
+            } else if !rows.isEmpty && visible.isEmpty {
+                EmptyHint(symbol: "line.3.horizontal.decrease.circle", message: "Nothing here for this filter.",
+                          actionTitle: "Show all", action: { filter = .all })
+            }
         }
     }
 
     private func setHeader(_ n: Int) -> String {
-        guard let state, state.match.sets.indices.contains(n - 1) else { return "SET \(n)" }
+        guard let state, state.match.sets.indices.contains(n - 1) else { return "Set \(n)" }
         let s = state.match.sets[n - 1].score
-        return "SET \(n) · \(s.home)–\(s.opponent)"
+        return "Set \(n) \u{00B7} \(s.home)\u{2013}\(s.opponent)"
     }
 
     private var labels: [PlayerID: String] { state?.setup.playerLabels ?? [:] }
@@ -132,45 +178,64 @@ struct MatchLogView: View {
         if let state, let row = rows.first(where: { $0.rally.seq == selected }) {
             let before = state.rewound(before: row.rally.seq)
             let lines = state.scoutLines.filter { $0.setNumber == row.rally.setNumber && $0.score == row.rally.scoreBefore }
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 16) {
-                    Text("SET \(row.rally.setNumber)").font(.sectionLabel)
+                    Text("Set \(row.rally.setNumber)").font(.groupTitle).foregroundStyle(Tokens.textSecondary.color)
                     Text("\(row.rally.scoreBefore.home) : \(row.rally.scoreBefore.opponent)").font(.liveNumerals)
-                    Text("\(row.rally.serving == .home ? summary.homeName : summary.opponentName) serves"
-                         + (row.rally.server.flatMap { labels[$0] }.map { " #\($0)" } ?? ""))
-                        .font(.sectionLabel)
-                    Text("R\(row.rally.homeRotation) \u{21C4} R\(row.rally.opponentRotation)").font(.dataMono)
+                    Text(serveLine(row.rally))
+                        .font(.themed(17, .semibold))
+                        .lineLimit(1)
+                    Text(advanced ? "R\(row.rally.homeRotation) \u{21C4} R\(row.rally.opponentRotation)" : "Rotation \(row.rally.homeRotation)")
+                        .font(advanced ? Font.dataMono : Font.themed(17, .regular))
+                        .foregroundStyle(Tokens.textSecondary.color)
                     Spacer()
                     Text(row.rally.winner == .home ? "\(summary.homeName) won" : "\(summary.opponentName) won")
-                        .font(.sectionLabel)
+                        .font(.themed(17, .bold))
                         .foregroundStyle(Tokens.team(row.rally.winner).color)
+                        .lineLimit(1)
+                    Button { noteText = ""; noteTarget = row } label: {
+                        Label("Add note", systemImage: "square.and.pencil")
+                    }
+                    .buttonStyle(CoachButtonStyle(kind: .secondary, minHeight: Tokens.targetStandard))
                 }
                 .foregroundStyle(Tokens.text.color)
                 .padding(.horizontal, 16).padding(.top, 12)
                 if !row.skills.isEmpty {
-                    Text(row.skills.map { "\($0.side == .home ? "" : "them ")#\(labels[$0.player] ?? "?") \($0.skill.rawValue)\($0.grade.symbol)" }
-                        .joined(separator: "   "))
-                        .font(.dataMono)
+                    Text(row.skills.map { skillText($0) }.joined(separator: "   "))
+                        .font(advanced ? Font.dataMono : Font.themed(16, .medium))
                         .foregroundStyle(Tokens.text.color)
                         .padding(.horizontal, 16)
                 }
                 StaticBoardView(scene: BoardScene.snapshot(before, labels: labels, lines: lines))
                 ForEach(row.notes, id: \.self) { n in
-                    Label(n, systemImage: "note.text").font(.system(size: 14)).padding(.horizontal, 16)
+                    Label(n, systemImage: "note.text").font(.scaled(.body)).padding(.horizontal, 16)
                 }
-                Text("Read-only: the formation before the serve, with this rally's scouted attacks.")
-                    .font(.system(size: 12)).foregroundStyle(Tokens.textSecondary.color)
+                Text(advanced ? "Read-only: the formation before the serve, with this rally's scouted attacks."
+                              : "Where everyone stood before the serve.")
+                    .font(.themed(15, .regular)).foregroundStyle(Tokens.textSecondary.color)
                     .padding(.horizontal, 16).padding(.bottom, 12)
             }
         } else {
             VStack {
                 Spacer()
-                Text("Select a rally to see the board as it stood before the serve.")
-                    .foregroundStyle(Tokens.textSecondary.color)
+                EmptyHint(symbol: "sportscourt", message: rows.isEmpty ? "The board appears here once the match has points."
+                                                                       : "Pick a point on the left to see where everyone stood.")
                 Spacer()
             }
             .frame(maxWidth: .infinity)
         }
+    }
+
+    private func serveLine(_ r: RallyRecord) -> String {
+        let team = r.serving == .home ? summary.homeName : summary.opponentName
+        let server = r.server.flatMap { labels[$0] }.map { " #\($0)" } ?? ""
+        return "\(team) serves" + server
+    }
+
+    private func skillText(_ s: SkillCode) -> String {
+        let who = (s.side == .home ? "" : (advanced ? "them " : "Them ")) + "#\(labels[s.player] ?? "?")"
+        if advanced { return "\(who) \(s.skill.rawValue)\(s.grade.symbol)" }
+        return "\(who) \(s.skill.name): \(PlainWords.grade(s.grade))"
     }
 
     // MARK: - Data
@@ -207,41 +272,59 @@ struct LogRowView: View {
 
     var body: some View {
         let r = row.rally
-        HStack(spacing: 10) {
-            Circle().fill(Tokens.team(r.winner).color).frame(width: 10, height: 10)
-            Text("\(r.scoreAfter.home):\(r.scoreAfter.opponent)").font(.themed(17, .bold).monospacedDigit())
-                .frame(width: 58, alignment: .leading)
+        let advanced = ThemeStore.shared.advanced
+        HStack(spacing: 12) {
+            Circle().fill(Tokens.team(r.winner).color).frame(width: 12, height: 12)
+            Text("\(r.scoreAfter.home):\(r.scoreAfter.opponent)").font(.themed(18, .bold).monospacedDigit())
+                .frame(width: 62, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
-                Text((r.serving == .home ? "Us" : "Them") + " serve" + (r.server.flatMap { labels[$0] }.map { " #\($0)" } ?? "")
-                     + (r.sideOut ? " · side-out" : " · break"))
-                    .font(.themed(13, .semibold))
-                Text("R\(r.homeRotation) \u{21C4} R\(r.opponentRotation)").font(.dataMono).foregroundStyle(Tokens.textSecondary.color)
+                Text(advanced ? expertLine(r) : plainLine(r))
+                    .font(.themed(16, .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                Text(advanced ? "R\(r.homeRotation) \u{21C4} R\(r.opponentRotation)" : "Rotation \(r.homeRotation)")
+                    .font(advanced ? Font.dataMono : Font.themed(15, .regular))
+                    .foregroundStyle(Tokens.textSecondary.color)
             }
             Spacer()
-            HStack(spacing: 6) {
-                if !row.skills.isEmpty { icon("list.bullet.clipboard", row.skills.count) }
-                if row.scoutLines > 0 { icon("scope", row.scoutLines) }
-                if row.sketchStrokes > 0 { icon("pencil.tip", nil) }
-                if row.substitutions > 0 { icon("arrow.left.arrow.right", row.substitutions) }
-                if row.timeOuts > 0 { icon("timer", nil) }
-                if !row.notes.isEmpty { icon("note.text", nil) }
+            HStack(spacing: 8) {
+                if !row.skills.isEmpty { icon("list.bullet.clipboard", row.skills.count, "touches coded") }
+                if row.scoutLines > 0 { icon("scope", row.scoutLines, "attacks scouted") }
+                if row.sketchStrokes > 0 { icon("pencil.tip", nil, "drawing") }
+                if row.substitutions > 0 { icon("arrow.left.arrow.right", row.substitutions, "substitutions") }
+                if row.timeOuts > 0 { icon("timer", nil, "timeout") }
+                if !row.notes.isEmpty { icon("note.text", nil, "note") }
             }
             .foregroundStyle(Tokens.textSecondary.color)
         }
-        .frame(minHeight: Tokens.targetStandard)
+        .frame(minHeight: Tokens.targetLivePrimary)
     }
 
-    private func icon(_ name: String, _ count: Int?) -> some View {
+    /// "We served #8 · Won" in Simple.
+    private func plainLine(_ r: RallyRecord) -> String {
+        let serve = (r.serving == .home ? "We served" : "They served") + (r.server.flatMap { labels[$0] }.map { " #\($0)" } ?? "")
+        return serve + (r.winner == .home ? " \u{00B7} Won" : " \u{00B7} Lost")
+    }
+
+    /// "We serve #8 · side-out" in Advanced.
+    private func expertLine(_ r: RallyRecord) -> String {
+        let serve = (r.serving == .home ? "We serve" : "They serve") + (r.server.flatMap { labels[$0] }.map { " #\($0)" } ?? "")
+        return serve + (r.sideOut ? " \u{00B7} side-out" : " \u{00B7} break")
+    }
+
+    private func icon(_ name: String, _ count: Int?, _ meaning: String) -> some View {
         HStack(spacing: 2) {
             Image(systemName: name)
-            if let count, count > 1 { Text("\(count)").font(.system(size: 11)) }
+            if let count, count > 1 { Text("\(count)").font(.themed(13, .semibold)) }
         }
-        .font(.system(size: 13))
+        .font(.system(size: 15))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(count.map { "\($0) \(meaning)" } ?? meaning)
     }
 }
 
-/// Player statistics from the Advanced Mode skill codes: per skill the number of touches, the share of # and +,
-/// and the efficiency (# − / − =) / total.
+/// Player statistics from the Detailed live mode's skill codes: per skill the number of touches, the share of
+/// # and +, and (Advanced) the efficiency (# − / − =) / total.
 struct PlayerStatsSheet: View {
     let state: LiveState
     let labels: [PlayerID: String]
@@ -252,6 +335,7 @@ struct PlayerStatsSheet: View {
     private let skills: [Skill] = [.serve, .reception, .set, .attack, .block, .dig]
 
     var body: some View {
+        let advanced = ThemeStore.shared.advanced
         let setNumber = setFilter == 0 ? nil : setFilter
         let table = SkillStats.table(state.skillCodes, side: .home, setNumber: setNumber)
         let team = SkillStats.team(state.skillCodes, side: .home, setNumber: setNumber)
@@ -259,38 +343,49 @@ struct PlayerStatsSheet: View {
         NavigationStack {
             ScrollView {
                 if players.isEmpty {
-                    Text("No skill codes yet. Long-press the mode badge in Live to switch to Advanced and code touches.")
-                        .foregroundStyle(Tokens.textSecondary.color)
-                        .padding(24)
+                    EmptyHint(symbol: "tablecells",
+                              message: advanced
+                                ? "No skill codes yet. In Live, set the mode to Detailed and tap a player to code a touch."
+                                : "No touches recorded yet. In a match, tap More, then More detail, and tap a player.")
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 40)
                 } else {
-                    Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 10) {
+                    Grid(alignment: .leading, horizontalSpacing: 22, verticalSpacing: 12) {
                         GridRow {
-                            Text("#").font(.sectionLabel)
-                            ForEach(skills, id: \.self) { Text($0.name.uppercased()).font(.sectionLabel) }
+                            Text(advanced ? "#" : "Player").font(.groupTitle)
+                            ForEach(skills, id: \.self) { Text($0.name).font(.groupTitle) }
                         }
                         .foregroundStyle(Tokens.textSecondary.color)
                         Divider()
                         ForEach(players, id: \.self) { p in
                             GridRow {
-                                Text(labels[p] ?? "?").font(.themed(20, .bold).monospacedDigit())
-                                ForEach(skills, id: \.self) { s in cell(table[p]?[s]) }
+                                Text(advanced ? (labels[p] ?? "?") : PlainWords.player(labels[p], advanced: false))
+                                    .font(.themed(22, .bold).monospacedDigit())
+                                ForEach(skills, id: \.self) { s in cell(table[p]?[s], advanced: advanced) }
                             }
                         }
                         Divider()
                         GridRow {
-                            Text(teamName.uppercased()).font(.sectionLabel)
-                            ForEach(skills, id: \.self) { s in cell(team[s]) }
+                            Text(teamName).font(.groupTitle)
+                            ForEach(skills, id: \.self) { s in cell(team[s], advanced: advanced) }
                         }
                     }
                     .padding(24)
+                    if !advanced {
+                        Text("Touches, and the share that was perfect or good.")
+                            .font(.scaled(.subheadline))
+                            .foregroundStyle(Tokens.textSecondary.color)
+                            .padding(.horizontal, 24)
+                    }
                 }
             }
             .background(Tokens.canvasBase.color)
+            .foregroundStyle(Tokens.text.color)
             .navigationTitle("Player stats")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Picker("Set", selection: $setFilter) {
-                        Text("Match").tag(0)
+                        Text("Whole match").tag(0)
                         ForEach(state.match.sets.map(\.number), id: \.self) { Text("Set \($0)").tag($0) }
                     }
                     .pickerStyle(.segmented)
@@ -300,16 +395,21 @@ struct PlayerStatsSheet: View {
         }
     }
 
-    @ViewBuilder private func cell(_ line: SkillLine?) -> some View {
+    @ViewBuilder private func cell(_ line: SkillLine?, advanced: Bool) -> some View {
         if let line, line.total > 0 {
+            let rate = line.positiveRate.map { "\(Int(($0 * 100).rounded()))%" } ?? "\u{2013}"
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(line.total)  \(line.positiveRate.map { "\(Int(($0 * 100).rounded()))%" } ?? "–")")
-                    .font(.dataMono)
-                Text("eff \(line.efficiency.map { String(format: "%+.0f", $0 * 100) } ?? "–")")
-                    .font(.system(size: 11)).foregroundStyle(Tokens.textSecondary.color)
+                if advanced {
+                    Text("\(line.total)  \(rate)").font(.dataMono)
+                    Text("eff \(line.efficiency.map { String(format: "%+.0f", $0 * 100) } ?? "\u{2013}")")
+                        .font(.themed(13, .regular)).foregroundStyle(Tokens.textSecondary.color)
+                } else {
+                    Text("\(line.total)").font(.themed(18, .bold).monospacedDigit())
+                    Text("\(rate) good").font(.themed(14, .regular)).foregroundStyle(Tokens.textSecondary.color)
+                }
             }
         } else {
-            Text("–").foregroundStyle(Tokens.textSecondary.color)
+            Text("\u{2013}").foregroundStyle(Tokens.textSecondary.color)
         }
     }
 }

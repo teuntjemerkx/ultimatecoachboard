@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// Screen 18 (Phase 1 subset): team switcher, jersey-only quick add, one row per player.
+/// Simple shows number, name and role; Advanced adds the body measurements.
 struct RosterView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \Team.createdAt) private var teams: [Team]
@@ -19,44 +20,70 @@ struct RosterView: View {
     }
 
     var body: some View {
+        let players = team?.sortedPlayers ?? []
         NavigationStack {
             List {
                 Section {
                     HStack(spacing: 12) {
                         Text("#").font(.themed(28, .bold)).foregroundStyle(Tokens.accent.color)
-                        TextField("Add a jersey number", text: $newJersey)
+                        TextField("Jersey number", text: $newJersey)
                             .keyboardType(.numberPad)
-                            .font(.themed(22, .semibold).monospacedDigit())
+                            .font(.themed(24, .semibold).monospacedDigit())
                             .focused($addFocused)
                             .submitLabel(.next)
                             .onSubmit(add)
-                        Button("Add", action: add).disabled(newJersey.isEmpty)
+                        Button(action: add) {
+                            Label("Add player", systemImage: "plus")
+                        }
+                        .buttonStyle(CoachButtonStyle(minHeight: Tokens.targetStandard + 4))
+                        .disabled(newJersey.isEmpty)
                     }
                     .frame(minHeight: Tokens.targetLivePrimary)
                     if let problem {
-                        Text(problem).foregroundStyle(Tokens.fault.color)
+                        Label(problem, systemImage: "exclamationmark.circle")
+                            .font(.scaled(.body, .semibold))
+                            .foregroundStyle(Tokens.fault.color)
                     }
+                } header: {
+                    sectionHeader("Add a player")
                 } footer: {
-                    Text("Type a number and press return; the field stays ready for the next player. Names and roles are optional.")
+                    Text("Type a jersey number and tap Add player. The box stays ready for the next one. Names and roles are optional.")
+                        .font(.scaled(.subheadline))
                 }
-                Section(team.map { "\($0.name) · \($0.players.count) players" } ?? "Team") {
-                    ForEach(team?.sortedPlayers ?? []) { player in
+                .listRowBackground(Tokens.surface.color)
+                Section {
+                    if players.isEmpty {
+                        Text("No players yet. Add your first one above.")
+                            .font(.scaled(.body))
+                            .foregroundStyle(Tokens.textSecondary.color)
+                            .frame(minHeight: Tokens.targetStandard)
+                    }
+                    ForEach(players) { player in
                         Button { detail = player } label: { PlayerRow(player: player) }
                             .foregroundStyle(Tokens.text.color)
                     }
                     .onDelete(perform: delete)
+                } header: {
+                    sectionHeader(team.map { "\($0.name) \u{00B7} \($0.players.count) players" } ?? "Team")
+                } footer: {
+                    if !players.isEmpty {
+                        Text("Tap a player to add a name or role. Swipe left on a player to delete.")
+                            .font(.scaled(.subheadline))
+                    }
                 }
+                .listRowBackground(Tokens.surface.color)
             }
             .scrollContentBackground(.hidden)
             .background(Tokens.canvasBase.color)
-            .navigationTitle("Roster")
+            .textCase(nil)
+            .navigationTitle("Players")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { teamSwitcher }
                 ToolbarItem(placement: .confirmationAction) { Button("Done", action: onDone) }
             }
             .sheet(item: $detail) { PlayerDetailView(player: $0) }
             .alert("New team", isPresented: $creatingTeam) {
-                TextField("Name", text: $newTeamName)
+                TextField("Team name", text: $newTeamName)
                 Button("Create") { createTeam() }
                 Button("Cancel", role: .cancel) {}
             }
@@ -67,6 +94,10 @@ struct RosterView: View {
         }
     }
 
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title).font(.groupTitle).foregroundStyle(Tokens.textSecondary.color)
+    }
+
     private var teamSwitcher: some View {
         Menu {
             ForEach(teams) { t in
@@ -75,10 +106,11 @@ struct RosterView: View {
                 }
             }
             Divider()
-            Button("New team…") { newTeamName = ""; creatingTeam = true }
+            Button("New team\u{2026}") { newTeamName = ""; creatingTeam = true }
         } label: {
             Label(team?.name ?? "Team", systemImage: "person.3")
         }
+        .accessibilityLabel("Team: \(team?.name ?? "none"). Change team")
     }
 
     private func ensureOwnTeam() {
@@ -123,33 +155,42 @@ struct PlayerRow: View {
     let player: Player
 
     var body: some View {
+        let advanced = ThemeStore.shared.advanced
         HStack(spacing: 16) {
             Text("\(player.jersey)")
-                .font(.themed(28, .bold).monospacedDigit())
+                .font(.themed(30, .bold).monospacedDigit())
                 .frame(width: 64, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
-                Text(player.displayName ?? "—").font(.themed(16, .semibold))
-                Text(player.role.label).font(.system(size: 13)).foregroundStyle(Tokens.textSecondary.color)
+                Text(player.displayName ?? "No name")
+                    .font(.themed(17, .semibold))
+                    .foregroundStyle(player.displayName == nil ? Tokens.textSecondary.color : Tokens.text.color)
+                Text(player.role.label).font(.themed(15, .regular)).foregroundStyle(Tokens.textSecondary.color)
             }
             Spacer()
-            biometric("H", player.stature, estimated: false)
-            biometric("REACH", player.standingReachOrEstimate, estimated: player.standingReach == nil)
-            biometric("SPIKE", player.spikeReach, estimated: false)
-            biometric("BLOCK", player.blockReach, estimated: false)
+            if advanced {
+                biometric("Height", player.stature, estimated: false)
+                biometric("Reach", player.standingReachOrEstimate, estimated: player.standingReach == nil)
+                biometric("Spike", player.spikeReach, estimated: false)
+                biometric("Block", player.blockReach, estimated: false)
+            }
+            Image(systemName: "chevron.right")
+                .font(.themed(15, .semibold))
+                .foregroundStyle(Tokens.textSecondary.color)
         }
-        .frame(minHeight: Tokens.targetStandard)
+        .frame(minHeight: Tokens.targetLivePrimary)
+        .contentShape(Rectangle())
     }
 
     private func biometric(_ label: String, _ value: Double?, estimated: Bool) -> some View {
         VStack(alignment: .trailing, spacing: 2) {
-            Text(label).font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
-            Text(value.map { String(format: "%.2f", $0) + (estimated ? " est." : "") } ?? "—").font(.dataMono)
+            Text(label).font(.themed(13, .semibold)).foregroundStyle(Tokens.textSecondary.color)
+            Text(value.map { String(format: "%.2f", $0) + (estimated ? " est." : "") } ?? "\u{2014}").font(.dataMono)
         }
         .frame(width: 84, alignment: .trailing)
     }
 }
 
-/// Screen 19 (Phase 1 subset): jersey, name, role, handedness and biometrics with inline range checks.
+/// Screen 19 (Phase 1 subset): jersey, name and role; Advanced adds handedness and biometrics with inline range checks.
 struct PlayerDetailView: View {
     @Bindable var player: Player
     @Environment(\.dismiss) private var dismiss
@@ -162,11 +203,12 @@ struct PlayerDetailView: View {
     @State private var problem: String?
 
     var body: some View {
+        let advanced = ThemeStore.shared.advanced
         NavigationStack {
             Form {
                 Section("Player") {
-                    LabeledContent("Jersey") {
-                        TextField("0–99", text: $jersey).keyboardType(.numberPad).multilineTextAlignment(.trailing)
+                    LabeledContent("Jersey number") {
+                        TextField("0\u{2013}99", text: $jersey).keyboardType(.numberPad).multilineTextAlignment(.trailing)
                     }
                     LabeledContent("Name") {
                         TextField("Optional", text: $name).multilineTextAlignment(.trailing)
@@ -174,28 +216,35 @@ struct PlayerDetailView: View {
                     Picker("Role", selection: Binding(get: { player.role }, set: { player.role = $0 })) {
                         ForEach(PlayerRole.allCases) { Text($0.label).tag($0) }
                     }
-                    Picker("Handedness", selection: Binding(get: { player.handedness }, set: { player.handedness = $0 })) {
-                        ForEach(Handedness.allCases) { Text($0.label).tag($0) }
+                    if advanced {
+                        Picker("Handedness", selection: Binding(get: { player.handedness }, set: { player.handedness = $0 })) {
+                            ForEach(Handedness.allCases) { Text($0.label).tag($0) }
+                        }
                     }
                 }
-                Section {
-                    metreField("Stature", $stature, placeholder: "1.20–2.25")
-                    metreField("Standing reach", $standing,
-                               placeholder: player.stature.map { String(format: "est. %.2f", $0 * 1.31) } ?? "Optional")
-                    metreField("Spike reach", $spike, placeholder: "Optional")
-                    metreField("Block reach", $block, placeholder: "Optional")
-                } header: {
-                    Text("Biometrics (metres)")
-                } footer: {
-                    Text("Used for the 3D avatars and block geometry from Phase 2 on. Empty fields use estimates.")
+                if advanced {
+                    Section {
+                        metreField("Height", $stature, placeholder: "1.20\u{2013}2.25")
+                        metreField("Standing reach", $standing,
+                                   placeholder: player.stature.map { String(format: "est. %.2f", $0 * 1.31) } ?? "Optional")
+                        metreField("Spike reach", $spike, placeholder: "Optional")
+                        metreField("Block reach", $block, placeholder: "Optional")
+                    } header: {
+                        Text("Body measurements (metres)")
+                    } footer: {
+                        Text("Used for the 3D players and the block. Leave a field empty to use an estimate.")
+                    }
                 }
                 if let problem {
-                    Section { Text(problem).foregroundStyle(Tokens.fault.color) }
+                    Section {
+                        Label(problem, systemImage: "exclamationmark.circle").foregroundStyle(Tokens.fault.color)
+                    }
                 }
             }
-            .navigationTitle("#\(player.jersey)")
+            .font(.scaled(.body))
+            .navigationTitle("Player #\(player.jersey)")
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Done", action: save) }
+                ToolbarItem(placement: .confirmationAction) { Button("Save", action: save) }
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
             .onAppear(perform: load)

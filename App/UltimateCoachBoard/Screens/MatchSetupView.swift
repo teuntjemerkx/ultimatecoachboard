@@ -33,7 +33,8 @@ struct MatchSetupData: Codable, Equatable {
 }
 
 /// Screen 2: a mini half-court with six position slots and a libero slot, fed by a strip of jersey chips;
-/// settings in one column on the grip side with the Start button (Appendix C2).
+/// settings in one column on the grip side with the Start button (Appendix C2). Simple asks only what every match
+/// needs; Advanced adds the opponent lineup, a custom net height, the rule profile and the template check details.
 struct MatchSetupView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \Team.createdAt) private var teams: [Team]
@@ -61,6 +62,7 @@ struct MatchSetupView: View {
 
     private static let profile = try? RuleCourtProfile.fivbSenior()
 
+    private var advanced: Bool { ThemeStore.shared.advanced }
     private var ownTeam: Team? { teams.first { $0.isOwnTeam } ?? teams.first }
     private var template: RotationTemplate? { try? TemplateLibrary.template(id: setup.system.templateID) }
     private var hasLibero: Bool { template?.libero != nil }
@@ -85,8 +87,9 @@ struct MatchSetupView: View {
             }
             .padding(24)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .background(Tokens.canvasBase.color)
-            .navigationTitle("Match setup")
+            .background(Tokens.background.color)
+            .foregroundStyle(Tokens.text.color)
+            .navigationTitle("New match")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel", action: onCancel) }
             }
@@ -98,11 +101,14 @@ struct MatchSetupView: View {
 
     private var lineupColumn: some View {
         VStack(alignment: .leading, spacing: 18) {
-            TextField("Our team", text: $setup.homeName)
-                .font(.themed(24, .bold))
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Our team").font(.groupTitle).foregroundStyle(Tokens.textSecondary.color)
+                TextField("Team name", text: $setup.homeName)
+                    .font(.themed(26, .bold))
+            }
             VStack(spacing: 10) {
-                HStack {
-                    Text("NET").font(.sectionLabel).foregroundStyle(Tokens.accent.color)
+                HStack(spacing: 10) {
+                    Text("Net").font(.groupTitle).foregroundStyle(Tokens.accent.color)
                     Rectangle().fill(Tokens.accent.color).frame(height: 3)
                 }
                 HStack(spacing: 10) { slotView(.p4); slotView(.p3); slotView(.p2) }
@@ -110,25 +116,27 @@ struct MatchSetupView: View {
                 HStack(spacing: 10) { slotView(.p5); slotView(.p6); slotView(.p1) }
                 if hasLibero {
                     HStack {
-                        liberoView.frame(width: 180)
+                        liberoView.frame(width: 220)
                         Spacer()
                     }
                 }
             }
-            .padding(16)
-            .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
-            .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.courtLine.color, lineWidth: 1))
+            .coachCard(padding: 16)
             rosterStrip
-            Text(hint).font(.system(size: 13)).foregroundStyle(Tokens.textSecondary.color)
+            Label(hint, systemImage: "hand.tap")
+                .font(.scaled(.body))
+                .foregroundStyle(Tokens.textSecondary.color)
         }
     }
 
     private var hint: String {
         switch armed {
-        case .player(let p): return "Tap a slot for #\(p.jersey)."
-        case .slot: return "Tap another slot to move or swap, or the same slot to take the player off."
-        case .setter: return "Tap the setter's slot; it names the starting rotation."
-        case nil: return "Tap a jersey, then a slot (or drag). Typing numbers fills P1, P2, … in order."
+        case .player(let p): return "Now tap a position for #\(p.jersey)."
+        case .slot: return "Tap another position to move or swap. Tap the same one again to take the player off."
+        case .setter: return "Tap the position where your setter starts."
+        case nil:
+            return advanced ? "Tap a number, then a position (or drag it). New numbers fill P1, P2, \u{2026} in order."
+                            : "Tap a number, then a position. Or drag it there."
         }
     }
 
@@ -137,89 +145,125 @@ struct MatchSetupView: View {
         let player = setup.homeSlots[index]
         let isSetter = setup.system.hasSetter && pos == anchor
         let highlighted = armed == .slot(index) || (armed != nil && armed != .slot(index) && player == nil)
+        let role = roles[pos] ?? ""
         return Button { tapSlot(index) } label: {
             VStack(spacing: 4) {
-                Text(pos.label).font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
-                Text(player.map { "\($0.jersey)" } ?? "—")
-                    .font(.themed(34, .bold).monospacedDigit())
-                Text(roles[pos] ?? "").font(.sectionLabel)
+                Text(advanced ? pos.label : "Position \(pos.rawValue)")
+                    .font(.themed(15, .semibold)).foregroundStyle(Tokens.textSecondary.color)
+                Text(player.map { "\($0.jersey)" } ?? "\u{2014}")
+                    .font(.themed(38, .bold).monospacedDigit())
+                Text(advanced ? role : PlainWords.role(role))
+                    .font(.themed(15, .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                     .foregroundStyle(isSetter ? Tokens.accent.color : Tokens.textSecondary.color)
             }
+            .padding(.horizontal, 6)
             .foregroundStyle(Tokens.text.color)
-            .frame(maxWidth: .infinity, minHeight: 112)
-            .background(Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+            .frame(maxWidth: .infinity, minHeight: 120)
+            .background(Tokens.background.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
             .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius)
                 .stroke(highlighted || isSetter ? Tokens.accent.color : Tokens.hairline.color,
                         lineWidth: armed == .slot(index) ? 3 : (highlighted || isSetter ? 1.5 : 1)))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .draggable(player?.id.uuidString ?? "")
         .dropDestination(for: String.self) { items, _ in return dropped(items, at: index) }
-        .accessibilityLabel("\(pos.label), \(player.map { "number \($0.jersey)" } ?? "empty"), \(roles[pos] ?? "")")
+        .accessibilityLabel("Position \(pos.rawValue), \(player.map { "number \($0.jersey)" } ?? "empty"), \(PlainWords.role(role))")
     }
 
     private var liberoView: some View {
         Button { tapSlot(-1) } label: {
-            HStack(spacing: 10) {
-                Text("L").font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
-                Text(setup.homeLibero.map { "\($0.jersey)" } ?? "—")
-                    .font(.themed(26, .bold).monospacedDigit())
-                Text("LIBERO").font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
+            HStack(spacing: 12) {
+                Text("Libero").font(.themed(15, .semibold)).foregroundStyle(Tokens.textSecondary.color)
+                Text(setup.homeLibero.map { "\($0.jersey)" } ?? "\u{2014}")
+                    .font(.themed(28, .bold).monospacedDigit())
             }
             .foregroundStyle(Tokens.text.color)
-            .frame(maxWidth: .infinity, minHeight: 60)
-            .background(Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+            .frame(maxWidth: .infinity, minHeight: Tokens.targetLivePrimary)
+            .background(Tokens.background.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
             .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(armed == .slot(-1) ? Tokens.accent.color : Tokens.hairline.color,
-                                                             lineWidth: armed == .slot(-1) ? 3 : 1))
+                                                                                 lineWidth: armed == .slot(-1) ? 3 : 1))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .dropDestination(for: String.self) { items, _ in return dropped(items, at: -1) }
+        .accessibilityLabel("Libero, \(setup.homeLibero.map { "number \($0.jersey)" } ?? "empty")")
     }
 
     private var rosterStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
                 if setup.system.hasSetter {
-                    chip(title: "SETTER", subtitle: "mark", selected: armed == .setter) {
-                        armed = armed == .setter ? nil : .setter
-                    }
+                    setterChip
                 }
                 ForEach(bench) { p in
                     let slot = SlotPlayer(id: p.id, jersey: p.jersey, name: p.displayName)
-                    chip(title: "\(p.jersey)", subtitle: p.role.short, selected: armed == .player(slot)) {
+                    chip(title: "\(p.jersey)", subtitle: advanced ? p.role.short : Self.roleWord(p.role), selected: armed == .player(slot)) {
                         armed = armed == .player(slot) ? nil : .player(slot)
                     }
                     .draggable(p.id.uuidString)
                 }
-                HStack(spacing: 4) {
-                    Text("+#").font(.themed(15, .bold)).foregroundStyle(Tokens.accent.color)
-                    TextField("new", text: $quickJersey)
+                HStack(spacing: 6) {
+                    Image(systemName: "plus").font(.themed(17, .bold)).foregroundStyle(Tokens.accent.color)
+                    TextField("Add #", text: $quickJersey)
                         .keyboardType(.numberPad)
                         .font(.themed(20, .semibold).monospacedDigit())
-                        .frame(width: 60)
+                        .frame(width: 70)
                         .onSubmit(quickAdd)
                 }
                 .padding(.horizontal, 12)
                 .frame(height: Tokens.targetLivePrimary)
+                .background(Tokens.surface.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
                 .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.hairline.color))
+                .accessibilityLabel("Add a player by jersey number")
             }
             .padding(.vertical, 2)
         }
     }
 
+    private var setterChip: some View {
+        let on = armed == .setter
+        return Button { armed = on ? nil : .setter } label: {
+            Label("Mark setter", systemImage: "hand.point.up.left")
+                .font(.themed(16, .semibold))
+                .padding(.horizontal, 14)
+                .frame(minHeight: Tokens.targetLivePrimary)
+                .foregroundStyle(on ? Tokens.onAccent.color : Tokens.text.color)
+                .background(on ? Tokens.accent.color : Tokens.surface.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+                .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.hairline.color))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? .isSelected : [])
+    }
+
+    /// The roster role in one short word for the jersey chips (Simple).
+    private static func roleWord(_ role: PlayerRole) -> String {
+        switch role {
+        case .unknown: return ""
+        case .defensive: return "Defence"
+        default: return role.label
+        }
+    }
+
     private func chip(title: String, subtitle: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 0) {
-                Text(title).font(.system(size: title.count > 3 ? 13 : 22, weight: .bold).width(.expanded).monospacedDigit())
-                Text(subtitle).font(.themed(10, .semibold)).foregroundStyle(Tokens.textSecondary.color)
+            VStack(spacing: 1) {
+                Text(title).font(.system(size: 22, weight: .bold).width(.expanded).monospacedDigit())
+                if !subtitle.isEmpty {
+                    Text(subtitle).font(.themed(13, .semibold)).lineLimit(1)
+                        .foregroundStyle(selected ? Tokens.onAccent.color : Tokens.textSecondary.color)
+                }
             }
-            .foregroundStyle(selected ? Tokens.canvasBase.color : Tokens.text.color)
-            .frame(minWidth: Tokens.targetLivePrimary, minHeight: Tokens.targetLivePrimary)
+            .foregroundStyle(selected ? Tokens.onAccent.color : Tokens.text.color)
+            .frame(minWidth: 64, minHeight: Tokens.targetLivePrimary)
             .padding(.horizontal, 6)
-            .background(selected ? Tokens.accent.color : Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+            .background(selected ? Tokens.accent.color : Tokens.surface.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
             .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.hairline.color))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Number \(title)" + (subtitle.isEmpty ? "" : ", \(subtitle)"))
     }
 
     // MARK: - Placing players
@@ -308,62 +352,101 @@ struct MatchSetupView: View {
     // MARK: - Settings
 
     private var settingsColumn: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            group("OPPONENT") {
-                TextField("Opponent", text: $setup.opponentName).textFieldStyle(.roundedBorder)
-                Button { showOpponent = true } label: {
-                    let known = setup.opponentNumbers.compactMap { $0 }.count
-                    Label("Lineup: \(known) of 6 numbers · setter P\(setup.opponentSetterPosition)", systemImage: "list.number")
-                }
-            }
-            group("SYSTEM") {
-                Picker("System", selection: $setup.system) {
-                    ForEach(TeamSystem.allCases, id: \.self) { Text($0.displayName).tag($0) }
-                }
-                .pickerStyle(.menu)
-            }
-            group("FIRST SERVE") {
-                Picker("First serve", selection: $setup.firstServer) {
-                    Text("Us").tag(Side.home)
-                    Text("Them").tag(Side.opponent)
-                }
-                .pickerStyle(.segmented)
-            }
-            group("NET HEIGHT") {
-                HStack {
-                    ForEach([2.43, 2.24], id: \.self) { h in
-                        Button(String(format: "%.2f", h)) { setup.netHeight = h }
-                            .buttonStyle(.bordered)
-                            .tint(abs(setup.netHeight - h) < 0.001 ? Tokens.accent.color : Tokens.textSecondary.color)
+        VStack(alignment: .leading, spacing: 16) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    group("Opponent") {
+                        TextField("Opponent name", text: $setup.opponentName)
+                            .font(.scaled(.body))
+                            .textFieldStyle(.roundedBorder)
+                        if advanced {
+                            Button { showOpponent = true } label: {
+                                let known = setup.opponentNumbers.compactMap { $0 }.count
+                                Label("Lineup: \(known) of 6 numbers \u{00B7} setter P\(setup.opponentSetterPosition)", systemImage: "list.number")
+                                    .font(.scaled(.body, .semibold))
+                                    .frame(minHeight: Tokens.targetStandard)
+                            }
+                        }
                     }
+                    group("Team system") {
+                        systemMenu
+                    }
+                    group("Who serves first?") {
+                        ChoiceBar(options: [(value: Side.home, title: "Us"), (value: Side.opponent, title: "Them")],
+                                  selection: $setup.firstServer)
+                    }
+                    group("Net height") {
+                        ChoiceBar(options: [(value: 2.43, title: "2.43 m"), (value: 2.24, title: "2.24 m")],
+                                  selection: $setup.netHeight)
+                        Text("2.43 m for men, 2.24 m for women.")
+                            .font(.scaled(.subheadline)).foregroundStyle(Tokens.textSecondary.color)
+                        if advanced {
+                            Stepper(String(format: "Custom %.2f m", setup.netHeight), value: $setup.netHeight, in: 2.00...2.43, step: 0.01)
+                                .font(.scaled(.body))
+                        }
+                    }
+                    if advanced {
+                        group("Rules") {
+                            Text(Self.profile?.name ?? "FIVB senior indoor").font(.scaled(.body, .semibold))
+                        }
+                    }
+                    // The way into Detailed mode; Simple shows it only when it is already on, so it can be turned off.
+                    if advanced || setup.mode == .advanced {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Toggle("Record every touch", isOn: Binding(get: { setup.mode == .advanced },
+                                                                       set: { setup.mode = $0 ? .advanced : .solo }))
+                                .font(.scaled(.body, .semibold))
+                            Text("Best with a second coach. You can switch during the match.")
+                                .font(.scaled(.subheadline)).foregroundStyle(Tokens.textSecondary.color)
+                        }
+                    }
+                    status
                 }
-                Stepper(String(format: "Custom %.2f m", setup.netHeight), value: $setup.netHeight, in: 2.00...2.43, step: 0.01)
+                .padding(.bottom, 8)
             }
-            group("RULES") {
-                Text(Self.profile?.name ?? "FIVB senior indoor").font(.themed(15, .semibold))
-            }
-            Toggle("Working alone today?", isOn: Binding(get: { setup.mode == .solo },
-                                                          set: { setup.mode = $0 ? .solo : .advanced }))
-            if let problem = validationProblem {
-                Text(problem).font(.themed(14, .semibold)).foregroundStyle(Tokens.fault.color)
-            } else {
-                Label(templateBadge, systemImage: "checkmark.seal.fill")
-                    .font(.themed(14, .semibold)).foregroundStyle(Tokens.accent.color)
-            }
-            ForEach(roleWarnings, id: \.self) { w in
-                Text(w).font(.system(size: 13)).foregroundStyle(Tokens.textSecondary.color)
-            }
-            Spacer(minLength: 8)
             Button { onStart(withBench(setup)) } label: {
-                Text("START")
-                    .font(.themed(20, .heavy))
-                    .frame(maxWidth: .infinity, minHeight: Tokens.targetLiveCritical)
-                    .background(validationProblem == nil ? Tokens.accent.color : Tokens.hairline.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
-                    .foregroundStyle(Tokens.canvasBase.color)
+                Label("Start match", systemImage: "play.fill")
             }
+            .buttonStyle(CoachButtonStyle(fullWidth: true, minHeight: 64))
             .disabled(validationProblem != nil)
         }
         .frame(width: 320)
+    }
+
+    private var systemMenu: some View {
+        Menu {
+            Picker("Team system", selection: $setup.system) {
+                ForEach(TeamSystem.allCases, id: \.self) { Text($0.displayName).tag($0) }
+            }
+        } label: {
+            HStack {
+                Text(setup.system.displayName).lineLimit(1).minimumScaleFactor(0.8)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.up.chevron.down").font(.themed(14, .semibold))
+            }
+            .font(.scaled(.body, .semibold))
+            .foregroundStyle(Tokens.text.color)
+            .padding(.horizontal, 14)
+            .frame(minHeight: Tokens.targetStandard + 4)
+            .background(Tokens.surface.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+            .overlay(RoundedRectangle(cornerRadius: Tokens.radiusSmall).stroke(Tokens.hairline.color))
+        }
+        .accessibilityLabel("Team system: \(setup.system.displayName)")
+    }
+
+    @ViewBuilder private var status: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let problem = validationProblem {
+                Label(problem, systemImage: "exclamationmark.circle")
+                    .font(.scaled(.body, .semibold)).foregroundStyle(Tokens.fault.color)
+            } else {
+                Label(advanced ? templateBadge : "Lineup ready", systemImage: "checkmark.seal.fill")
+                    .font(.scaled(.body, .semibold)).foregroundStyle(Tokens.accent.color)
+            }
+            ForEach(roleWarnings, id: \.self) { w in
+                Text(w).font(.scaled(.subheadline)).foregroundStyle(Tokens.textSecondary.color)
+            }
+        }
     }
 
     /// The roster players left off the lineup become the substitutes' bench.
@@ -375,7 +458,7 @@ struct MatchSetupView: View {
 
     private func group<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
+            Text(title).font(.groupTitle).foregroundStyle(Tokens.textSecondary.color)
             content()
         }
     }
@@ -383,18 +466,18 @@ struct MatchSetupView: View {
     /// Inline validation, never a dialog (Appendix C2): Start stays disabled with a one-line reason.
     private var validationProblem: String? {
         let placed = setup.homeSlots.compactMap { $0 }.count
-        if placed < 6 { return "Place six players on court (\(placed) of 6)." }
+        if placed < 6 { return "Put 6 players on court (\(placed) of 6)." }
         let numbers = setup.homeSlots.compactMap { $0?.jersey } + [setup.homeLibero?.jersey].compactMap { $0 }
         if Set(numbers).count != numbers.count { return "Two players share a jersey number." }
         let theirs = setup.opponentNumbers.compactMap { $0 } + [setup.opponentLibero].compactMap { $0 }
-        if Set(theirs).count != theirs.count { return "Opponent numbers must be different." }
-        if let failing = Self.templateFailure(setup.system) { return failing }
+        if Set(theirs).count != theirs.count { return "Their jersey numbers must all be different." }
+        if let failing = Self.templateFailure(setup.system, plain: !advanced) { return failing }
         return nil
     }
 
     private var templateBadge: String {
         let margin = Self.templateMargin(setup.system)
-        return "\(setup.system.displayName) verified" + (margin.map { String(format: " · smallest margin %.2f m", $0) } ?? "")
+        return "\(setup.system.displayName) verified" + (margin.map { String(format: " \u{00B7} smallest margin %.2f m", $0) } ?? "")
     }
 
     private static func validations(_ system: TeamSystem) -> [FormationValidation] {
@@ -402,8 +485,9 @@ struct MatchSetupView: View {
         return TemplateLibrary.validate(t, profile: profile)
     }
 
-    private static func templateFailure(_ system: TeamSystem) -> String? {
+    private static func templateFailure(_ system: TeamSystem, plain: Bool) -> String? {
         guard let bad = validations(system).first(where: { !$0.isLegal }), let pair = bad.failing.first else { return nil }
+        if plain { return "This system has an overlap in rotation \(bad.rotation) (\(bad.phase))." }
         return "Template R\(bad.rotation) \(bad.phase): \(pair.a.label) and \(pair.b.label) overlap."
     }
 
@@ -419,14 +503,15 @@ struct MatchSetupView: View {
             guard let slot = setup.homeSlots[pos.rawValue - 1], let role = roles[pos],
                   let player = team.players.first(where: { $0.id == slot.id }) else { continue }
             if !player.role.fits(templateRole: role) {
-                out.append("#\(slot.jersey) is listed as \(player.role.label.lowercased()) but plays \(role) here.")
+                let plays = advanced ? role : PlainWords.role(role).lowercased()
+                out.append("#\(slot.jersey) is listed as \(player.role.label.lowercased()) but plays \(plays) here.")
             }
         }
         return out
     }
 }
 
-/// Optional opponent numbers by position, their libero and where their setter starts.
+/// Optional opponent numbers by position, their libero and where their setter starts (Advanced).
 struct OpponentLineupSheet: View {
     @Binding var setup: MatchSetupData
     @Environment(\.dismiss) private var dismiss
@@ -434,18 +519,22 @@ struct OpponentLineupSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Numbers by position (unknown is fine)") {
+                Section {
                     ForEach(0..<6, id: \.self) { i in
                         LabeledContent("P\(i + 1)") {
-                            TextField("—", value: Binding(get: { setup.opponentNumbers[i] }, set: { setup.opponentNumbers[i] = $0 }),
+                            TextField("\u{2014}", value: Binding(get: { setup.opponentNumbers[i] }, set: { setup.opponentNumbers[i] = $0 }),
                                       format: .number)
                                 .keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 80)
                         }
                     }
                     LabeledContent("Libero") {
-                        TextField("—", value: $setup.opponentLibero, format: .number)
+                        TextField("\u{2014}", value: $setup.opponentLibero, format: .number)
                             .keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 80)
                     }
+                } header: {
+                    Text("Their numbers by position")
+                } footer: {
+                    Text("All optional. Leave a number empty if you don't know it.")
                 }
                 Section("Their setter starts in") {
                     Picker("Setter position", selection: $setup.opponentSetterPosition) {
@@ -454,7 +543,8 @@ struct OpponentLineupSheet: View {
                     .pickerStyle(.segmented)
                 }
             }
-            .navigationTitle("Opponent lineup")
+            .font(.scaled(.body))
+            .navigationTitle("Their lineup")
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
     }
