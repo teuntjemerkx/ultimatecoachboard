@@ -1,0 +1,1664 @@
+{
+  "position": "outside_hitter",
+  "traits": {
+    "stature_m": {
+      "elite_men": 1.96,
+      "elite_women": 1.85,
+      "youth_women_u16": 1.74
+    },
+    "standing_reach_m": {
+      "elite_men": 2.53,
+      "elite_women": 2.39,
+      "youth_women_u16": 2.25
+    },
+    "spike_reach_m": {
+      "elite_men": 3.45,
+      "elite_women": 3.05,
+      "youth_women_u16": 2.72
+    },
+    "block_reach_m": {
+      "elite_men": 3.25,
+      "elite_women": 2.94,
+      "youth_women_u16": 2.63
+    },
+    "build_notes": "ALL NUMBERS ESTIMATED: no anthropometric source could be opened in this session because page fetches were blocked and the shared web-search budget ran out. The values are typical figures for international outside hitters (Volleyball World/VNL rosters list height, spike and block reach per player; roster reach values are self-reported and tend to run high) and should be checked before use. Standing reach is taken as ~1.29-1.30 x stature. Spike reach is standing reach + ~0.90 m (men), ~0.65 m (women) or ~0.47 m (U16 girls); block reach is ~0.20 m (men) or ~0.10 m (women and girls) below spike reach. Body build: outside hitters are the all-round passer-attackers, tall but usually a few cm shorter than middle blockers and opposites, with a long-limbed, lean athletic build, strong legs and hips, and a well-developed hitting shoulder and back. Studies support a few qualitative points: upper-body anthropometrics and joint angular velocities matter most for ball speed (Fuchs et al. 2019), men jump higher and use more torso and arm swing than women (Fuchs et al. 2019), and OH/OPP plant with a much deeper knee than middle blockers (Frontiers in Physiology 2026). Gear (visual convention, estimated): knee pads on both knees, usually low-profile sleeve pads worn just below the knee, plus ankle braces or high-top volleyball shoes. Some players wear compression arm sleeves and finger or wrist tape. Women wear fitted shorts and men longer shorts. The outside hitter wears the normal team jersey; only the libero wears a contrasting shirt.",
+    "sources": [
+      "https://www.researchgate.net/publication/330189339_Movement_characteristics_of_volleyball_spike_jump_performance_in_females",
+      "https://pubmed.ncbi.nlm.nih.gov/31280702/",
+      "https://www.frontiersin.org/journals/physiology/articles/10.3389/fphys.2026.1931891/full",
+      "https://www.jssm.org/jssm-13-78.xml-abst"
+    ]
+  },
+  "techniques": [
+    {
+      "id": "ready_medium",
+      "name": "Serve-receive ready (medium posture)",
+      "phase": "ready",
+      "handedness": "right",
+      "description": "Outside hitter waiting for the serve in the reception line: feet a little wider than the shoulders, right foot slightly ahead, knees bent and inside the toes, weight on the balls of the feet. Shoulders are ahead of the knees (trunk tipped ~30 deg), back straight, arms relaxed and already out in front with the hands about knee height, eyes on the server.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.6,
+        "stagger_m": 0.1,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 15,
+        "thoracic_flex": 17,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -22,
+        "l_shoulder_flex": 40,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 70,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 40,
+        "r_shoulder_abd": 15,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 70,
+        "r_wrist_ext": 0,
+        "l_hip_flex": 38,
+        "l_hip_abd": 16,
+        "l_hip_ext_rot": 15,
+        "l_knee_flex": 74,
+        "l_ankle_dorsi": 36,
+        "r_hip_flex": 45,
+        "r_hip_abd": 16,
+        "r_hip_ext_rot": 15,
+        "r_knee_flex": 73,
+        "r_ankle_dorsi": 28
+      },
+      "confidence": "estimated (coaching texts; thigh inclination ~46 deg anchored on the start posture reported for forearm passers by Ridgway & Hamilton)",
+      "evidence": [
+        "ESTIMATED: Volleyball Canada passing skill sheet - feet slightly wider than shoulders, knees flexed, trunk leaning slightly forward https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+        "ESTIMATED: KFUPM skills page - knees bent inside the toes, weight forward, straight spine https://faculty.kfupm.edu.sa/PE/abuhilal/volleyball_skills.html",
+        "ESTIMATED: Pakmen - shoulders ahead of knees, arms forward in the ready position https://www.pakmen.com/volleyball-positioning-techniques-resting-and-ready-positions-lesson-1/",
+        "ESTIMATED: JVA - hips back, shoulders forward, about shoulder-width stance; do not pop up when the ball is served https://jvavolleyball.org/passing-drills-train-proper-technique-eliminate-bad-habits/",
+        "PARTLY MEASURED: start thigh flexion ~46 deg in skilled and unskilled forearm passers (Ridgway & Hamilton) https://ojs.ub.uni-konstanz.de/cpa/article/view/2336",
+        "Geometry check: knee_flex = hip_flex + ankle_dorsi for flat feet with the rig's upright pelvis; front/back legs give equal hip heights for a 0.10 m stagger"
+      ]
+    },
+    {
+      "id": "pass_platform",
+      "name": "Forearm pass (serve reception, ball on the midline)",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Ball meets the joined forearms 3-15 cm above the wrists, in front of the body between the knees. Elbows locked, heels of the hands together with the thumbs pointing to the floor, elbow pits facing up so the platform is flat; arms about 45 deg below horizontal. Legs extend slightly through contact as the weight moves onto the front (right) foot; skilled passers keep the trunk fairly upright and the shoulders still.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.6,
+        "stagger_m": 0.15,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 12,
+        "thoracic_flex": 16,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": 8,
+        "l_shoulder_flex": 75,
+        "l_shoulder_abd": -15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 0,
+        "l_wrist_ext": -15,
+        "r_shoulder_flex": 75,
+        "r_shoulder_abd": -15,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 0,
+        "r_wrist_ext": -15,
+        "l_hip_flex": 30,
+        "l_hip_abd": 16,
+        "l_hip_ext_rot": 12,
+        "l_knee_flex": 60,
+        "l_ankle_dorsi": 30,
+        "r_hip_flex": 40,
+        "r_hip_abd": 16,
+        "r_hip_ext_rot": 12,
+        "r_knee_flex": 58,
+        "r_ankle_dorsi": 18
+      },
+      "confidence": "estimated (coaching texts plus qualitative study findings; arm angle checked against the ~45 deg forearm-to-floor description)",
+      "evidence": [
+        "PARTLY MEASURED (qualitative): skilled passers more upright trunk and ~10 deg less shoulder range than unskilled; knees extend through the pass (Ridgway & Hamilton) https://ojs.ub.uni-konstanz.de/cpa/article/view/2336",
+        "Kapidzic et al. - shoulder angles larger for shorter passes; knee and elbow angle at contact correlate with accuracy https://www.iiste.org/Journals/index.php/JEP/article/view/12341",
+        "ESTIMATED: textbook summary - forearms about 45 deg from parallel to the floor https://prezi.com/3o6xhlud9f66/the-biomechanics-of-forearm-passing-a-volleyball/",
+        "ESTIMATED: JVA - contact on the inside forearms about 1-6 in above the wrist; flat platform https://jvavolleyball.org/?p=25606",
+        "ESTIMATED: Volleyball Canada - weight moves to the front foot, arms swing slightly up and forward toward the target https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+        "ESTIMATED: Active.com - platform below the shoulders, shoulders square to the target https://www.active.com/volleyball/articles/10-serve-receive-tips",
+        "ESTIMATED: Volleyball Ireland LTPD pass card https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Pass-card.pdf",
+        "Arm check: shoulder flex 75 relative to a trunk tipped 28 deg gives arms ~45 deg below horizontal; abd -15 brings the hands together on the midline"
+      ]
+    },
+    {
+      "id": "pass_platform_angled",
+      "name": "Angled forearm pass (ball outside the left hip)",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Serve arrives outside the passer's left hip, the usual problem ball for a left-side passer. The left foot steps wide and takes the weight; the chest turns about 25 deg to the left so the joined arms reach the ball, and the trunk side-bends to the right so the outside (left) shoulder is higher than the right. That shoulder tilt turns the platform's face back toward the setter on the right ('tilt, not twist').",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.9,
+        "stagger_m": 0,
+        "yaw_deg": 10
+      },
+      "angles": {
+        "lumbar_flex": 12,
+        "thoracic_flex": 15,
+        "trunk_lateral": 15,
+        "trunk_twist": -25,
+        "neck_flex": 8,
+        "l_shoulder_flex": 70,
+        "l_shoulder_abd": -10,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 0,
+        "l_wrist_ext": -15,
+        "r_shoulder_flex": 75,
+        "r_shoulder_abd": -20,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 0,
+        "r_wrist_ext": -15,
+        "l_hip_flex": 40,
+        "l_hip_abd": 20,
+        "l_hip_ext_rot": 15,
+        "l_knee_flex": 68,
+        "l_ankle_dorsi": 28,
+        "r_hip_flex": 25,
+        "r_hip_abd": 33,
+        "r_hip_ext_rot": 10,
+        "r_knee_flex": 43,
+        "r_ankle_dorsi": 18
+      },
+      "confidence": "estimated (coaching texts on platform angle; no study gave joint angles for angled passes)",
+      "evidence": [
+        "ESTIMATED: JVA - drop the shoulder and angle the platform with weight transfer, 'tilt, not twist' https://jvavolleyball.org/passing-drills-train-proper-technique-eliminate-bad-habits/",
+        "ESTIMATED: Beach-passing keys / Volleyball1on1 - horizontal angle comes from lifting the outside shoulder; angle grows the further the ball is from the midline https://www.volleyball1on1.com/?p=33215",
+        "ESTIMATED: Coaching Volleyball - against fast serves the platform angle, not footwork, decides where the ball goes https://coachingvb.com/teaching-center-line-passing-or-platform-angle/",
+        "ESTIMATED: Art of Coaching Volleyball - how sharp the platform angle is depends on serve depth and location https://www.theartofcoachingvolleyball.com/practicing-passing-angles/",
+        "Geometry check: the joined hands can only sit left of the pelvis if the chest turns left (equal arm lengths), hence trunk_twist -25; the right (extended) leg is abducted more so both hips stay at the same height"
+      ]
+    },
+    {
+      "id": "overhead_pass",
+      "name": "Overhead pass (hands; free ball or float serve)",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Used by outside hitters on free balls and, at some levels, on short float serves. Ball is taken just above and in front of the forehead with both hands forming a window, elbows bent about 90 deg and pointing forward-out, wrists bent back. Knees and hips slightly flexed with the right foot ahead, trunk nearly upright, eyes looking up through the hands.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.4,
+        "stagger_m": 0.19,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 3,
+        "thoracic_flex": 2,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -30,
+        "l_shoulder_flex": 125,
+        "l_shoulder_abd": 20,
+        "l_shoulder_ext_rot": -40,
+        "l_elbow_flex": 90,
+        "l_wrist_ext": 60,
+        "r_shoulder_flex": 125,
+        "r_shoulder_abd": 20,
+        "r_shoulder_ext_rot": -40,
+        "r_elbow_flex": 90,
+        "r_wrist_ext": 60,
+        "l_hip_flex": 15,
+        "l_hip_abd": 5,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 45,
+        "l_ankle_dorsi": 30,
+        "r_hip_flex": 30,
+        "r_hip_abd": 5,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 50,
+        "r_ankle_dorsi": 20
+      },
+      "confidence": "estimated (overhead-pass studies were found but their angle tables could not be read)",
+      "evidence": [
+        "Ozawa et al. - overhead pass kinetic chain runs from elbow to wrist in skilled players (abstract only) https://www.tandfonline.com/doi/full/10.1080/14763141.2019.1609072",
+        "Ozawa et al. - leg contribution grows with pass distance (3, 6, 9 m) https://lida.sport-iat.de/dvv/Record/4084492",
+        "Dong et al. 2024 - upper-limb control dominates short and medium passes, legs dominate long ones https://doaj.org/article/7c9d2b47e6ca47a98fbeb4820899a424",
+        "Rig note: ext_rot -40 is the axial value that, in the flex-then-abd composition implied by the schema example, brings the hands together about 26 cm apart, ~35 cm above and ~16 cm in front of the shoulders; anatomically the shoulder is in mild external rotation here"
+      ]
+    },
+    {
+      "id": "approach_penultimate",
+      "name": "Spike approach - penultimate (right) step",
+      "phase": "approach",
+      "handedness": "right",
+      "description": "Heel strike of the long, low right-foot step (the 'R' of L-R-L or R-L-R-L) on an outside-in approach angled about 35 deg to the net from outside the left sideline. The left foot is pushing off on its toes behind, the trunk is tipped forward ~27 deg and both straight arms are swinging back past the hips. Eyes stay on the set.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.2,
+        "stagger_m": 0.85,
+        "yaw_deg": -35
+      },
+      "angles": {
+        "lumbar_flex": 12,
+        "thoracic_flex": 15,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -20,
+        "l_shoulder_flex": -40,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 15,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": -40,
+        "r_shoulder_abd": 15,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 15,
+        "r_wrist_ext": 0,
+        "l_hip_flex": -15,
+        "l_hip_abd": 3,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 30,
+        "l_ankle_dorsi": -15,
+        "r_hip_flex": 35,
+        "r_hip_abd": 3,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 20,
+        "r_ankle_dorsi": 0
+      },
+      "confidence": "estimated (approach studies report what predicts jump height, not joint angles at this instant)",
+      "evidence": [
+        "ESTIMATED: Wikipedia (Volleyball spiking) - approach angled ~45 deg to the net, starting on the leg opposite the hitting hand https://en.wikipedia.org/wiki/Volleyball_spiking",
+        "ESTIMATED: Volleyball Magazine - in a 4-step approach the third (right) step is the biggest, planting hard to redirect momentum upward https://volleyballmag.com/?p=65248",
+        "ESTIMATED: Sask Volleyball progression - 'Batman' arms back on the early steps, 'Superman' arms up on the close https://saskvolleyball.ca/wp-content/uploads/2018/12/Atomic-Vball-TEACHING-PROGRESSION-ATTACK-APPROACH-ARM-SWING-Sask-Volleyball-v.2-May-17.pdf",
+        "MEASURED (qualitative): longer orientation/approach steps and faster dominant-knee extension predict jump height (Fuchs et al. 2019, females) https://www.researchgate.net/publication/330189339_Movement_characteristics_of_volleyball_spike_jump_performance_in_females",
+        "MEASURED (qualitative): jump height correlates with horizontal CoM velocity and the lowest CoM height (Wagner et al. 2009) https://www.researchgate.net/publication/26654826_Kinematic_Analysis_of_Volleyball_Spike_Jump",
+        "Approach step number changes horizontal velocity and dominant-knee flexion https://digitalscholarship.unlv.edu/scholarship_kin/vol4/iss1/15",
+        "ESTIMATED: Art of Coaching Volleyball - outside hitters in transition use shuffles to the outside of the pin, then R-L-R-L https://www.theartofcoachingvolleyball.com/outside-hitter-footwork/"
+      ]
+    },
+    {
+      "id": "approach_takeoff",
+      "name": "Spike approach - plant / take-off (lowest point)",
+      "phase": "take-off",
+      "handedness": "right",
+      "description": "Both feet are planted heel-to-toe (right then left, left slightly ahead and toed in toward the setter) and the body is at its lowest point. Knees ~70 deg and the trunk tipped ~45 deg forward. Both straight arms are at the top of the backswing behind the body, just before the double-arm swing whips forward and up. The pelvis is still turned ~30 deg to the right of square from the outside-in approach.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.35,
+        "stagger_m": -0.14,
+        "yaw_deg": -30
+      },
+      "angles": {
+        "lumbar_flex": 20,
+        "thoracic_flex": 25,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -40,
+        "l_shoulder_flex": -55,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 10,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": -55,
+        "r_shoulder_abd": 15,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 10,
+        "r_wrist_ext": 0,
+        "l_hip_flex": 53,
+        "l_hip_abd": 5,
+        "l_hip_ext_rot": -10,
+        "l_knee_flex": 68,
+        "l_ankle_dorsi": 15,
+        "r_hip_flex": 45,
+        "r_hip_abd": 5,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 73,
+        "r_ankle_dorsi": 28
+      },
+      "confidence": "measured (right knee ~73 deg flexion = ~107 deg knee angle for outside/opposite hitters, national-level men) + estimated (all other joints)",
+      "evidence": [
+        "MEASURED: right knee angle ~107 deg (= ~73 deg flexion) at step contact and at maximum knee flexion for outside and opposite hitters versus ~162 deg for middle blockers, 27 national-level men (Frontiers in Physiology 2026; values read from the search abstract) https://www.frontiersin.org/journals/physiology/articles/10.3389/fphys.2026.1931891/full",
+        "MEASURED (qualitative): Brazilian analysis of 3 outside hitters - ankle angle at the last-stride support reached a minimum of ~60 deg (~30 deg dorsiflexion) https://sponet.de/sponet/Record/3040210",
+        "MEASURED (qualitative): wide, dynamic arm swing gives a forceful countermovement and more lower-limb range of motion (Fuchs et al. 2019) https://www.researchgate.net/publication/330189339_Movement_characteristics_of_volleyball_spike_jump_performance_in_females",
+        "MEASURED (qualitative): men use a larger torso incline during the arm backswing than women (Fuchs et al. 2019, J Sports Sci) https://pubmed.ncbi.nlm.nih.gov/31280702/",
+        "MEASURED (qualitative): better spikers delay leg extension during loading and reach higher knee angular velocity at take-off https://ojs.ub.uni-konstanz.de/cpa/article/view/2606/2454",
+        "MEASURED (qualitative): successful spikes show faster knee and hip extension and arm swing at take-off (Sarvestan et al. 2020) https://lida.sport-iat.de/dvv/Record/4066763?lng=en",
+        "Self-organising-map analysis of successful vs faulty spikes https://pmc.ncbi.nlm.nih.gov/articles/PMC7917820",
+        "One-leg vs two-leg approach: two-leg take-off uses more knee/hip flexion at initial foot contact (Tai et al. 2021) https://doaj.org/article/9dda9c97843c4c06b3414f5b5761e7a8",
+        "ESTIMATED: shoulder -55 is near the end of normal shoulder hyperextension; with the trunk tipped 45 deg the arms point back about 10 deg above horizontal"
+      ]
+    },
+    {
+      "id": "attack_arm_cock",
+      "name": "Spike - arm cock (end of cocking, max external rotation)",
+      "phase": "arm cock",
+      "handedness": "right",
+      "description": "In the air on the way up, the hitter is in the 'bow'. The back is arched, the chest is turned ~25 deg right of the pelvis (so it opens toward the setter) and the knees are bent with the heels behind. The hitting elbow is at or just above shoulder height out to the side, laid back so the hand is behind the right shoulder. The left arm is still high, pointing at the ball and starting to pull down. This is the instant of maximum shoulder external rotation, which ends the cocking phase.",
+      "root": {
+        "jump_m": 0.65,
+        "stance_width_m": 0.25,
+        "stagger_m": -0.1,
+        "yaw_deg": -20
+      },
+      "angles": {
+        "lumbar_flex": -10,
+        "thoracic_flex": -10,
+        "trunk_lateral": 5,
+        "trunk_twist": 25,
+        "neck_flex": -30,
+        "l_shoulder_flex": 145,
+        "l_shoulder_abd": 20,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 25,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 10,
+        "r_shoulder_abd": 105,
+        "r_shoulder_ext_rot": 160,
+        "r_elbow_flex": 95,
+        "r_wrist_ext": 20,
+        "l_hip_flex": 10,
+        "l_hip_abd": 3,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 55,
+        "l_ankle_dorsi": -30,
+        "r_hip_flex": 0,
+        "r_hip_abd": 3,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 70,
+        "r_ankle_dorsi": -30
+      },
+      "confidence": "measured (r_shoulder_ext_rot 160 = max external rotation 160 +/- 10 deg, female collegiate cross-body spike) + estimated (all other joints)",
+      "evidence": [
+        "MEASURED: maximum shoulder external rotation 160 +/- 10 deg in the cross-body spike (Reeser et al. 2010, Table 3) https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065/table/table3-1941738110374624",
+        "Phase model approach - arm cocking - arm acceleration - follow-through, key events take-off, max ER, ball contact (Reeser et al. 2010) https://www.semanticscholar.org/paper/Upper-Limb-Biomechanics-During-the-Volleyball-Serve-Reeser-Fleisig/2b65554997d672c436749f7462af8b06232a1566/figure/0",
+        "MEASURED (qualitative): the alternative technique lowers peak shoulder flexion by ~10 deg; the traditional technique has ~15 deg more horizontal abduction; external rotation does not differ (Seminati et al. 2015) https://researchportal.bath.ac.uk/en/publications/shoulder-3d-range-of-motion-and-humerus-rotation-in-two-volleybal/",
+        "Arm swings seen in Olympic spikers: circular (most common), snap, straight, and high/low bow-and-arrow; textbooks mostly show bow-and-arrow https://jssm.org/21-3-465.p_d_f",
+        "ESTIMATED: Volleyball Ireland attack card - left arm points at the ball, right arm bent behind the head https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Attack-card.pdf",
+        "ESTIMATED: Sask progression - 'Robin Hood' draw of the hitting arm on the jump https://saskvolleyball.ca/wp-content/uploads/2018/12/Atomic-Vball-TEACHING-PROGRESSION-ATTACK-APPROACH-ARM-SWING-Sask-Volleyball-v.2-May-17.pdf",
+        "Review: a turn/swing phase where trunk rotation adds range before the arm swings forward https://www.researchgate.net/publication/383039800_Biomechanics_Analysis_of_Volleyball_A_Review",
+        "Hip-shoulder separation is the strongest predictor of cross-court spike ball speed in D-I women https://digitalcommons.wku.edu/ijesab/vol16/iss3/330",
+        "ESTIMATED: jump_m 0.65 is a generic value (elite women ~0.5-0.6, elite men ~0.85-0.95 at peak); scale per avatar",
+        "Rig note: abd 105 + ER 160 + elbow 95 puts the forearm pointing backward with the hand ~25 cm behind and ~15 cm above the shoulder (layback)"
+      ]
+    },
+    {
+      "id": "attack_contact",
+      "name": "Spike - ball contact",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "At the top of the jump the ball is hit in front of the hitting shoulder with a high arm. The upper arm is about 130 deg from the trunk and the elbow is still ~34 deg bent (it straightens just after contact). The trunk has unwound and is bending forward and to the LEFT, which lifts the hitting shoulder; the left arm has been pulled down and tucked to the left side. The legs pike forward slightly, and chest and pelvis face roughly cross-court.",
+      "root": {
+        "jump_m": 0.75,
+        "stance_width_m": 0.25,
+        "stagger_m": -0.1,
+        "yaw_deg": -15
+      },
+      "angles": {
+        "lumbar_flex": 5,
+        "thoracic_flex": 8,
+        "trunk_lateral": -20,
+        "trunk_twist": -5,
+        "neck_flex": -20,
+        "l_shoulder_flex": 25,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 100,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 0,
+        "r_shoulder_abd": 130,
+        "r_shoulder_ext_rot": 80,
+        "r_elbow_flex": 34,
+        "r_wrist_ext": 5,
+        "l_hip_flex": 30,
+        "l_hip_abd": 3,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 40,
+        "l_ankle_dorsi": -30,
+        "r_hip_flex": 25,
+        "r_hip_abd": 3,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 45,
+        "r_ankle_dorsi": -30
+      },
+      "confidence": "measured (r_shoulder_abd 130 +/- 8 and r_elbow_flex 34 +/- 10 at ball contact, female collegiate cross-body spike) + estimated (all other joints)",
+      "evidence": [
+        "MEASURED: shoulder abduction at ball contact 130 +/- 8 deg, elbow flexion at contact 34 +/- 10 deg, ball speed 16 +/- 2 m/s, cross-body spike, 14 female collegiate players (Reeser et al. 2010, Table 3) https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065/table/table3-1941738110374624",
+        "MEASURED: abduction at contact ~130 deg for all skills, well above tennis serves or baseball pitches (Reeser et al. 2010) https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065",
+        "MEASURED (review): shoulder abduction 130-133 deg at contact in NCAA players; a moderate trunk backswing and neutral shoulder/hip alignment at impact https://www.researchgate.net/publication/338552868_A_systematic_review_of_volleyball_spike_kinematics_Implications_for_practice_and_research",
+        "MEASURED (qualitative): players with shoulder pain show more horizontal abduction and LESS trunk side flexion at contact, so healthy spikers side-bend the trunk https://pmc.ncbi.nlm.nih.gov/articles/PMC6410979",
+        "MEASURED (qualitative): thoracic rotation and abduction at impact differ between line and cross-court spikes (Mitchinson et al. 2013) https://pubmed.ncbi.nlm.nih.gov/22814300",
+        "MEASURED (qualitative): top-level players have a more extended elbow just before impact than juniors; pelvis/trunk orientation is invariant across levels (Serrien et al. 2016) https://www.hrpub.org/download/20160930/SAJ3-19907336.pdf",
+        "Shared proximal-to-distal sequence across handball throw, tennis serve and volleyball spike (Wagner et al. 2014) https://www.bisp-surf.de/Record/PU201307005343",
+        "Trunk rotation kinematics did not correlate with ball speed in 10 international male spikers (Coleman et al. 1993) https://researchportal.hw.ac.uk/en/publications/a-three-dimensional-cinematographical-analysis-of-the-volleyball-/",
+        "Quaternion analysis of spike shoulder rotations (Roemer et al., ISBS 2008) https://ojs.ub.uni-konstanz.de/cpa/article/view/1914",
+        "Moderate knee flexion near the peak of flight at contact https://pmc.ncbi.nlm.nih.gov/articles/PMC5548173/",
+        "ESTIMATED: ER 80 at contact (no volleyball value found); in the abd-only representation it keeps the forearm almost vertical above the shoulder",
+        "Rig note: the arm is given as abd 130 / flex 0 so it does not depend on the flex/abd rotation order; the hand comes forward through trunk lean and side bend"
+      ]
+    },
+    {
+      "id": "attack_landing",
+      "name": "Spike landing - two-foot absorption (coached landing)",
+      "phase": "landing",
+      "handedness": "right",
+      "description": "This is the coached, safe landing at maximum absorption. Both feet are down about hip-width apart, the left slightly ahead, with knees ~65 deg and hips well flexed. The trunk is tipped forward ~28 deg over the feet and the knees track over the toes. The hitting arm has finished its follow-through across the body to the left hip and the left arm is out for balance.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.35,
+        "stagger_m": -0.1,
+        "yaw_deg": -10
+      },
+      "angles": {
+        "lumbar_flex": 12,
+        "thoracic_flex": 16,
+        "trunk_lateral": 0,
+        "trunk_twist": -10,
+        "neck_flex": 0,
+        "l_shoulder_flex": 45,
+        "l_shoulder_abd": 30,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 35,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 30,
+        "r_shoulder_abd": -15,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 25,
+        "r_wrist_ext": -10,
+        "l_hip_flex": 50,
+        "l_hip_abd": 6,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 62,
+        "l_ankle_dorsi": 12,
+        "r_hip_flex": 45,
+        "r_hip_abd": 6,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 67,
+        "r_ankle_dorsi": 22
+      },
+      "confidence": "estimated (landing studies found; their angle tables were not readable)",
+      "evidence": [
+        "MEASURED (qualitative): landings with knee flexion below ~30 deg give higher GRF and stiffness (Zahradnik et al. 2017, via systematic review) https://dergipark.org.tr/en/download/article-file/5488302",
+        "MEASURED (qualitative): college women land spikes with less knee and hip flexion than men (Salci et al. 2004) https://www.sciencedirect.com/science/article/abs/pii/S0268003304000555",
+        "MEASURED (qualitative): video and verbal feedback raised maximal hip flexion by ~30 deg and trunk flexion by ~15 deg in adolescent girls (Parsons & Alexander 2012) https://pubmed.ncbi.nlm.nih.gov/22446676/",
+        "MEASURED (qualitative): elite women land spike jumps with straighter legs and less knee/ankle range than depth jumps https://ojs.ub.uni-konstanz.de/cpa/article/view/1766",
+        "MEASURED (qualitative): women show more ankle dorsiflexion and knee valgus at landing https://media.isbweb.org/images/conferences/isb-congresses/2013/poster/ps1-14u.pdf",
+        "MEASURED (qualitative): fatigue raises pelvis-trunk flexion and lowers hip/knee/ankle flexion at landing https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12612828/",
+        "MEASURED (qualitative): sets to the non-dominant side raise trunk lateral bend and knee valgus at initial contact (Kawai et al. 2024) https://pubmed.ncbi.nlm.nih.gov/39094236"
+      ]
+    },
+    {
+      "id": "attack_landing_one_foot",
+      "name": "Spike landing - left-foot-first (typical outside hitter landing)",
+      "phase": "landing (initial contact)",
+      "handedness": "right",
+      "description": "This is the landing an outside hitter actually does most often after a fast outside set: the LEFT forefoot touches down first while the right foot is still in the air under or behind the body. The body has drifted toward the inside, the trunk is tipped and bent slightly left, and the knee and hip are straighter than in a two-foot landing. The hitting arm is finishing across the body and the left arm is out wide for balance.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.25,
+        "stagger_m": -0.35,
+        "yaw_deg": -20
+      },
+      "angles": {
+        "lumbar_flex": 8,
+        "thoracic_flex": 10,
+        "trunk_lateral": -8,
+        "trunk_twist": -10,
+        "neck_flex": 0,
+        "l_shoulder_flex": 50,
+        "l_shoulder_abd": 40,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 30,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 35,
+        "r_shoulder_abd": -20,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 30,
+        "r_wrist_ext": -10,
+        "l_hip_flex": 25,
+        "l_hip_abd": 5,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 20,
+        "l_ankle_dorsi": -20,
+        "r_hip_flex": 30,
+        "r_hip_abd": 3,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 80,
+        "r_ankle_dorsi": -25
+      },
+      "confidence": "estimated (prevalence and relative differences measured; initial-contact joint values estimated)",
+      "evidence": [
+        "MEASURED: one-foot landings are frequent after spikes from position 4 and 6 and after faster sets (Lobietti et al. 2010, Italian pro league, 48 men + 48 women) https://cris.unibo.it/handle/11585/92591",
+        "MEASURED: offensive landings in elite women were 50% two-foot, 38.9% left-foot-first, 11.1% right-foot-first https://www.sponet.de/sponet/Record/4006275",
+        "MEASURED: over half of defensive landings were on one foot (Tillman et al. 2004) https://www.jssm.org/jssm-03-30.xml-abst",
+        "MEASURED: single-leg spike landings have ~13.8 deg less knee flexion and ~10.8 deg less hip flexion over the landing phase than double-leg landings (13 semi-pro men, Applied Sciences 2021) https://www.mdpi.com/2076-3417/11/1/130",
+        "ESTIMATED: initial-contact angles (left knee 20, hip 25, forefoot-first ankle -20)"
+      ]
+    },
+    {
+      "id": "backrow_attack_contact",
+      "name": "Back-row attack (pipe) - ball contact",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "The back-row outside hitter jumps from behind the 3 m line in zone 6 (pipe) after a near-straight approach, so the pelvis is almost square to the net. The body is broad-jumping forward, so the ball is met farther in front: the trunk is tipped more forward (~20 deg), the arm is slightly higher and the wrist snaps over the top to give topspin. The left arm is tucked and the legs are piked under the body.",
+      "root": {
+        "jump_m": 0.7,
+        "stance_width_m": 0.25,
+        "stagger_m": -0.05,
+        "yaw_deg": -5
+      },
+      "angles": {
+        "lumbar_flex": 8,
+        "thoracic_flex": 12,
+        "trunk_lateral": -15,
+        "trunk_twist": -5,
+        "neck_flex": -15,
+        "l_shoulder_flex": 30,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 100,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 0,
+        "r_shoulder_abd": 135,
+        "r_shoulder_ext_rot": 80,
+        "r_elbow_flex": 30,
+        "r_wrist_ext": 5,
+        "l_hip_flex": 35,
+        "l_hip_abd": 3,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 40,
+        "l_ankle_dorsi": -30,
+        "r_hip_flex": 35,
+        "r_hip_abd": 3,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 45,
+        "r_ankle_dorsi": -30
+      },
+      "confidence": "estimated (by analogy with measured front-row spike contact values; no pipe-specific study found)",
+      "evidence": [
+        "MEASURED (front-row spike, used as anchor): abduction 130 +/- 8, elbow 34 +/- 10 at contact (Reeser et al. 2010) https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065/table/table3-1941738110374624",
+        "Jump-height determinants in the approach (horizontal CoM velocity) apply to the longer pipe approach (Wagner et al. 2009) https://www.researchgate.net/publication/26654826_Kinematic_Analysis_of_Volleyball_Spike_Jump",
+        "ESTIMATED: more forward trunk and contact further in front because of the forward broad-jump trajectory from behind the attack line"
+      ]
+    },
+    {
+      "id": "block_ready",
+      "name": "Block ready (left front, pin blocker)",
+      "phase": "ready",
+      "handedness": "right",
+      "description": "At the net in zone 4, about an arm's length from the antenna and 20-30 cm off the net, square to the net. Feet are about shoulder width, knees softly bent and the trunk almost upright. The hands are up in front of the face with palms toward the net, elbows bent and in front of the body, ready to press straight up and over.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.5,
+        "stagger_m": 0,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 4,
+        "thoracic_flex": 4,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -5,
+        "l_shoulder_flex": 70,
+        "l_shoulder_abd": 20,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 110,
+        "l_wrist_ext": 20,
+        "r_shoulder_flex": 70,
+        "r_shoulder_abd": 20,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 110,
+        "r_wrist_ext": 20,
+        "l_hip_flex": 20,
+        "l_hip_abd": 11,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 35,
+        "l_ankle_dorsi": 15,
+        "r_hip_flex": 20,
+        "r_hip_abd": 11,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 35,
+        "r_ankle_dorsi": 15
+      },
+      "confidence": "estimated (coaching texts)",
+      "evidence": [
+        "ESTIMATED: PE Update - hands should reach just above the net; thumbs rotated up toward the ceiling https://www.physicaleducationupdate.com/public/575.cfm",
+        "ESTIMATED: PE Update - cue for sealing the net (hands/forearms kept within a few inches of the net) https://www.physicaleducationupdate.com/public/910.cfm",
+        "ESTIMATED: Art of Coaching Volleyball - slide the hands over the net instead of going up then forward https://www.theartofcoachingvolleyball.com/ideal-hand-path-when-blocking/",
+        "Rig note: with flex 70 / abd 20 and ER 0 the bent forearms point up, so the hands are at face height in front of the body"
+      ]
+    },
+    {
+      "id": "block_footwork_crossover",
+      "name": "Block footwork - crossover step (moving inside, swing-block arms)",
+      "phase": "footwork",
+      "handedness": "right",
+      "description": "The outside hitter moves inside along the net (to the right) to help the middle. The hips turn to run (pelvis ~60 deg to the right) while the chest stays as square to the net as the trunk allows. The left foot crosses over in front and plants, and the right foot pushes off. In the swing-block style both arms swing low and back like a short spike approach, ready to swing up on the take-off.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.08,
+        "stagger_m": -0.55,
+        "yaw_deg": -60
+      },
+      "angles": {
+        "lumbar_flex": 5,
+        "thoracic_flex": 7,
+        "trunk_lateral": 0,
+        "trunk_twist": -35,
+        "neck_flex": -5,
+        "l_shoulder_flex": -35,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 25,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": -35,
+        "r_shoulder_abd": 15,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 25,
+        "r_wrist_ext": 0,
+        "l_hip_flex": 35,
+        "l_hip_abd": -8,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 50,
+        "l_ankle_dorsi": 15,
+        "r_hip_flex": -10,
+        "r_hip_abd": 3,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 35,
+        "r_ankle_dorsi": -15
+      },
+      "confidence": "estimated (footwork studies give jump height/timing, not joint angles)",
+      "evidence": [
+        "MEASURED (qualitative): the swing block gives more jump height, hand penetration and take-off velocity than the traditional block, with a shorter approach time but a risk of mistiming (Ficklin, Lund & Schipper 2014) https://www.jssm.org/jssm-13-78.xml-abst",
+        "MEASURED (qualitative): the chicken-wing arm action is fastest to get the hands above the net; the swing gives the most penetration and jump height https://www.jssm.org/jssm-10-452.xml-abst",
+        "MEASURED (qualitative): jab-crossover step reaches peak CoM speed sooner (Dona et al. 2006, pilot) https://lida.sport-iat.de/dvv/Record/3040039",
+        "Crossover vs slide-step footwork in read and commit blocks, elite men https://cris.unibo.it/handle/11585/71493",
+        "ESTIMATED: trunk_twist -35 keeps the chest about 25 deg off square while the hips run"
+      ]
+    },
+    {
+      "id": "block_jump_peak",
+      "name": "Block - peak of jump (hands over the net)",
+      "phase": "peak",
+      "handedness": "right",
+      "description": "At the top of the block both arms are straight, shoulder-width and pressed forward over the net (penetration), with fingers spread and wrists firm, hands angled down into the opponent's court. As the pin blocker, the outside hand is turned in to keep the ball off the antenna. The body is long with a slight pike at the hips, toes pointed, and the eyes watch the hitter.",
+      "root": {
+        "jump_m": 0.55,
+        "stance_width_m": 0.35,
+        "stagger_m": 0,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 5,
+        "thoracic_flex": 5,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": 0,
+        "l_shoulder_flex": 170,
+        "l_shoulder_abd": 10,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 5,
+        "l_wrist_ext": -10,
+        "r_shoulder_flex": 170,
+        "r_shoulder_abd": 10,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 5,
+        "r_wrist_ext": -10,
+        "l_hip_flex": 15,
+        "l_hip_abd": 4,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 15,
+        "l_ankle_dorsi": -35,
+        "r_hip_flex": 15,
+        "r_hip_abd": 4,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 15,
+        "r_ankle_dorsi": -35
+      },
+      "confidence": "estimated (coaching texts; block reach studies give heights, not joint angles)",
+      "evidence": [
+        "MEASURED (qualitative): hand penetration and jump height are higher with the swing technique (Ficklin et al. 2014) https://www.jssm.org/jssm-13-78.xml-abst",
+        "ESTIMATED: Art of Coaching Volleyball - ideal hand path slides over the net https://www.theartofcoachingvolleyball.com/ideal-hand-path-when-blocking/",
+        "ESTIMATED: PE Update - palms just above the ribbon; thumbs up https://www.physicaleducationupdate.com/public/575.cfm",
+        "ESTIMATED: PE Update - seal the net https://www.physicaleducationupdate.com/public/910.cfm",
+        "ESTIMATED: jump_m 0.55 generic (block jumps are lower than spike jumps); scale per avatar"
+      ]
+    },
+    {
+      "id": "block_landing",
+      "name": "Block landing",
+      "phase": "landing",
+      "handedness": "right",
+      "description": "This is the two-foot landing straight down after the block, facing the net with the feet shoulder-width apart. Knees ~58 deg and the trunk tipped ~18 deg forward. The arms are coming down in front of the body (not swinging into the net), and the head is already turning to find the ball for the transition.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.45,
+        "stagger_m": 0,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 8,
+        "thoracic_flex": 10,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": 0,
+        "l_shoulder_flex": 100,
+        "l_shoulder_abd": 20,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 40,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 100,
+        "r_shoulder_abd": 20,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 40,
+        "r_wrist_ext": 0,
+        "l_hip_flex": 38,
+        "l_hip_abd": 9,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 58,
+        "l_ankle_dorsi": 20,
+        "r_hip_flex": 38,
+        "r_hip_abd": 9,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 58,
+        "r_ankle_dorsi": 20
+      },
+      "confidence": "estimated (studies show how block-landing knee flexion changes, values not readable)",
+      "evidence": [
+        "MEASURED (qualitative): opposition changes knee flexion at ground contact, max knee flexion and knee ROM in block landings (Hughes, Watkins & Owen 2010) https://uhra.herts.ac.uk/id/eprint/865/",
+        "MEASURED (qualitative): women show less hip flexion than men in 40 cm block landings (Salci et al. 2004) https://www.sciencedirect.com/science/article/abs/pii/S0268003304000555",
+        "MEASURED: >50% of defensive (block) landings on one foot in elite women (Tillman et al. 2004) https://www.jssm.org/jssm-03-30.xml-abst",
+        "Landing systematic review (spike and block landings) https://dergipark.org.tr/en/download/article-file/5488302"
+      ]
+    },
+    {
+      "id": "dig_low",
+      "name": "Low dig (defense)",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Defensive dig of a hard-driven ball. Feet are wide and turned out, hips very low (knees ~100 deg) and the trunk tipped ~40 deg so the platform is close to the floor in front of the knees. Arms are straight and joined, angled steeply down so the ball rebounds up instead of out, and the head stays up watching the hitter and ball.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.85,
+        "stagger_m": 0.08,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 18,
+        "thoracic_flex": 22,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -28,
+        "l_shoulder_flex": 75,
+        "l_shoulder_abd": -15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 0,
+        "l_wrist_ext": -15,
+        "r_shoulder_flex": 75,
+        "r_shoulder_abd": -15,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 0,
+        "r_wrist_ext": -15,
+        "l_hip_flex": 62,
+        "l_hip_abd": 32,
+        "l_hip_ext_rot": 20,
+        "l_knee_flex": 100,
+        "l_ankle_dorsi": 38,
+        "r_hip_flex": 68,
+        "r_hip_abd": 32,
+        "r_hip_ext_rot": 20,
+        "r_knee_flex": 98,
+        "r_ankle_dorsi": 30
+      },
+      "confidence": "estimated (coaching texts and anatomy; no dig kinematics study found)",
+      "evidence": [
+        "ESTIMATED: Volleyball Canada passing sheet (platform mechanics shared with the dig) https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+        "ESTIMATED: JVA - hips back, shoulders forward https://jvavolleyball.org/passing-drills-train-proper-technique-eliminate-bad-habits/",
+        "ESTIMATED: Art of Coaching Volleyball (Hagglund libero series) - towel drill to keep the shoulders forward and form platform angles https://www.theartofcoachingvolleyball.com/natalie-hagglund-libero-training-series/",
+        "Arm check: shoulder flex 75 with the trunk at 40 deg puts the platform ~55 deg below horizontal"
+      ]
+    },
+    {
+      "id": "cover",
+      "name": "Attack coverage",
+      "phase": "ready",
+      "handedness": "right",
+      "description": "The outside hitter is covering a teammate's attack, 1-2 m behind and to the side of the hitter. The stance is very low and wide with the knees ~100 deg and the head up watching the opposing block. Both hands are low and in front, palms up and slightly apart, ready to scoop a blocked ball off the floor.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.8,
+        "stagger_m": 0.05,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 15,
+        "thoracic_flex": 15,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -35,
+        "l_shoulder_flex": 50,
+        "l_shoulder_abd": 25,
+        "l_shoulder_ext_rot": 10,
+        "l_elbow_flex": 30,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 50,
+        "r_shoulder_abd": 25,
+        "r_shoulder_ext_rot": 10,
+        "r_elbow_flex": 30,
+        "r_wrist_ext": 0,
+        "l_hip_flex": 64,
+        "l_hip_abd": 30,
+        "l_hip_ext_rot": 20,
+        "l_knee_flex": 102,
+        "l_ankle_dorsi": 38,
+        "r_hip_flex": 68,
+        "r_hip_abd": 30,
+        "r_hip_ext_rot": 20,
+        "r_knee_flex": 100,
+        "r_ankle_dorsi": 32
+      },
+      "confidence": "estimated (coaching practice and anatomy; no study found)",
+      "evidence": [
+        "ESTIMATED: KFUPM / Pakmen ready-posture principles (weight forward, shoulders ahead of knees) applied to a lower posture https://faculty.kfupm.edu.sa/PE/abuhilal/volleyball_skills.html",
+        "ESTIMATED: Pakmen - arms shoot forward ahead of the body in a ready position https://www.pakmen.com/volleyball-positioning-techniques-resting-and-ready-positions-lesson-1/"
+      ]
+    },
+    {
+      "id": "transition_retreat",
+      "name": "Transition - retreat off the net",
+      "phase": "footwork",
+      "handedness": "right",
+      "description": "After landing from the block (or from base), the outside hitter opens to the court with a drop step of the right foot and moves back toward the approach start, about 3.5-4.5 m off the net at or outside the left sideline. Hips are turned ~45 deg to the right so the eyes stay on the dig and setter. The body is low and athletic with the arms in a running carry, ready to turn into the R-L-R-L approach.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.25,
+        "stagger_m": -0.58,
+        "yaw_deg": -45
+      },
+      "angles": {
+        "lumbar_flex": 7,
+        "thoracic_flex": 8,
+        "trunk_lateral": 0,
+        "trunk_twist": 10,
+        "neck_flex": -10,
+        "l_shoulder_flex": -25,
+        "l_shoulder_abd": 10,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 90,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 30,
+        "r_shoulder_abd": 10,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 90,
+        "r_wrist_ext": 0,
+        "l_hip_flex": 30,
+        "l_hip_abd": 4,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 45,
+        "l_ankle_dorsi": 15,
+        "r_hip_flex": -20,
+        "r_hip_abd": 4,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 20,
+        "r_ankle_dorsi": -20
+      },
+      "confidence": "estimated (coaching texts)",
+      "evidence": [
+        "ESTIMATED: Art of Coaching Volleyball - outside hitter footwork: shuffles to the outside of the pin, then a 4-step approach (R-L-R-L) https://www.theartofcoachingvolleyball.com/outside-hitter-footwork/",
+        "ESTIMATED: approach start depth/angle (approach from ~3 m, behind the attack line, angled to the net) https://en.wikipedia.org/wiki/Volleyball_spiking"
+      ]
+    },
+    {
+      "id": "serve_jump_toss",
+      "name": "Topspin jump serve - toss",
+      "phase": "toss",
+      "handedness": "right",
+      "description": "This shows a one-arm toss with the hitting (right) hand (many servers toss with both hands or the left), started ~3-4 m behind the end line on the first step of the approach. The right arm finishes high and forward with a wrist flick that puts topspin on a high toss in front of the hitting shoulder. The left foot is stepping forward and the eyes follow the ball up.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.25,
+        "stagger_m": -0.5,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 6,
+        "thoracic_flex": 6,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -35,
+        "l_shoulder_flex": 30,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 30,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 150,
+        "r_shoulder_abd": 15,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 10,
+        "r_wrist_ext": -30,
+        "l_hip_flex": 25,
+        "l_hip_abd": 4,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 30,
+        "l_ankle_dorsi": 5,
+        "r_hip_flex": -15,
+        "r_hip_abd": 4,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 15,
+        "r_ankle_dorsi": -10
+      },
+      "confidence": "estimated (coaching practice; no toss kinematics found)",
+      "evidence": [
+        "Jump serve kinematics follow the spike pattern (Coleman, ISBS jump-serve analysis; Reeser et al. 2010) https://ojs.ub.uni-konstanz.de/cpa/article/view/3718",
+        "ESTIMATED: toss arm and step pattern from common coaching practice; the approach after the toss is the spike approach (see approach_penultimate / approach_takeoff)"
+      ]
+    },
+    {
+      "id": "serve_jump_contact",
+      "name": "Topspin jump serve - ball contact",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Airborne after a straight 3-4 step approach and broad jump into the court, the server meets the ball high and in front of the hitting shoulder, snapping the wrist over the top for topspin. The arm is ~130 deg from the trunk, which is unwinding and side-bending left with the left arm tucked. The legs pike forward under the body.",
+      "root": {
+        "jump_m": 0.65,
+        "stance_width_m": 0.25,
+        "stagger_m": -0.05,
+        "yaw_deg": -10
+      },
+      "angles": {
+        "lumbar_flex": 7,
+        "thoracic_flex": 10,
+        "trunk_lateral": -18,
+        "trunk_twist": -5,
+        "neck_flex": -20,
+        "l_shoulder_flex": 25,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 100,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 0,
+        "r_shoulder_abd": 129,
+        "r_shoulder_ext_rot": 80,
+        "r_elbow_flex": 45,
+        "r_wrist_ext": 5,
+        "l_hip_flex": 35,
+        "l_hip_abd": 3,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 40,
+        "l_ankle_dorsi": -30,
+        "r_hip_flex": 30,
+        "r_hip_abd": 3,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 45,
+        "r_ankle_dorsi": -30
+      },
+      "confidence": "measured (r_shoulder_abd 129 +/- 11 at contact; elbow 48 +/- 26 at contact, shown as 45; max ER 164 +/- 11; small n, descriptive only) + estimated (all other joints)",
+      "evidence": [
+        "MEASURED: jump serve - max ER 164 +/- 11, elbow flexion at contact 48 +/- 26, abduction at contact 129 +/- 11, ball speed 16 +/- 2 m/s; too few servers for statistics, described as similar to spikes (Reeser et al. 2010) https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065/table/table3-1941738110374624",
+        "Coleman ISBS 3-D jump-serve analysis - limb kinematics vs performance agrees with the 1993 spike results https://ojs.ub.uni-konstanz.de/cpa/article/view/3718",
+        "Seminati conference abstract - shoulder range of alternative spike/serve techniques https://sponet.de/sponet/Record/4026868?lng=en"
+      ]
+    },
+    {
+      "id": "serve_float_contact",
+      "name": "Standing float serve - ball contact",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Standing behind the end line with the left foot forward, the server moves the weight onto the front foot as the hand meets the ball high in front of the hitting shoulder. The wrist is firm and the contact is with the heel of the open hand, with a short punch and no wrist snap or long follow-through. The elbow is nearly straight, the trunk upright and almost square to the target, and the left arm is pulled down to the side.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.3,
+        "stagger_m": -0.4,
+        "yaw_deg": -15
+      },
+      "angles": {
+        "lumbar_flex": 2,
+        "thoracic_flex": 4,
+        "trunk_lateral": -10,
+        "trunk_twist": -5,
+        "neck_flex": -20,
+        "l_shoulder_flex": 30,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 90,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 0,
+        "r_shoulder_abd": 130,
+        "r_shoulder_ext_rot": 70,
+        "r_elbow_flex": 20,
+        "r_wrist_ext": 0,
+        "l_hip_flex": 15,
+        "l_hip_abd": 4,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 20,
+        "l_ankle_dorsi": 5,
+        "r_hip_flex": -15,
+        "r_hip_abd": 4,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 10,
+        "r_ankle_dorsi": -15
+      },
+      "confidence": "measured (r_shoulder_abd ~130 at contact, reported for all skills incl. float serve) + estimated (all other joints)",
+      "evidence": [
+        "MEASURED: shoulder abduction at contact ~130 deg for all skills incl. the float serve; float-serve shoulder/elbow loads second-lowest after the roll shot (Reeser et al. 2010) https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065",
+        "ESTIMATED: elbow 20 and firm wrist from coaching practice (contact with heel of hand, no wrist snap)"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "title": "Reeser JC, Fleisig GS, et al. (2010) Upper limb biomechanics during the volleyball serve and spike. Sports Health",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065",
+      "type": "study",
+      "used_for": [
+        "attack_arm_cock",
+        "attack_contact",
+        "backrow_attack_contact",
+        "serve_jump_contact",
+        "serve_float_contact"
+      ]
+    },
+    {
+      "title": "Reeser et al. (2010) Table 3 - cross-body spike and jump serve vs baseball pitch and tennis serve (max ER, elbow flexion, abduction at contact)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065/table/table3-1941738110374624",
+      "type": "study",
+      "used_for": [
+        "attack_arm_cock",
+        "attack_contact",
+        "backrow_attack_contact",
+        "serve_jump_contact"
+      ]
+    },
+    {
+      "title": "Reeser et al. (2010) Figure 1 - spike phases (approach, arm cocking, arm acceleration, follow-through) and events",
+      "url": "https://www.semanticscholar.org/paper/Upper-Limb-Biomechanics-During-the-Volleyball-Serve-Reeser-Fleisig/2b65554997d672c436749f7462af8b06232a1566/figure/0",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "attack_arm_cock",
+        "attack_contact"
+      ]
+    },
+    {
+      "title": "Seminati E, et al. (2015) Shoulder 3D range of motion and humerus rotation in two volleyball spike techniques. Sports Biomechanics",
+      "url": "https://researchportal.bath.ac.uk/en/publications/shoulder-3d-range-of-motion-and-humerus-rotation-in-two-volleybal/",
+      "type": "study",
+      "used_for": [
+        "attack_arm_cock",
+        "attack_contact"
+      ]
+    },
+    {
+      "title": "Seminati E, et al. The shoulder range of motion of alternative spike/serve techniques as a potential injury predictor (conference abstract)",
+      "url": "https://sponet.de/sponet/Record/4026868?lng=en",
+      "type": "study",
+      "used_for": [
+        "attack_arm_cock",
+        "serve_jump_contact"
+      ]
+    },
+    {
+      "title": "Coleman SGS, Benham AS, Northcott SR (1993) A three-dimensional cinematographical analysis of the volleyball spike. J Sports Sci",
+      "url": "https://researchportal.hw.ac.uk/en/publications/a-three-dimensional-cinematographical-analysis-of-the-volleyball-/",
+      "type": "study",
+      "used_for": [
+        "attack_contact",
+        "attack_arm_cock"
+      ]
+    },
+    {
+      "title": "Coleman SGS - A three-dimensional kinematic analysis of the volleyball jump serve (ISBS proceedings)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/3718",
+      "type": "study",
+      "used_for": [
+        "serve_jump_toss",
+        "serve_jump_contact"
+      ]
+    },
+    {
+      "title": "Serrien B, et al. (2016) A motion analysis in the volleyball spike - part 1: three-dimensional kinematics and performance. IJHMSS",
+      "url": "https://www.hrpub.org/download/20160930/SAJ3-19907336.pdf",
+      "type": "study",
+      "used_for": [
+        "attack_contact",
+        "attack_arm_cock"
+      ]
+    },
+    {
+      "title": "Wagner H, et al. (2014) Upper-body kinematics in team-handball throw, tennis serve, and volleyball spike. Scand J Med Sci Sports",
+      "url": "https://www.bisp-surf.de/Record/PU201307005343",
+      "type": "study",
+      "used_for": [
+        "attack_contact"
+      ]
+    },
+    {
+      "title": "Wagner H, Tilp M, von Duvillard SP, Mueller E (2009) Kinematic analysis of volleyball spike jump. Int J Sports Med",
+      "url": "https://www.researchgate.net/publication/26654826_Kinematic_Analysis_of_Volleyball_Spike_Jump",
+      "type": "study",
+      "used_for": [
+        "approach_penultimate",
+        "approach_takeoff",
+        "backrow_attack_contact"
+      ]
+    },
+    {
+      "title": "Fuchs PX, et al. (2019) Movement characteristics of volleyball spike jump performance in females. J Sci Med Sport",
+      "url": "https://www.researchgate.net/publication/330189339_Movement_characteristics_of_volleyball_spike_jump_performance_in_females",
+      "type": "study",
+      "used_for": [
+        "approach_penultimate",
+        "approach_takeoff",
+        "traits"
+      ]
+    },
+    {
+      "title": "Fuchs PX, et al. (2019) Spike jump biomechanics in male versus female elite volleyball players. J Sports Sci",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/31280702/",
+      "type": "study",
+      "used_for": [
+        "approach_takeoff",
+        "traits"
+      ]
+    },
+    {
+      "title": "Position-specific spike approach kinematics in national-level male players (OH/OPP vs MB knee angles). Frontiers in Physiology 2026, doi 10.3389/fphys.2026.1931891",
+      "url": "https://www.frontiersin.org/journals/physiology/articles/10.3389/fphys.2026.1931891/full",
+      "type": "study",
+      "used_for": [
+        "approach_takeoff",
+        "traits"
+      ]
+    },
+    {
+      "title": "Influence of the step number of the approach run on the jumping kinematics in volleyball spike jumps (2-step vs 3-step)",
+      "url": "https://digitalscholarship.unlv.edu/scholarship_kin/vol4/iss1/15",
+      "type": "study",
+      "used_for": [
+        "approach_penultimate"
+      ]
+    },
+    {
+      "title": "Tai WH, et al. (2021) One-leg vs two-leg spike approach kinematics. Applied Sciences",
+      "url": "https://doaj.org/article/9dda9c97843c4c06b3414f5b5761e7a8",
+      "type": "study",
+      "used_for": [
+        "approach_takeoff"
+      ]
+    },
+    {
+      "title": "Sarvestan J, et al. (2020) Kinematic differences between successful and faulty spikes in young volleyball players. J Sports Sci",
+      "url": "https://lida.sport-iat.de/dvv/Record/4066763?lng=en",
+      "type": "study",
+      "used_for": [
+        "approach_takeoff"
+      ]
+    },
+    {
+      "title": "Analysis of whole-body coordination patterning in successful and faulty spikes using self-organising map-based cluster analysis",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7917820",
+      "type": "study",
+      "used_for": [
+        "approach_takeoff"
+      ]
+    },
+    {
+      "title": "ISBS proceedings - spike approach loading: better spikers delay premature leg extension, higher knee angular velocity at take-off",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/2606/2454",
+      "type": "study",
+      "used_for": [
+        "approach_takeoff"
+      ]
+    },
+    {
+      "title": "Kinematic analysis of volleyball spike - three outside hitters (ISBS 2006 abstract)",
+      "url": "https://sponet.de/sponet/Record/3040210",
+      "type": "study",
+      "used_for": [
+        "approach_takeoff",
+        "approach_penultimate"
+      ]
+    },
+    {
+      "title": "Kinematic differences of women's spikes between side-spikers and middle-blockers (Japanese Society of Volleyball Research, 2024)",
+      "url": "https://jsvr.org/wp-content/uploads/2024/02/jsvr20pp24-29.pdf",
+      "type": "study",
+      "used_for": [
+        "approach_takeoff"
+      ]
+    },
+    {
+      "title": "Arm swing techniques of Olympic spikers 1984-2021 (circular, snap, straight, bow-and-arrow high/low). J Sports Sci Med 21:465",
+      "url": "https://jssm.org/21-3-465.p_d_f",
+      "type": "video analysis",
+      "used_for": [
+        "attack_arm_cock"
+      ]
+    },
+    {
+      "title": "Mitchinson L, et al. (2013) Comparison of upper arm kinematics during a volleyball spike between players with and without a history of shoulder injury. J Appl Biomech",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/22814300",
+      "type": "study",
+      "used_for": [
+        "attack_contact"
+      ]
+    },
+    {
+      "title": "Spiking kinematics in volleyball players with shoulder pain. J Athl Train 2019;54(1):90-98",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6410979",
+      "type": "study",
+      "used_for": [
+        "attack_contact"
+      ]
+    },
+    {
+      "title": "Effect of including ball contact force on modelled shoulder torque in adolescent spikers (2023)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10499142",
+      "type": "study",
+      "used_for": [
+        "attack_contact"
+      ]
+    },
+    {
+      "title": "Roemer K, et al. (2008) Investigation of shoulder kinematics in volleyball spikes (ISBS)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/1914",
+      "type": "study",
+      "used_for": [
+        "attack_contact",
+        "attack_arm_cock"
+      ]
+    },
+    {
+      "title": "The influence of hip to shoulder separation in the volleyball attack. Int J Exerc Sci Conf Proc",
+      "url": "https://digitalcommons.wku.edu/ijesab/vol16/iss3/330",
+      "type": "study",
+      "used_for": [
+        "attack_arm_cock"
+      ]
+    },
+    {
+      "title": "Slovak L, Sarvestan J, et al. (2024) Upper limb biomechanical differences in volleyball spikes among young female players",
+      "url": "https://journals.sagepub.com/doi/10.1177/17479541231211679",
+      "type": "study",
+      "used_for": [
+        "attack_contact"
+      ]
+    },
+    {
+      "title": "A systematic review of volleyball spike kinematics: implications for practice and research",
+      "url": "https://www.researchgate.net/publication/338552868_A_systematic_review_of_volleyball_spike_kinematics_Implications_for_practice_and_research",
+      "type": "study",
+      "used_for": [
+        "attack_contact"
+      ]
+    },
+    {
+      "title": "Biomechanics analysis of volleyball: a review (2024)",
+      "url": "https://www.researchgate.net/publication/383039800_Biomechanics_Analysis_of_Volleyball_A_Review",
+      "type": "study",
+      "used_for": [
+        "attack_arm_cock"
+      ]
+    },
+    {
+      "title": "Kinematic analysis of volleyball attack in the net center with various types of take-off",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5548173/",
+      "type": "study",
+      "used_for": [
+        "attack_contact"
+      ]
+    },
+    {
+      "title": "Kawai et al. (2024) Effect of ball positions on trunk, hip, knee and ankle joint kinematics and kinetics during a spike jump. Gait & Posture",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/39094236",
+      "type": "study",
+      "used_for": [
+        "attack_landing"
+      ]
+    },
+    {
+      "title": "Salci Y, et al. (2004) Comparison of landing maneuvers between male and female college volleyball players. Clin Biomech",
+      "url": "https://www.sciencedirect.com/science/article/abs/pii/S0268003304000555",
+      "type": "study",
+      "used_for": [
+        "attack_landing",
+        "block_landing"
+      ]
+    },
+    {
+      "title": "Hughes G, Watkins J, Owen N (2010) The effects of opposition on knee kinematics and ground reaction force during landing from volleyball block jumps",
+      "url": "https://uhra.herts.ac.uk/id/eprint/865/",
+      "type": "study",
+      "used_for": [
+        "block_landing"
+      ]
+    },
+    {
+      "title": "Single-leg vs double-leg landings following a volleyball spike: temporal kinematic and kinetic differences. Applied Sciences 2021, 11(1):130",
+      "url": "https://www.mdpi.com/2076-3417/11/1/130",
+      "type": "study",
+      "used_for": [
+        "attack_landing_one_foot"
+      ]
+    },
+    {
+      "title": "Tillman MD, et al. (2004) Jumping and landing techniques in elite women's volleyball. J Sports Sci Med",
+      "url": "https://www.jssm.org/jssm-03-30.xml-abst",
+      "type": "video analysis",
+      "used_for": [
+        "attack_landing_one_foot",
+        "block_landing"
+      ]
+    },
+    {
+      "title": "Prevalence of jumping and landing techniques in volleyball: an analysis of elite female players",
+      "url": "https://www.sponet.de/sponet/Record/4006275",
+      "type": "video analysis",
+      "used_for": [
+        "attack_landing_one_foot"
+      ]
+    },
+    {
+      "title": "Lobietti R, Coleman S, Pizzichillo E, Merni F (2010) Landing techniques in volleyball. J Sports Sci",
+      "url": "https://cris.unibo.it/handle/11585/92591",
+      "type": "video analysis",
+      "used_for": [
+        "attack_landing_one_foot"
+      ]
+    },
+    {
+      "title": "Parsons JL, Alexander MJ (2012) Modifying spike jump landing biomechanics in female adolescent volleyball athletes using video and verbal feedback",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/22446676/",
+      "type": "study",
+      "used_for": [
+        "attack_landing"
+      ]
+    },
+    {
+      "title": "Understanding biomechanical demands during volleyball spike and block landings: a systematic review",
+      "url": "https://dergipark.org.tr/en/download/article-file/5488302",
+      "type": "study",
+      "used_for": [
+        "attack_landing",
+        "block_landing"
+      ]
+    },
+    {
+      "title": "Hsieh & Huang (2013) Gender differences in volleyball spike landing (ISB poster)",
+      "url": "https://media.isbweb.org/images/conferences/isb-congresses/2013/poster/ps1-14u.pdf",
+      "type": "study",
+      "used_for": [
+        "attack_landing"
+      ]
+    },
+    {
+      "title": "A kinematic analysis of spike jumps and plyometric depth jumps performed by elite female volleyball players (ISBS)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/1766",
+      "type": "study",
+      "used_for": [
+        "attack_landing"
+      ]
+    },
+    {
+      "title": "Comparison of jump-landing biomechanics during and after fatigue",
+      "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12612828/",
+      "type": "study",
+      "used_for": [
+        "attack_landing"
+      ]
+    },
+    {
+      "title": "Ficklin T, Lund R, Schipper M (2014) A comparison of jump height, takeoff velocities and blocking coverage in the swing and traditional volleyball blocking techniques. J Sports Sci Med",
+      "url": "https://www.jssm.org/jssm-13-78.xml-abst",
+      "type": "study",
+      "used_for": [
+        "block_footwork_crossover",
+        "block_jump_peak",
+        "traits"
+      ]
+    },
+    {
+      "title": "Dona G, et al. (2006) Biomechanical analysis of three different blocking footwork techniques in volleyball: a pilot study (ISBS)",
+      "url": "https://lida.sport-iat.de/dvv/Record/3040039",
+      "type": "study",
+      "used_for": [
+        "block_footwork_crossover"
+      ]
+    },
+    {
+      "title": "Kinematic analysis of read and commit blocks: crossover vs slide-step footwork in elite male players",
+      "url": "https://cris.unibo.it/handle/11585/71493",
+      "type": "study",
+      "used_for": [
+        "block_footwork_crossover"
+      ]
+    },
+    {
+      "title": "Comparison of blocking arm-swing techniques (traditional, chicken-wing, swing). J Sports Sci Med 10:452",
+      "url": "https://www.jssm.org/jssm-10-452.xml-abst",
+      "type": "study",
+      "used_for": [
+        "block_footwork_crossover"
+      ]
+    },
+    {
+      "title": "Ridgway M, Hamilton N (2008) The kinematics of forearm passing in low skilled and high skilled volleyball players",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/2336",
+      "type": "study",
+      "used_for": [
+        "ready_medium",
+        "pass_platform"
+      ]
+    },
+    {
+      "title": "Kapidzic A, et al. Kinematic analysis of forearm passing in volleyball at different distances. J Educ Pract",
+      "url": "https://www.iiste.org/Journals/index.php/JEP/article/view/12341",
+      "type": "study",
+      "used_for": [
+        "pass_platform"
+      ]
+    },
+    {
+      "title": "Ozawa Y, et al. Biomechanical analysis of volleyball overhead pass. Sports Biomechanics",
+      "url": "https://www.tandfonline.com/doi/full/10.1080/14763141.2019.1609072",
+      "type": "study",
+      "used_for": [
+        "overhead_pass"
+      ]
+    },
+    {
+      "title": "Ozawa Y, et al. Biomechanical analysis of distance adjustment in volleyball overhead pass",
+      "url": "https://lida.sport-iat.de/dvv/Record/4084492",
+      "type": "study",
+      "used_for": [
+        "overhead_pass"
+      ]
+    },
+    {
+      "title": "Dong et al. (2024) Contribution of upper vs lower extremity as overhead pass distance increases. J Men's Health",
+      "url": "https://doaj.org/article/7c9d2b47e6ca47a98fbeb4820899a424",
+      "type": "study",
+      "used_for": [
+        "overhead_pass"
+      ]
+    },
+    {
+      "title": "Volleyball Canada - Basic passing skill description (coach education)",
+      "url": "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "ready_medium",
+        "pass_platform",
+        "dig_low"
+      ]
+    },
+    {
+      "title": "Volleyball Ireland - LTPD Pass skill card",
+      "url": "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Pass-card.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "pass_platform"
+      ]
+    },
+    {
+      "title": "Volleyball Ireland - LTPD Attack skill card",
+      "url": "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Attack-card.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "attack_arm_cock"
+      ]
+    },
+    {
+      "title": "Sask Volleyball / Atomic Volleyball - Teaching progression: attack approach and arm swing",
+      "url": "https://saskvolleyball.ca/wp-content/uploads/2018/12/Atomic-Vball-TEACHING-PROGRESSION-ATTACK-APPROACH-ARM-SWING-Sask-Volleyball-v.2-May-17.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "approach_penultimate",
+        "attack_arm_cock"
+      ]
+    },
+    {
+      "title": "JVA - passing technique (platform, contact point)",
+      "url": "https://jvavolleyball.org/?p=25606",
+      "type": "technique article",
+      "used_for": [
+        "pass_platform"
+      ]
+    },
+    {
+      "title": "JVA - passing drills that train proper technique ('tilt, not twist', hips back shoulders forward)",
+      "url": "https://jvavolleyball.org/passing-drills-train-proper-technique-eliminate-bad-habits/",
+      "type": "technique article",
+      "used_for": [
+        "ready_medium",
+        "pass_platform_angled",
+        "dig_low"
+      ]
+    },
+    {
+      "title": "Coaching Volleyball - Teaching center-line passing vs platform angle",
+      "url": "https://coachingvb.com/teaching-center-line-passing-or-platform-angle/",
+      "type": "technique article",
+      "used_for": [
+        "pass_platform_angled"
+      ]
+    },
+    {
+      "title": "Art of Coaching Volleyball - Practicing passing angles",
+      "url": "https://www.theartofcoachingvolleyball.com/practicing-passing-angles/",
+      "type": "technique article",
+      "used_for": [
+        "pass_platform_angled"
+      ]
+    },
+    {
+      "title": "Art of Coaching Volleyball - Outside hitter footwork",
+      "url": "https://www.theartofcoachingvolleyball.com/outside-hitter-footwork/",
+      "type": "technique article",
+      "used_for": [
+        "approach_penultimate",
+        "transition_retreat"
+      ]
+    },
+    {
+      "title": "Art of Coaching Volleyball - Ideal hand path when blocking",
+      "url": "https://www.theartofcoachingvolleyball.com/ideal-hand-path-when-blocking/",
+      "type": "technique article",
+      "used_for": [
+        "block_ready",
+        "block_jump_peak"
+      ]
+    },
+    {
+      "title": "Art of Coaching Volleyball - Natalie Hagglund libero training series (shoulders-forward towel drill, platform angles)",
+      "url": "https://www.theartofcoachingvolleyball.com/natalie-hagglund-libero-training-series/",
+      "type": "video analysis",
+      "used_for": [
+        "dig_low"
+      ]
+    },
+    {
+      "title": "Active.com - 10 serve receive tips",
+      "url": "https://www.active.com/volleyball/articles/10-serve-receive-tips",
+      "type": "technique article",
+      "used_for": [
+        "pass_platform"
+      ]
+    },
+    {
+      "title": "Volleyball1on1 - passing platform angle (lift/drop the outside shoulder)",
+      "url": "https://www.volleyball1on1.com/?p=33215",
+      "type": "technique article",
+      "used_for": [
+        "pass_platform_angled"
+      ]
+    },
+    {
+      "title": "Physical Education Update - Coaching cue for sealing the net",
+      "url": "https://www.physicaleducationupdate.com/public/910.cfm",
+      "type": "technique article",
+      "used_for": [
+        "block_ready",
+        "block_jump_peak"
+      ]
+    },
+    {
+      "title": "Physical Education Update - Blocking height and position (palms above the net, thumbs up)",
+      "url": "https://www.physicaleducationupdate.com/public/575.cfm",
+      "type": "technique article",
+      "used_for": [
+        "block_ready",
+        "block_jump_peak"
+      ]
+    },
+    {
+      "title": "KFUPM Physical Education - Volleyball basic skills (ready posture)",
+      "url": "https://faculty.kfupm.edu.sa/PE/abuhilal/volleyball_skills.html",
+      "type": "coaching manual",
+      "used_for": [
+        "ready_medium",
+        "cover"
+      ]
+    },
+    {
+      "title": "Pakmen Volleyball - Positioning techniques: resting and ready positions (lesson 1)",
+      "url": "https://www.pakmen.com/volleyball-positioning-techniques-resting-and-ready-positions-lesson-1/",
+      "type": "video analysis",
+      "used_for": [
+        "ready_medium",
+        "cover"
+      ]
+    },
+    {
+      "title": "Wikipedia - Volleyball spiking (approach description)",
+      "url": "https://en.wikipedia.org/wiki/Volleyball_spiking",
+      "type": "technique article",
+      "used_for": [
+        "approach_penultimate",
+        "transition_retreat"
+      ]
+    },
+    {
+      "title": "Volleyball Magazine - approach footwork article (4-step approach, biggest step)",
+      "url": "https://volleyballmag.com/?p=65248",
+      "type": "technique article",
+      "used_for": [
+        "approach_penultimate"
+      ]
+    },
+    {
+      "title": "University of Victoria unit plan - spike task outline (jump, directional arm, bow, swing, wrist snap)",
+      "url": "https://web.uvic.ca/~thopper/Unitplan452/netwall2000/Kevin&jayson9VB/Gametasks/Partnerholdingball.html",
+      "type": "coaching manual",
+      "used_for": [
+        "attack_arm_cock",
+        "attack_contact"
+      ]
+    },
+    {
+      "title": "Prezi - The biomechanics of forearm passing a volleyball (textbook summary; forearms ~45 deg to the floor)",
+      "url": "https://prezi.com/3o6xhlud9f66/the-biomechanics-of-forearm-passing-a-volleyball/",
+      "type": "technique article",
+      "used_for": [
+        "pass_platform"
+      ]
+    }
+  ]
+}

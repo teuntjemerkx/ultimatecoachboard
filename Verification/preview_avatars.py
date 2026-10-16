@@ -23,7 +23,7 @@ def render(mesh, size=(260, 340), yaw=-35.0, pitch=12.0):
     cn = n @ rot.T
     w, h = size
     scale = h / 2.75
-    sx = w / 2 + cv[:, 0] * -scale
+    sx = w / 2 + cv[:, 0] * scale
     sy = h - 12 - cv[:, 1] * scale
     depth = cv[:, 2]
     light = np.array([0.35, 0.8, 0.5]); light /= np.linalg.norm(light)

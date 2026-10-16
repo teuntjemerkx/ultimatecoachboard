@@ -1,0 +1,1880 @@
+{
+  "position": "middle_blocker",
+  "traits": {
+    "stature_m": {
+      "elite_men": 2.04,
+      "elite_women": 1.9,
+      "youth_women_u16": 1.8
+    },
+    "standing_reach_m": {
+      "elite_men": 2.7,
+      "elite_women": 2.5,
+      "youth_women_u16": 2.37
+    },
+    "spike_reach_m": {
+      "elite_men": 3.46,
+      "elite_women": 3.08,
+      "youth_women_u16": 2.85
+    },
+    "block_reach_m": {
+      "elite_men": 3.22,
+      "elite_women": 2.94,
+      "youth_women_u16": 2.73
+    },
+    "build_notes": "Middle blockers are the tallest and heaviest players on the team with an ectomorphic build: long legs and very long arms, narrow relative to height, lean (systematic review of the MB; Croatian 13-15 y study: MBs taller and more ectomorphic). Stature: London 2012 Olympic men's MBs 203.8 +/- 4.9 cm (Tsukuba study); top men's MB profiles 2.05-2.09 m (Holt, Piano); women's elite MBs 1.88-1.98 m (Erdem 188, Akinradewo 191, Danesi 195-198); 2017 FIVB U18 girls' MBs 185.9 cm / 71.4 kg; 13-15 y club girls' MBs 174.9 +/- 8.5 cm. U16 value 1.80 m is an estimate between those two youth data sets. Reach: men's MB spike/block 345.6/321.3 cm (Palao et al. 2014 as cited by the MB systematic review, Olympics/World Championships 2000-2012; not checked against the original table); top men's MB profiles 349-357 / 320-338 cm; women: profiles spike 308-315 (Akinradewo 330) / block 300-306 cm, U18 girls' MBs 294.5 / 282.7 cm; women's elite and U16 values are estimates between these, and roster reach values are self-reported and often generous. Palao et al.: spike reach exceeds block reach by about 0.20-0.30 m (men) and 0.15-0.25 m (women); MBs and opposites have the highest block reach. Standing reach is estimated as about 1.32 x stature (no position-specific measured value found). Gear: regular team jersey and shorts/spandex (not the libero colour), knee pads (often low-profile), court shoes; the MB systematic review reports a higher injury risk for MBs, particularly knees and fingers, so taped fingers, patellar straps/knee sleeves and ankle braces are common (gear frequency is an estimate, not measured).",
+    "sources": [
+      "https://johk.pl/?p=3222",
+      "https://www.jhse.ua.es/article/view/2019-v14-n1-middle-blocker-volleyball-systematic-review",
+      "https://tsukuba.repo.nii.ac.jp/record/38485/files/%E7%94%B7%E5%AD%90%E3%83%90%E3%83%AC%E3%83%BC%E3%83%9C%E3%83%BC%E3%83%AB%E9%81%B8%E6%89%8B%E3%81%AE%E8%BA%AB%E9%95%B7%E3%81%AB%E9%96%A2%E3%81%99%E3%82%8B%E7%A0%94%E7%A9%B6.pdf",
+      "https://lida.sport-iat.de/dvv/Record/4071056?lng=en",
+      "https://pmc.ncbi.nlm.nih.gov/articles/PMC5377555/table/t0003",
+      "https://www.bib.irb.hr:8443/504423",
+      "https://lida.sport-iat.de/ta/Record/4075496?lng=en",
+      "https://ojs.utlib.ee/index.php/PoA/article/view/13543",
+      "https://doaj.org/article/cbf4886cd74f4ea38b1b4633286728c8",
+      "https://doaj.org/article/24527f9d134e491aa2e50f8bb71820e5",
+      "https://acuresearchbank.acu.edu.au/item/88483/physical-performance-and-positional-differences-among-young-female-volleyball-players",
+      "https://lida.sport-iat.de/dvv/Record/4064696",
+      "https://xbotgo.com/blogs/knowledge/average-volleyball-player-height",
+      "https://www.bruinsportsanalytics.com/post/height-importance-volleyball",
+      "https://en.wikipedia.org/wiki/Maxwell_Holt",
+      "https://en.wikipedia.org/wiki/Matteo_Piano",
+      "https://en.volleyballworld.com/volleyball/competitions/superlega/2022-2023/players/141936",
+      "https://en.wikipedia.org/wiki/Ivan_Iakovlev",
+      "https://en.wikipedia.org/wiki/Sa%C5%A1o_%C5%A0talekar",
+      "https://en.wikipedia.org/wiki/Foluke_Gunderson",
+      "https://usavolleyball.org/athlete/foluke-akinradewo/",
+      "https://en.wikipedia.org/wiki/Anna_Danesi",
+      "https://eurovolley.cev.eu/team/10870-taly/player/43071-danesi-anna",
+      "https://en.volleyballworld.com/volleyball/competitions/volleyball-olympic-games-paris-2024/players/136694",
+      "https://en.wikipedia.org/wiki/Eda_Erdem",
+      "https://en.volleyballworld.com/volleyball/competitions/olympics-2020/players/138782",
+      "https://bianet.org/haber/volleyball-player-eda-erdem-breaks-historical-record-250007",
+      "https://coachingvb.com/middle-blocker-in-volleyball-role-responsibilities-and-training-priorities/"
+    ]
+  },
+  "techniques": [
+    {
+      "id": "block_ready",
+      "name": "Block ready stance at the net",
+      "phase": "ready",
+      "handedness": "right",
+      "description": "Square to the net about an arm's length away, feet about shoulder width, knees slightly bent, weight on the balls of the feet, back straight with the shoulders slightly forward. Hands up at shoulder height about 15-25 cm in front of the body, palms toward the net, fingers spread, elbows bent and kept close to the body rather than flared. Hands never drop below the tape before the jump.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.5,
+        "stagger_m": 0.0,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 5,
+        "thoracic_flex": 5,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -5,
+        "l_shoulder_flex": 35,
+        "l_shoulder_abd": 20,
+        "l_shoulder_ext_rot": 10,
+        "l_elbow_flex": 115,
+        "l_wrist_ext": 15,
+        "r_shoulder_flex": 35,
+        "r_shoulder_abd": 20,
+        "r_shoulder_ext_rot": 10,
+        "r_elbow_flex": 115,
+        "r_wrist_ext": 15,
+        "l_hip_flex": 15,
+        "l_hip_abd": 5,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 27,
+        "l_ankle_dorsi": 12,
+        "r_hip_flex": 15,
+        "r_hip_abd": 5,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 27,
+        "r_ankle_dorsi": 12
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "estimated: hand height/position from USA Volleyball (hands at shoulder height, 6-10 in in front, palms to net, do not drop hands)",
+        "estimated: knees slightly bent, weight on toes, back straight, shoulders slightly forward, elbows close to body (Volleyball Canada blocking sheets)",
+        "geometry check: knee 27 = thigh 15 + shin 12 deg (feet flat)",
+        "https://usavolleyball.org/resource/staying-square-to-the-volleyball-net-while-blocking-five-steps/",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Blocking_2-Player_for_e_module_skill_description.pdf",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Blocking_3-Player_for_e_module_skill_description.pdf",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Blocking_Step_Block_Outside_movement_for_e_module_skill_description.pdf",
+        "https://betteratvolleyball.com/six-steps-to-dominate-in-volleyball-with-incredible-blocking/",
+        "https://www.jssm.org/jssm-10-452.xml-Fulltext"
+      ]
+    },
+    {
+      "id": "block_read_base",
+      "name": "Middle blocker read base (bunch / read position in the middle)",
+      "phase": "ready",
+      "handedness": "right",
+      "description": "MB-specific read posture in the middle of the net while reading the setter: slightly wider base than a wing blocker, knees a little more bent, hands higher (chin-to-eye height) and in front of the face so the hands reach the net plane fast against the quick. Elbows forward and slightly out, forearms near vertical, palms toward the net; head up, eyes moving setter -> ball -> hitter.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.6,
+        "stagger_m": 0.0,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 4,
+        "thoracic_flex": 6,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -5,
+        "l_shoulder_flex": 65,
+        "l_shoulder_abd": 30,
+        "l_shoulder_ext_rot": 20,
+        "l_elbow_flex": 100,
+        "l_wrist_ext": 20,
+        "r_shoulder_flex": 65,
+        "r_shoulder_abd": 30,
+        "r_shoulder_ext_rot": 20,
+        "r_elbow_flex": 100,
+        "r_wrist_ext": 20,
+        "l_hip_flex": 18,
+        "l_hip_abd": 7,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 32,
+        "l_ankle_dorsi": 14,
+        "r_hip_flex": 18,
+        "r_hip_abd": 7,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 32,
+        "r_ankle_dorsi": 14
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "measured (qualitative): read-block players start with the feet wider and reach the net plane sooner but jump lower than commit blockers (Lobietti, Fantozzi, Merni 2006, n=4)",
+        "estimated: hand height above shoulder level and elbows forward from coaching descriptions; arm angles solved so the hands sit at chin/eye height ~0.3 m in front of the face",
+        "geometry check: knee 32 = thigh 18 + shin 14 deg",
+        "https://ojs.ub.uni-konstanz.de/cpa/article/view/244",
+        "https://usavolleyball.org/resource/staying-square-to-the-volleyball-net-while-blocking-five-steps/",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Blocking_2-Player_for_e_module_skill_description.pdf",
+        "https://betteratvolleyball.com/six-steps-to-dominate-in-volleyball-with-incredible-blocking/",
+        "https://www.volleyball1on1.com/tag/indoor-volleyball"
+      ]
+    },
+    {
+      "id": "block_footwork_sidestep",
+      "name": "Side-step (slide / shuffle) block footwork",
+      "phase": "footwork",
+      "handedness": "right",
+      "description": "Instant the lead (right) foot lands in a shuffle to the right: hips and shoulders stay square to the net, the feet never click together, knees stay bent so the head does not bob. Hands stay up at shoulder height in front of the body; the trailing left foot is about to follow and both feet push off together for the jump.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.75,
+        "stagger_m": 0.0,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 5,
+        "thoracic_flex": 7,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -8,
+        "l_shoulder_flex": 45,
+        "l_shoulder_abd": 20,
+        "l_shoulder_ext_rot": 15,
+        "l_elbow_flex": 105,
+        "l_wrist_ext": 15,
+        "r_shoulder_flex": 45,
+        "r_shoulder_abd": 20,
+        "r_shoulder_ext_rot": 15,
+        "r_elbow_flex": 105,
+        "r_wrist_ext": 15,
+        "l_hip_flex": 22,
+        "l_hip_abd": 16,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 40,
+        "l_ankle_dorsi": 18,
+        "r_hip_flex": 22,
+        "r_hip_abd": 20,
+        "r_hip_ext_rot": 10,
+        "r_knee_flex": 40,
+        "r_ankle_dorsi": 18
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "measured (qualitative): slide-step jump height not different from a vertical jump, cross-step higher (Vurmaz et al., n=6)",
+        "estimated: square shoulders/hips and hands-up shuffle from USA Volleyball 'staying square' and Volleyball Canada step-block sheet",
+        "geometry check: knee 40 = thigh 22 + shin 18 deg",
+        "https://www.jhse.ua.es/article/view/2009-v4-n2-a-review-of-blocking-in-volleyball-from-the-notationa",
+        "https://hsm.susu.ru/hsm/en/article/view/3012",
+        "https://usavolleyball.org/resource/staying-square-to-the-volleyball-net-while-blocking-five-steps/",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Blocking_Step_Block_Outside_movement_for_e_module_skill_description.pdf"
+      ]
+    },
+    {
+      "id": "block_footwork_crossover",
+      "name": "Cross-over step block footwork (moving right)",
+      "phase": "footwork",
+      "handedness": "right",
+      "description": "Middle moving right to close on an outside attack: after an open step with the right foot the left foot crosses in front (net side) and plants; the pelvis is turned about 55 deg toward the direction of travel while the chest is held back toward the net, so the shoulders stay as square as possible. Hands stay up near shoulder height (traditional) and the right foot is pushing off behind; the next step plants the right foot and turns the hips square for a two-foot take-off.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.15,
+        "stagger_m": -0.55,
+        "yaw_deg": -55
+      },
+      "angles": {
+        "lumbar_flex": 8,
+        "thoracic_flex": 7,
+        "trunk_lateral": 0,
+        "trunk_twist": -30,
+        "neck_flex": -5,
+        "l_shoulder_flex": 45,
+        "l_shoulder_abd": 20,
+        "l_shoulder_ext_rot": 15,
+        "l_elbow_flex": 105,
+        "l_wrist_ext": 10,
+        "r_shoulder_flex": 45,
+        "r_shoulder_abd": 20,
+        "r_shoulder_ext_rot": 15,
+        "r_elbow_flex": 105,
+        "r_wrist_ext": 10,
+        "l_hip_flex": 35,
+        "l_hip_abd": -10,
+        "l_hip_ext_rot": -10,
+        "l_knee_flex": 45,
+        "l_ankle_dorsi": 10,
+        "r_hip_flex": -10,
+        "r_hip_abd": 5,
+        "r_hip_ext_rot": 10,
+        "r_knee_flex": 30,
+        "r_ankle_dorsi": -15
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "measured (qualitative): cross-step gives the highest block jump of the footwork patterns tested (Vurmaz et al.); cross-over moving left resembles the spike approach coordination, moving right needs a different pattern (Lobietti et al. 2009 case study)",
+        "measured (timing): middle blockers slower than wing players in the first and fourth phases and total cross-over time; players faster moving right (Symmetry 2020)",
+        "measured (usage): Spanish Superliga middles mostly use cross-over steps (Entrenamos como bloqueamos?)",
+        "estimated: pelvis yaw -55 / chest -25 from coaching descriptions (cross foot passes in front, closer to the net; stay square)",
+        "geometry check: front (left) knee 45 = thigh 35 + shin 10 deg",
+        "https://www.jhse.ua.es/article/view/2009-v4-n2-a-review-of-blocking-in-volleyball-from-the-notationa",
+        "https://ojs.ub.uni-konstanz.de/cpa/article/view/3163",
+        "https://hsm.susu.ru/hsm/en/article/view/3012",
+        "https://repositorio.ual.es/handle/10835/8308",
+        "https://investiga.upo.es/documentos/5edacf6a2999524e40a8b4cf",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Blocking_3-Player_for_e_module_skill_description.pdf",
+        "https://usavolleyball.org/resource/staying-square-to-the-volleyball-net-while-blocking-five-steps/",
+        "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11595254/"
+      ]
+    },
+    {
+      "id": "swing_block_takeoff",
+      "name": "Swing block take-off (run-and-swing footwork)",
+      "phase": "take-off",
+      "handedness": "right",
+      "description": "Deepest point of the plant after swing-block footwork to the right (open step, cross, plant, close): both feet down, hips still turned about 35 deg toward the direction of travel, both arms swung back behind the hips with the elbows only slightly bent, like an attack approach. Knees near 90 deg and chest forward; from here the arms swing forward-up and the hips rotate square so the hands arrive over the net with a wide, penetrating reach.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.45,
+        "stagger_m": 0.15,
+        "yaw_deg": -35
+      },
+      "angles": {
+        "lumbar_flex": 18,
+        "thoracic_flex": 20,
+        "trunk_lateral": -5,
+        "trunk_twist": -10,
+        "neck_flex": -30,
+        "l_shoulder_flex": -55,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 25,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": -55,
+        "r_shoulder_abd": 15,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 25,
+        "r_wrist_ext": 0,
+        "l_hip_flex": 58,
+        "l_hip_abd": 6,
+        "l_hip_ext_rot": 10,
+        "l_knee_flex": 85,
+        "l_ankle_dorsi": 27,
+        "r_hip_flex": 62,
+        "r_hip_abd": 12,
+        "r_hip_ext_rot": -10,
+        "r_knee_flex": 90,
+        "r_ankle_dorsi": 28
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "measured (qualitative): swing block gives greater jump height and hand penetration than traditional (Neves 2011, n=13) and greater vertical and horizontal take-off velocity, shorter approach time, longer time in the air (Ficklin 2014, n=9)",
+        "estimated: arms brought behind with elbows bent before take-off, then extended over the net (Volleyball Canada 2-player block)",
+        "estimated: knee ~90 by analogy with measured block-jump crouch (93 +/- 5 deg, Fatahi 2019) and spike plant",
+        "geometry check: knees 85/90 = thigh 58/62 + shin 27/28 deg",
+        "https://www.jssm.org/jssm-10-452.xml-Fulltext",
+        "https://www.jssm.org/jssm-13-78.xml-abst",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Blocking_2-Player_for_e_module_skill_description.pdf",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Blocking_3-Player_for_e_module_skill_description.pdf",
+        "https://goldmedalsquared.com/?p=7608",
+        "https://investiga.upo.es/documentos/5edacf6a2999524e40a8b4cf",
+        "https://sponet.de/sponet/Record/4011488",
+        "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11595254/"
+      ]
+    },
+    {
+      "id": "block_jump_takeoff",
+      "name": "Block jump crouch (straight-up / commit block)",
+      "phase": "take-off",
+      "handedness": "right",
+      "description": "Bottom of the countermovement for a stationary or one-step block, e.g. committing on the quick hitter: knees about 85 deg, trunk leaning ~33 deg, hands held up in front of the face (traditional arm action) so they reach the net plane fast. Head up looking at the hitter; quick blocks use a shallower, faster dip than a full block jump.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.5,
+        "stagger_m": 0.0,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 15,
+        "thoracic_flex": 18,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -25,
+        "l_shoulder_flex": 75,
+        "l_shoulder_abd": 20,
+        "l_shoulder_ext_rot": 15,
+        "l_elbow_flex": 100,
+        "l_wrist_ext": 15,
+        "r_shoulder_flex": 75,
+        "r_shoulder_abd": 20,
+        "r_shoulder_ext_rot": 15,
+        "r_elbow_flex": 100,
+        "r_wrist_ext": 15,
+        "l_hip_flex": 58,
+        "l_hip_abd": 5,
+        "l_hip_ext_rot": 8,
+        "l_knee_flex": 85,
+        "l_ankle_dorsi": 27,
+        "r_hip_flex": 58,
+        "r_hip_abd": 5,
+        "r_hip_ext_rot": 8,
+        "r_knee_flex": 85,
+        "r_ankle_dorsi": 27
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "measured: knee flexion in the block jump countermovement 93.4 +/- 4.75 deg, ankle 21.25 +/- 2.98 (junior elite males, Fatahi 2019; ankle unit misprinted in abstract); about 70 deg in a single-player case study (Lobietti et al. 2009). Value used: 85 deg (between, quick block)",
+        "measured (qualitative): quick block has a shorter propulsive phase and different crouch angles than the middle block (1993 force-plate study)",
+        "estimated: ankle raised to 27 deg (above the measured 21) so the centre of mass stays over the feet with a 33 deg trunk lean",
+        "geometry check: knee 85 = thigh 58 + shin 27 deg",
+        "https://ptj.uswr.ac.ir/article-1-395-en.html",
+        "https://ojs.ub.uni-konstanz.de/cpa/article/view/3163",
+        "https://sponet.de/sponet/Record/4002761",
+        "https://ojs.ub.uni-konstanz.de/cpa/article/view/244",
+        "https://www.jssm.org/jssm-10-452.xml-Fulltext",
+        "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11595254/",
+        "https://betteratvolleyball.com/six-steps-to-dominate-in-volleyball-with-incredible-blocking/"
+      ]
+    },
+    {
+      "id": "block_jump_peak",
+      "name": "Block peak with penetration (closing double block, outside hand turned in)",
+      "phase": "peak",
+      "handedness": "right",
+      "description": "Peak of the block after closing to the right-side blocker: arms almost straight and pressed over the tape about 25-30 deg forward of vertical, shoulders shrugged up to the ears, abdominals tight so the trunk is slightly piked. Hands just over the tape, a bit wider than shoulder-width, fingers spread, thumbs up; the left palm faces the net and the outside (right) hand is turned in so its palm faces forward-left, toward the middle of the opponent's court. Head between the arms with eyes on the hitter; legs nearly straight with toes pointed.",
+      "root": {
+        "jump_m": 0.55,
+        "stance_width_m": 0.3,
+        "stagger_m": 0.0,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 6,
+        "thoracic_flex": 6,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": 5,
+        "l_shoulder_flex": 165,
+        "l_shoulder_abd": 12,
+        "l_shoulder_ext_rot": -50,
+        "l_elbow_flex": 8,
+        "l_wrist_ext": -5,
+        "r_shoulder_flex": 160,
+        "r_shoulder_abd": 18,
+        "r_shoulder_ext_rot": -25,
+        "r_elbow_flex": 8,
+        "r_wrist_ext": -5,
+        "l_hip_flex": 12,
+        "l_hip_abd": 4,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 18,
+        "l_ankle_dorsi": -35,
+        "r_hip_flex": 12,
+        "r_hip_abd": 4,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 18,
+        "r_ankle_dorsi": -35
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "measured: elite men's block flight time about 0.62-0.70 s -> about 0.47-0.60 m rise (h = g t^2 / 8); jump_m 0.55 used (elite women about 0.40-0.45, estimated)",
+        "measured (qualitative): swing arm action increases hand penetration (Neves 2011); abs tighten to press the hands over (Volleyball Canada)",
+        "estimated: hands just over the tape, shoulder-width, thumbs up; hands then forearms within about 5-10 cm of the net (PE Update, Univ. Pretoria, USA Volleyball)",
+        "rig note: palm direction is given via shoulder rotation (left -50, right -25 = right hand turned in); if the rig has forearm pronation, move part of this rotation there",
+        "https://sponet.de/sponet/Record/4011488",
+        "https://www.jssm.org/jssm-10-452.xml-Fulltext",
+        "https://www.jssm.org/jssm-13-78.xml-abst",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Blocking_2-Player_for_e_module_skill_description.pdf",
+        "https://www.physicaleducationupdate.com/public/910.cfm",
+        "https://www.physicaleducationupdate.com/public/575.cfm",
+        "https://upwebtest.up.ac.za/media/shared/Legacy/sitefiles/file/5573/5421/5459/tipsforblockinginvolleyball.pdf",
+        "https://coachesinsider.com/volleyball/blocking-creating-a-seal-over-the-net-with-mackenzie-chrisman-northeastern-junior-college",
+        "https://coachingvb.com/video-review-blocking-penetration-drill",
+        "https://betteratvolleyball.com/six-steps-to-dominate-in-volleyball-with-incredible-blocking/",
+        "https://usavolleyball.org/resource/staying-square-to-the-volleyball-net-while-blocking-five-steps/",
+        "https://www.jhse.ua.es/article/view/2009-v4-n2-a-review-of-blocking-in-volleyball-from-the-notationa"
+      ]
+    },
+    {
+      "id": "block_landing",
+      "name": "Block landing (two-foot, absorbing)",
+      "phase": "landing",
+      "handedness": "right",
+      "description": "Near maximum knee flexion after a two-foot block landing: knees about 60 deg, hips and ankles flexed, trunk leaning ~22 deg, feet about hip width. Hands are pulled back from the net in front of the face (not swung down into the net); the eyes drop to find the ball and the pelvis has started turning toward the court for transition.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.4,
+        "stagger_m": 0.0,
+        "yaw_deg": 15
+      },
+      "angles": {
+        "lumbar_flex": 10,
+        "thoracic_flex": 12,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": 10,
+        "l_shoulder_flex": 95,
+        "l_shoulder_abd": 20,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 55,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 95,
+        "r_shoulder_abd": 20,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 55,
+        "r_wrist_ext": 0,
+        "l_hip_flex": 38,
+        "l_hip_abd": 6,
+        "l_hip_ext_rot": 8,
+        "l_knee_flex": 62,
+        "l_ankle_dorsi": 24,
+        "r_hip_flex": 38,
+        "r_hip_abd": 6,
+        "r_hip_ext_rot": 8,
+        "r_knee_flex": 62,
+        "r_ankle_dorsi": 24
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "measured (qualitative): over 50% of defensive (block) landings in elite women occur on one foot (Tillman 2004) - the avatar shows the taught two-foot landing",
+        "measured (qualitative): landing with knee flexion < 30 deg at the first force peak is associated with ACL risk; experienced players use a larger knee-flexion range; blocks load less than spikes (ISBS/BMC studies)",
+        "measured (qualitative): non-dominant-direction blocks land with more ankle dorsiflexion and knee flexion (2024 elite study)",
+        "estimated: knee 62 deg at peak absorption; geometry check: knee 62 = thigh 38 + shin 24 deg",
+        "https://www.jssm.org/jssm-03-30.xml-abst",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC9188216",
+        "https://ojs.ub.uni-konstanz.de/cpa/article/view/5679",
+        "https://ojs.ub.uni-konstanz.de/cpa/article/view/6437",
+        "https://lida.sport-iat.de/ta/Record/4041496",
+        "https://smj.ssrc.ac.ir/article_2131.html?lang=en",
+        "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11595254/",
+        "https://lida.sport-iat.de/ta/Record/4054385?lng=en",
+        "https://www.jhse.ua.es/article/view/2019-v14-n1-middle-blocker-volleyball-systematic-review",
+        "https://www.physicaleducationupdate.com/public/910.cfm"
+      ]
+    },
+    {
+      "id": "transition_retreat",
+      "name": "Transition off the net (block to attack line)",
+      "phase": "transition",
+      "handedness": "right",
+      "description": "Middle sprinting off the net after the block, about 1.5 m from it: hips turned toward the court (shown turning left, mirror for the other side), running stride with the right foot on the ground and the left knee driving, arms pumping, chest only slightly forward. Eyes track the dig; the player decelerates and turns back to face the setter at about 3 m to start the quick approach.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.15,
+        "stagger_m": 0.2,
+        "yaw_deg": 135
+      },
+      "angles": {
+        "lumbar_flex": 8,
+        "thoracic_flex": 10,
+        "trunk_lateral": 0,
+        "trunk_twist": -10,
+        "neck_flex": -5,
+        "l_shoulder_flex": -35,
+        "l_shoulder_abd": 10,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 85,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 45,
+        "r_shoulder_abd": 10,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 90,
+        "r_wrist_ext": 0,
+        "l_hip_flex": 55,
+        "l_hip_abd": 3,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 85,
+        "l_ankle_dorsi": 0,
+        "r_hip_flex": 25,
+        "r_hip_abd": 3,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 40,
+        "r_ankle_dorsi": 15
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "estimated: middles must get off the net quickly to the attack line so they can approach for the quick (CoachingVB, Human Kinetics transition excerpt, SportsEdTV)",
+        "estimated: turn-and-run stride angles from general sprint kinematics; no MB-specific transition kinematics found",
+        "geometry check: stance knee 40 = thigh 25 + shin 15 deg",
+        "https://us.humankinetics.com/blogs/excerpt/transition",
+        "https://coachingvb.com/middle-blocker-in-volleyball-role-responsibilities-and-training-priorities/",
+        "https://sportsedtv.com/blog/middle-blocker-in-volleyball"
+      ]
+    },
+    {
+      "id": "free_ball_ready",
+      "name": "Arrival at the attack line, ready to approach",
+      "phase": "ready",
+      "handedness": "right",
+      "description": "Middle has arrived about 3 m from the net before the pass or dig reaches the setter: balanced medium posture, knees about 55 deg, weight forward, body opened slightly toward the setter on the right, arms relaxed in front. The first approach step (left foot) starts as the ball reaches the setter.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.45,
+        "stagger_m": 0.0,
+        "yaw_deg": -20
+      },
+      "angles": {
+        "lumbar_flex": 10,
+        "thoracic_flex": 12,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -15,
+        "l_shoulder_flex": 20,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 40,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 20,
+        "r_shoulder_abd": 15,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 40,
+        "r_wrist_ext": 0,
+        "l_hip_flex": 35,
+        "l_hip_abd": 6,
+        "l_hip_ext_rot": 8,
+        "l_knee_flex": 55,
+        "l_ankle_dorsi": 20,
+        "r_hip_flex": 35,
+        "r_hip_abd": 6,
+        "r_hip_ext_rot": 8,
+        "r_knee_flex": 55,
+        "r_ankle_dorsi": 20
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "estimated: Volleyball Canada 51 (quick) sheet - first step with the left foot, last two steps in front of the setter at least 1 m off the net",
+        "estimated: start the approach on the setter's contact / pass arrival (coaching articles)",
+        "geometry check: knee 55 = thigh 35 + shin 20 deg",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Attacking_Basics_-_51_for_e_module_skill_description_copy.pdf",
+        "https://us.humankinetics.com/blogs/excerpt/transition",
+        "https://coachingvb.com/middle-blocker-in-volleyball-role-responsibilities-and-training-priorities/",
+        "https://www.theartofcoachingvolleyball.com/quick-middle-attack/"
+      ]
+    },
+    {
+      "id": "approach_penultimate",
+      "name": "Quick-attack approach, penultimate step",
+      "phase": "approach",
+      "handedness": "right",
+      "description": "Second-to-last step of the quick (1-ball) approach: the right foot strikes heel-first well ahead of the body, the left foot is pushing off behind, the trunk leans ~27 deg and both arms are swung back behind the hips with nearly straight elbows. The step is shorter and the arm swing more compact than an outside hitter's, because the middle is already in the air as the ball is set.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.25,
+        "stagger_m": 0.65,
+        "yaw_deg": -25
+      },
+      "angles": {
+        "lumbar_flex": 12,
+        "thoracic_flex": 15,
+        "trunk_lateral": 0,
+        "trunk_twist": 5,
+        "neck_flex": -20,
+        "l_shoulder_flex": -40,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 20,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": -40,
+        "r_shoulder_abd": 15,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 20,
+        "r_wrist_ext": 0,
+        "l_hip_flex": -15,
+        "l_hip_abd": 3,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 55,
+        "l_ankle_dorsi": -25,
+        "r_hip_flex": 45,
+        "r_hip_abd": 5,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 45,
+        "r_ankle_dorsi": 0
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "estimated: Volleyball Canada 51 sheet - three-step approach left-right-left, arms go up as the legs drive down, left foot planted an instant before the set",
+        "estimated: slow-to-fast rhythm, approach timed off the setter's contact, hitting arm drawn back early (USA Volleyball pro tips, Art of Coaching Volleyball, Volleyball Magazine)",
+        "measured (qualitative): faster 3-step approaches need more dominant-knee flexion to brake (UNLV step-number study); successful spikes show higher hip/knee angular velocity in the plant (Sarvestan 2020)",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Attacking_Basics_-_51_for_e_module_skill_description_copy.pdf",
+        "https://usavolleyball.org/resource/pro-tips-for-attacking-middle-blockers-and-beach/",
+        "https://www.theartofcoachingvolleyball.com/quick-middle-attack/",
+        "https://volleyballmag.com/?p=65248",
+        "https://oasis.library.unlv.edu/scholarship_kin/vol4/iss1/15/",
+        "https://lida.sport-iat.de/dvv/Record/4066763?lng=en",
+        "https://volleycountry.com/training/volleyball-approach-3-mistakes-that-stop-you-from-hitting-like-a-pro",
+        "https://coachingvb.com/middle-blocker-in-volleyball-role-responsibilities-and-training-priorities/",
+        "https://www.volleyball1on1.com/tag/indoor-volleyball",
+        "https://sportsedtv.com/blog/middle-blocker-in-volleyball"
+      ]
+    },
+    {
+      "id": "approach_takeoff",
+      "name": "Quick-attack two-foot take-off",
+      "phase": "take-off",
+      "handedness": "right",
+      "description": "Deepest point of the quick-attack plant: the left foot has closed slightly ahead and turned in, both knees about 78 deg, trunk ~25 deg forward, both arms swinging forward past the hips. The dip is shallower and faster than for a high outside set; the body faces the setter slightly.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.35,
+        "stagger_m": -0.2,
+        "yaw_deg": -25
+      },
+      "angles": {
+        "lumbar_flex": 12,
+        "thoracic_flex": 13,
+        "trunk_lateral": 0,
+        "trunk_twist": 5,
+        "neck_flex": -20,
+        "l_shoulder_flex": 15,
+        "l_shoulder_abd": 10,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 20,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 15,
+        "r_shoulder_abd": 10,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 20,
+        "r_wrist_ext": 0,
+        "l_hip_flex": 50,
+        "l_hip_abd": 6,
+        "l_hip_ext_rot": -10,
+        "l_knee_flex": 78,
+        "l_ankle_dorsi": 28,
+        "r_hip_flex": 50,
+        "r_hip_abd": 8,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 78,
+        "r_ankle_dorsi": 28
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "estimated: knee 78 deg - shallower than the measured block-jump crouch (93 deg, Fatahi 2019) because the quick is hit on the way up; single-player study reports about 70 deg for spike/block countermovement (Lobietti 2009)",
+        "measured (qualitative): higher attackers take off with a higher CoM and wider inter-ankle distance (Martinez/Marquez/Hsieh ISBS 2021); men use different arm/torso angular velocities than women (Fuchs 2019)",
+        "geometry check: knee 78 = thigh 50 + shin 28 deg",
+        "https://ptj.uswr.ac.ir/article-1-395-en.html",
+        "https://ojs.ub.uni-konstanz.de/cpa/article/view/3163",
+        "https://commons.nmu.edu/isbs/vol39/iss1/24",
+        "https://iris.unicas.it/handle/11580/91401",
+        "https://lida.sport-iat.de/dvv/Record/4066763?lng=en",
+        "https://oasis.library.unlv.edu/scholarship_kin/vol4/iss1/15/",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Attacking_Basics_-_51_for_e_module_skill_description_copy.pdf",
+        "https://www.theartofcoachingvolleyball.com/remedy-common-middle-attack-issues/",
+        "https://volleyballmag.com/?p=65248",
+        "https://volleyballvault.com/?p=4017",
+        "https://volleycountry.com/training/volleyball-approach-3-mistakes-that-stop-you-from-hitting-like-a-pro"
+      ]
+    },
+    {
+      "id": "attack_arm_cock",
+      "name": "Quick-attack arm cock (compact)",
+      "phase": "arm cock",
+      "handedness": "right",
+      "description": "Shortly after take-off for the 1-ball: left arm reaching up toward the ball, right elbow high (at or above shoulder level) with the hand behind the head, upper arm externally rotated; chest turned right and upper back slightly arched, knees bent with heels behind. The backswing is shorter and the elbow higher than in an outside hitter's bow-and-arrow because the set arrives very fast.",
+      "root": {
+        "jump_m": 0.4,
+        "stance_width_m": 0.3,
+        "stagger_m": -0.1,
+        "yaw_deg": -20
+      },
+      "angles": {
+        "lumbar_flex": -5,
+        "thoracic_flex": -8,
+        "trunk_lateral": -5,
+        "trunk_twist": 30,
+        "neck_flex": -25,
+        "l_shoulder_flex": 150,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 25,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 25,
+        "r_shoulder_abd": 105,
+        "r_shoulder_ext_rot": 120,
+        "r_elbow_flex": 105,
+        "r_wrist_ext": 20,
+        "l_hip_flex": 0,
+        "l_hip_abd": 4,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 55,
+        "l_ankle_dorsi": -30,
+        "r_hip_flex": 0,
+        "r_hip_abd": 4,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 55,
+        "r_ankle_dorsi": -30
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "measured (qualitative): spike is a pelvis -> trunk -> arm kinetic chain with maximal shoulder external rotation as key event; pelvis/trunk orientation largely invariant across levels; men show more torso rotation in the backswing (kinetic-chain PMC study, 3D part-1 study, Prosch et al.)",
+        "estimated: external rotation 120 deg (within the 90-160 cocking range); compact quick arm from coaching descriptions",
+        "angles relative to the trunk; trunk twist +30 puts the elbow behind the frontal plane",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC12751981/",
+        "https://lida.sport-iat.de/ta/Record/4043909?lng=en",
+        "https://johk.pl/?p=10121",
+        "https://air.unimi.it/handle/2434/350660",
+        "https://ojs.ub.uni-konstanz.de/cpa/article/view/1914/1783",
+        "https://iris.unicas.it/handle/11580/91401",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065"
+      ]
+    },
+    {
+      "id": "quick_attack_contact",
+      "name": "Quick attack (1-ball) contact",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Ball contact on a first-tempo set in front of the setter: right arm high and almost straight, contact in front of the hitting shoulder at full reach, wrist snapping over the ball; trunk side-bent to the left and rotating left, left arm pulled down to the chest. Legs jackknifed forward under the body, body facing slightly toward the setter; the ball is often hit on the way up.",
+      "root": {
+        "jump_m": 0.55,
+        "stance_width_m": 0.3,
+        "stagger_m": -0.05,
+        "yaw_deg": -20
+      },
+      "angles": {
+        "lumbar_flex": 6,
+        "thoracic_flex": 10,
+        "trunk_lateral": -18,
+        "trunk_twist": -15,
+        "neck_flex": -20,
+        "l_shoulder_flex": 50,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 100,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 145,
+        "r_shoulder_abd": 35,
+        "r_shoulder_ext_rot": 40,
+        "r_elbow_flex": 15,
+        "r_wrist_ext": -15,
+        "l_hip_flex": 30,
+        "l_hip_abd": 4,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 45,
+        "l_ankle_dorsi": -30,
+        "r_hip_flex": 30,
+        "r_hip_abd": 4,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 45,
+        "r_ankle_dorsi": -30
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "measured: shoulder abduction (humeral elevation) about 130 deg at ball contact in spikes (Reeser 2010); here flex 145 + abd 35 with an 18 deg left side bend",
+        "measured (qualitative): higher-reaching hitters show more elbow extension and ankle plantarflexion and more shoulder abduction at impact (Hsieh ISBS 2019)",
+        "estimated: jump 0.55 m (quick hit near/before peak); elite men MB spike jump about 0.75-0.80 m from reach data in traits",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065",
+        "https://commons.nmu.edu/isbs/vol37/iss1/85",
+        "https://iris.unicas.it/handle/11580/91401",
+        "https://lida.sport-iat.de/ta/Record/4043909?lng=en",
+        "https://air.unimi.it/handle/2434/350660",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Attacking_Basics_-_51_for_e_module_skill_description_copy.pdf",
+        "https://www.theartofcoachingvolleyball.com/quick-middle-attack/",
+        "https://www.theartofcoachingvolleyball.com/remedy-common-middle-attack-issues/",
+        "https://usavolleyball.org/resource/pro-tips-for-attacking-middle-blockers-and-beach/",
+        "https://www.jhse.ua.es/article/view/2019-v14-n1-middle-blocker-volleyball-systematic-review",
+        "https://volleyballvault.com/?p=4017"
+      ]
+    },
+    {
+      "id": "slide_takeoff",
+      "name": "Slide take-off (one foot, behind the setter)",
+      "phase": "take-off",
+      "handedness": "right",
+      "description": "One-foot take-off off the LEFT foot after running parallel to the net behind the setter (right-hander): the left leg is planted slightly ahead of the body with the knee about 45 deg, the right knee drives up hard like a basketball lay-up, trunk nearly upright and leaning slightly toward the net. Hips/shoulders open toward the setter, left arm rising toward the ball while the hitting arm is drawn up and back ready.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.2,
+        "stagger_m": 0.0,
+        "yaw_deg": -75
+      },
+      "angles": {
+        "lumbar_flex": -2,
+        "thoracic_flex": 4,
+        "trunk_lateral": -8,
+        "trunk_twist": 15,
+        "neck_flex": -25,
+        "l_shoulder_flex": 130,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 30,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 80,
+        "r_shoulder_abd": 45,
+        "r_shoulder_ext_rot": 60,
+        "r_elbow_flex": 85,
+        "r_wrist_ext": 10,
+        "l_hip_flex": 30,
+        "l_hip_abd": 0,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 45,
+        "l_ankle_dorsi": 15,
+        "r_hip_flex": 85,
+        "r_hip_abd": 5,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 95,
+        "r_ankle_dorsi": -10
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "estimated: right-hander's slide/12 approach ends with a left-foot take-off, arms swing up as the left foot plants, hips and shoulders open to the ball, hitting arm back while lead hand points at the ball (Volleyball Canada 'Hitting the 12', Volleyball Magazine, Coaches Insider)",
+        "measured (qualitative): slide and back-row attacks differ in landing ground reaction forces; slide load ratios lower than back-row attacks (Trends Sport Sci 2017; dynamic-loads study)",
+        "estimated: drive-knee height and plant-knee angle from one-leg jump technique; geometry check: plant knee 45 = thigh 30 + shin 15 deg",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Hitting_the_12_for_e_module_skill_description.pdf",
+        "https://volleyballmag.com/?p=65248",
+        "https://coachesinsider.com/volleyball/one-foot-takeoff-footwork-drill-with-matt-darling-gannon-univ",
+        "https://www.wbc.poznan.pl//Content/416184/PDF/8_Trends_2017_No.2_87.pdf",
+        "https://lida.sport-iat.de/ta/Record/4054385?lng=en"
+      ]
+    },
+    {
+      "id": "slide_attack_contact",
+      "name": "Slide attack contact (drifting, one-foot jump)",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Contact on the slide while drifting along the net toward the right antenna: hips are still turned along the net but rotate back toward it in the air, chest rotating left, right arm high and almost straight. The right knee is still raised from the one-foot take-off and the left leg hangs, which gives the slide its typical asymmetric silhouette.",
+      "root": {
+        "jump_m": 0.55,
+        "stance_width_m": 0.25,
+        "stagger_m": 0.15,
+        "yaw_deg": -50
+      },
+      "angles": {
+        "lumbar_flex": 5,
+        "thoracic_flex": 8,
+        "trunk_lateral": -15,
+        "trunk_twist": -20,
+        "neck_flex": -20,
+        "l_shoulder_flex": 40,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 100,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 145,
+        "r_shoulder_abd": 35,
+        "r_shoulder_ext_rot": 40,
+        "r_elbow_flex": 15,
+        "r_wrist_ext": -10,
+        "l_hip_flex": 10,
+        "l_hip_abd": 3,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 35,
+        "l_ankle_dorsi": -35,
+        "r_hip_flex": 55,
+        "r_hip_abd": 5,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 75,
+        "r_ankle_dorsi": -20
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "measured: humeral elevation about 130 deg at contact in spikes (Reeser 2010)",
+        "estimated: drift and open body from Volleyball Canada 'Hitting the 12' and slide coaching; leg asymmetry from one-foot take-off",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Hitting_the_12_for_e_module_skill_description.pdf",
+        "https://commons.nmu.edu/isbs/vol37/iss1/85",
+        "https://www.wbc.poznan.pl//Content/416184/PDF/8_Trends_2017_No.2_87.pdf"
+      ]
+    },
+    {
+      "id": "attack_landing",
+      "name": "Attack landing (after a quick)",
+      "phase": "landing",
+      "handedness": "right",
+      "description": "Two-foot landing after a quick attack, near maximum knee flexion: knees about 60 deg, trunk ~22 deg forward and turned slightly left from the follow-through, hitting arm relaxed down in front, left arm out for balance. The middle immediately looks up to transition back to block.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.4,
+        "stagger_m": -0.1,
+        "yaw_deg": -15
+      },
+      "angles": {
+        "lumbar_flex": 10,
+        "thoracic_flex": 12,
+        "trunk_lateral": -3,
+        "trunk_twist": -10,
+        "neck_flex": 5,
+        "l_shoulder_flex": 50,
+        "l_shoulder_abd": 25,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 45,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 20,
+        "r_shoulder_abd": 5,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 30,
+        "r_wrist_ext": 0,
+        "l_hip_flex": 38,
+        "l_hip_abd": 6,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 62,
+        "l_ankle_dorsi": 24,
+        "r_hip_flex": 38,
+        "r_hip_abd": 6,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 62,
+        "r_ankle_dorsi": 24
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "measured (qualitative): spike landings produce larger vertical forces than block landings; many elite landings are one-footed (Coleman & Lobietti; Tillman 2004) - avatar shows the taught two-foot landing",
+        "geometry check: knee 62 = thigh 38 + shin 24 deg",
+        "https://ojs.ub.uni-konstanz.de/cpa/article/view/5679",
+        "https://www.jssm.org/jssm-03-30.xml-abst",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC9188216",
+        "https://www.wbc.poznan.pl//Content/416184/PDF/8_Trends_2017_No.2_87.pdf",
+        "https://lida.sport-iat.de/ta/Record/4054385?lng=en"
+      ]
+    },
+    {
+      "id": "cover",
+      "name": "Attack coverage (covering own hitter)",
+      "phase": "cover",
+      "handedness": "right",
+      "description": "Middle covering the hitter after not getting the set: low and wide close behind/next to the attacker, knees about 95 deg, trunk ~38 deg forward, arms low and apart in front with the hands ready to play a ball blocked back; head up watching the opposing block's hands.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.75,
+        "stagger_m": 0.1,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 18,
+        "thoracic_flex": 20,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -35,
+        "l_shoulder_flex": 50,
+        "l_shoulder_abd": 25,
+        "l_shoulder_ext_rot": 10,
+        "l_elbow_flex": 35,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 50,
+        "r_shoulder_abd": 25,
+        "r_shoulder_ext_rot": 10,
+        "r_elbow_flex": 35,
+        "r_wrist_ext": 0,
+        "l_hip_flex": 65,
+        "l_hip_abd": 15,
+        "l_hip_ext_rot": 15,
+        "l_knee_flex": 95,
+        "l_ankle_dorsi": 30,
+        "r_hip_flex": 65,
+        "r_hip_abd": 15,
+        "r_hip_ext_rot": 15,
+        "r_knee_flex": 95,
+        "r_ankle_dorsi": 30
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "estimated: coverage posture from coaching descriptions of transition and coverage responsibilities (Human Kinetics excerpt); no kinematic study found",
+        "geometry check: knee 95 = thigh 65 + shin 30 deg",
+        "https://us.humankinetics.com/blogs/excerpt/transition"
+      ]
+    },
+    {
+      "id": "ready_medium",
+      "name": "Back-row defensive ready (after serving)",
+      "phase": "ready",
+      "handedness": "right",
+      "description": "The middle serves and plays back-row defence for that rally until the libero replaces her/him: medium posture, feet wider than the shoulders, knees about 70 deg, trunk ~30 deg forward, arms apart in front of the knees, eyes on the opposing attack.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.7,
+        "stagger_m": 0.1,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 15,
+        "thoracic_flex": 15,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -25,
+        "l_shoulder_flex": 55,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 70,
+        "l_wrist_ext": 10,
+        "r_shoulder_flex": 55,
+        "r_shoulder_abd": 15,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 70,
+        "r_wrist_ext": 10,
+        "l_hip_flex": 45,
+        "l_hip_abd": 12,
+        "l_hip_ext_rot": 10,
+        "l_knee_flex": 70,
+        "l_ankle_dorsi": 25,
+        "r_hip_flex": 45,
+        "r_hip_abd": 12,
+        "r_hip_ext_rot": 10,
+        "r_knee_flex": 70,
+        "r_ankle_dorsi": 25
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "estimated: generic defensive medium posture (no MB-specific study found); MB replaced by the libero in the back row (systematic review of the MB role)",
+        "geometry check: knee 70 = thigh 45 + shin 25 deg",
+        "https://www.jhse.ua.es/article/view/2019-v14-n1-middle-blocker-volleyball-systematic-review",
+        "https://us.humankinetics.com/blogs/excerpt/transition"
+      ]
+    },
+    {
+      "id": "serve_float_toss",
+      "name": "Standing float serve - toss / arm draw",
+      "phase": "toss",
+      "handedness": "right",
+      "description": "Right-handed standing float serve at the instant the ball leaves the left hand: left foot forward, weight still mostly on the back foot, tossing arm extended up in front of the hitting shoulder, hitting arm already drawn back with the elbow at or above shoulder height (bow-and-arrow), chest turned right. The toss is low, just above the contact point, and eyes watch the ball.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.25,
+        "stagger_m": -0.35,
+        "yaw_deg": -20
+      },
+      "angles": {
+        "lumbar_flex": 0,
+        "thoracic_flex": 0,
+        "trunk_lateral": 5,
+        "trunk_twist": 25,
+        "neck_flex": -20,
+        "l_shoulder_flex": 140,
+        "l_shoulder_abd": 10,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 10,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 25,
+        "r_shoulder_abd": 95,
+        "r_shoulder_ext_rot": 95,
+        "r_elbow_flex": 100,
+        "r_wrist_ext": 15,
+        "l_hip_flex": 12,
+        "l_hip_abd": 3,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 15,
+        "l_ankle_dorsi": 3,
+        "r_hip_flex": 0,
+        "r_hip_abd": 3,
+        "r_hip_ext_rot": 10,
+        "r_knee_flex": 15,
+        "r_ankle_dorsi": 15
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "measured (qualitative): float serve shoulder/elbow kinetics are second-lowest of the overhead skills; humeral elevation about 130 deg at contact (Reeser 2010)",
+        "estimated: stance, low toss and high-elbow draw from common coaching descriptions; geometry check: knees 15 = thigh + shin",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065"
+      ]
+    },
+    {
+      "id": "serve_float_contact",
+      "name": "Standing float serve - contact",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Contact of the float serve: weight transferred onto the front (left) foot with the right heel lifting, hitting arm high in front of the right shoulder with the elbow almost straight, firm wrist and open palm striking through the centre of the ball, then stopping short (no wrist snap, minimal follow-through). Trunk has rotated back to square and side-bends slightly left; the left arm is pulled down in front of the body.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.25,
+        "stagger_m": -0.45,
+        "yaw_deg": -10
+      },
+      "angles": {
+        "lumbar_flex": 4,
+        "thoracic_flex": 6,
+        "trunk_lateral": -10,
+        "trunk_twist": -5,
+        "neck_flex": -15,
+        "l_shoulder_flex": 60,
+        "l_shoulder_abd": 10,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 90,
+        "l_wrist_ext": 0,
+        "r_shoulder_flex": 130,
+        "r_shoulder_abd": 35,
+        "r_shoulder_ext_rot": 45,
+        "r_elbow_flex": 15,
+        "r_wrist_ext": 5,
+        "l_hip_flex": 15,
+        "l_hip_abd": 3,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 18,
+        "l_ankle_dorsi": 3,
+        "r_hip_flex": -15,
+        "r_hip_abd": 3,
+        "r_hip_ext_rot": 10,
+        "r_knee_flex": 25,
+        "r_ankle_dorsi": -20
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "measured: humeral elevation about 130 deg at ball contact for the float serve as for spikes (Reeser 2010); here flex 130 + abd 35 with a 10 deg left side bend",
+        "estimated: firm wrist and short follow-through for a float from coaching descriptions; geometry check: front knee 18 = thigh 15 + shin 3",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "title": "Biomechanic differences between anticipated and unanticipated volleyball block jump: implications for lower limb injury risk (15 elite male players, 2024)",
+      "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11595254/",
+      "type": "study",
+      "used_for": [
+        "block_jump_takeoff",
+        "swing_block_takeoff",
+        "block_landing",
+        "block_footwork_crossover"
+      ]
+    },
+    {
+      "title": "Knee and ankle flexion angles and block jump height in junior elite male volleyball players (3D, 5 cameras, 100 Hz; knee 93.4 +/- 4.75 deg, ankle 21.25 +/- 2.98) - Physical Treatments journal, 2019",
+      "url": "https://ptj.uswr.ac.ir/article-1-395-en.html",
+      "type": "study",
+      "used_for": [
+        "block_jump_takeoff",
+        "approach_takeoff"
+      ]
+    },
+    {
+      "title": "Lobietti, Fantozzi, Stagni, Coleman - A biomechanical comparison of jumping techniques in the volleyball block and spike (ISBS 2009, single-player case study)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/3163",
+      "type": "study",
+      "used_for": [
+        "block_jump_takeoff",
+        "block_footwork_crossover",
+        "approach_takeoff"
+      ]
+    },
+    {
+      "title": "Lobietti, Fantozzi, Merni - Blocking the quick attack in volleyball: a 3D kinematic analysis (ISBS 2006; read vs commit block)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/244",
+      "type": "study",
+      "used_for": [
+        "block_read_base",
+        "block_ready",
+        "block_jump_takeoff"
+      ]
+    },
+    {
+      "title": "A biomechanical analysis of volleyball block jumps (quick block vs middle block; sagittal video 60 Hz + AMTI force plate)",
+      "url": "https://sponet.de/sponet/Record/4002761",
+      "type": "study",
+      "used_for": [
+        "block_jump_takeoff"
+      ]
+    },
+    {
+      "title": "The effect of block movement done by different approaches on the height of jumps in volleyball (side-step vs cross-step vs vertical jump, 6 female athletes)",
+      "url": "https://hsm.susu.ru/hsm/en/article/view/3012",
+      "type": "study",
+      "used_for": [
+        "block_footwork_sidestep",
+        "block_footwork_crossover"
+      ]
+    },
+    {
+      "title": "Neves, Johnson, Myrer, Seeley (2011) Comparison of the traditional, swing, and chicken wing volleyball blocking techniques in NCAA Division I female athletes. JSSM 10:452-457",
+      "url": "https://www.jssm.org/jssm-10-452.xml-Fulltext",
+      "type": "study",
+      "used_for": [
+        "swing_block_takeoff",
+        "block_jump_peak",
+        "block_jump_takeoff",
+        "block_ready"
+      ]
+    },
+    {
+      "title": "Ficklin, Lund, Schipper (2014) A comparison of jump height, takeoff velocities, and blocking coverage in the swing and traditional volleyball blocking techniques. JSSM 13:78-83",
+      "url": "https://www.jssm.org/jssm-13-78.xml-abst",
+      "type": "study",
+      "used_for": [
+        "swing_block_takeoff",
+        "block_jump_peak"
+      ]
+    },
+    {
+      "title": "Lobietti (2009) A review of blocking in volleyball: from the notational analysis to biomechanics. Journal of Human Sport & Exercise 4(2)",
+      "url": "https://www.jhse.ua.es/article/view/2009-v4-n2-a-review-of-blocking-in-volleyball-from-the-notationa",
+      "type": "study",
+      "used_for": [
+        "block_footwork_sidestep",
+        "block_footwork_crossover",
+        "block_jump_peak",
+        "swing_block_takeoff"
+      ]
+    },
+    {
+      "title": "Hernandez-Hernandez, Montalvo-Espinosa, Garcia-de-Alcaraz (2020) A time-motion analysis of the cross-over step block technique in volleyball: non-linear and asymmetric performances. Symmetry 12(6):1027",
+      "url": "https://repositorio.ual.es/handle/10835/8308",
+      "type": "study",
+      "used_for": [
+        "block_footwork_crossover"
+      ]
+    },
+    {
+      "title": "Kinematical analysis of block techniques by elite men's volleyball players (2004 Pre-Olympic Congress abstract; flight times about 0.62-0.70 s)",
+      "url": "https://sponet.de/sponet/Record/4011488",
+      "type": "study",
+      "used_for": [
+        "block_jump_peak",
+        "swing_block_takeoff"
+      ]
+    },
+    {
+      "title": "Entrenamos como bloqueamos? Case study of blocking in the Spanish men's Superliga (middle blockers mostly use cross-over steps and the chicken-wing arm action)",
+      "url": "https://investiga.upo.es/documentos/5edacf6a2999524e40a8b4cf",
+      "type": "study",
+      "used_for": [
+        "block_footwork_crossover",
+        "swing_block_takeoff"
+      ]
+    },
+    {
+      "title": "Tillman, Hass, Brunt, Bennett (2004) Jumping and landing techniques in elite women's volleyball. JSSM 3:30-36",
+      "url": "https://www.jssm.org/jssm-03-30.xml-abst",
+      "type": "study",
+      "used_for": [
+        "block_landing",
+        "attack_landing"
+      ]
+    },
+    {
+      "title": "Comparison of landing kinematics and kinetics between experienced and novice volleyball players during block and spike jumps (BMC Sports Sci Med Rehabil 2022)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9188216",
+      "type": "study",
+      "used_for": [
+        "block_landing",
+        "attack_landing"
+      ]
+    },
+    {
+      "title": "Coleman, Lobietti - Landing forces in volleyball spiking and blocking (ISBS; 16 Scottish players, force plates)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/5679",
+      "type": "study",
+      "used_for": [
+        "block_landing",
+        "attack_landing"
+      ]
+    },
+    {
+      "title": "Landing patterns after block in volleyball: application for ACL injury (ISBS; 19 elite female players)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/6437",
+      "type": "study",
+      "used_for": [
+        "block_landing"
+      ]
+    },
+    {
+      "title": "Identification of types of landings after blocking in volleyball associated with risk of ACL injury",
+      "url": "https://lida.sport-iat.de/ta/Record/4041496",
+      "type": "study",
+      "used_for": [
+        "block_landing"
+      ]
+    },
+    {
+      "title": "Effect of level of opposition on block landing (knee flexion at ground contact, maximum knee flexion; university players)",
+      "url": "https://smj.ssrc.ac.ir/article_2131.html?lang=en",
+      "type": "study",
+      "used_for": [
+        "block_landing"
+      ]
+    },
+    {
+      "title": "Dynamic loads indicators for take-off - landing sequence in blocks and attacks of elite female volleyball players",
+      "url": "https://lida.sport-iat.de/ta/Record/4054385?lng=en",
+      "type": "study",
+      "used_for": [
+        "slide_takeoff",
+        "block_landing",
+        "attack_landing"
+      ]
+    },
+    {
+      "title": "Landing ground reaction forces in back-row attacks vs slide attacks, 12 female players (Trends in Sport Sciences 2017, no. 2)",
+      "url": "https://www.wbc.poznan.pl//Content/416184/PDF/8_Trends_2017_No.2_87.pdf",
+      "type": "study",
+      "used_for": [
+        "slide_takeoff",
+        "slide_attack_contact",
+        "attack_landing"
+      ]
+    },
+    {
+      "title": "Reeser, Fleisig, Bolt, Ruan (2010) Upper limb biomechanics during the volleyball serve and spike. Sports Health (14 female collegiate players, 240 Hz 3D)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065",
+      "type": "study",
+      "used_for": [
+        "quick_attack_contact",
+        "slide_attack_contact",
+        "attack_arm_cock",
+        "serve_float_toss",
+        "serve_float_contact"
+      ]
+    },
+    {
+      "title": "Fuchs et al. (2019) Spike jump biomechanics in male versus female elite volleyball players. Journal of Sports Sciences",
+      "url": "https://iris.unicas.it/handle/11580/91401",
+      "type": "study",
+      "used_for": [
+        "attack_arm_cock",
+        "quick_attack_contact",
+        "approach_takeoff"
+      ]
+    },
+    {
+      "title": "Prosch, Zentgraf, Wieland - Sex-specifics in volleyball spike technique, upper-body strength, and shoulder mobility. Journal of Human Kinetics",
+      "url": "https://johk.pl/?p=10121",
+      "type": "study",
+      "used_for": [
+        "attack_arm_cock"
+      ]
+    },
+    {
+      "title": "A motion analysis in the volleyball spike - part 1: three-dimensional kinematics and performance (top-level vs junior elite)",
+      "url": "https://lida.sport-iat.de/ta/Record/4043909?lng=en",
+      "type": "study",
+      "used_for": [
+        "attack_arm_cock",
+        "quick_attack_contact"
+      ]
+    },
+    {
+      "title": "Seminati, Marzari, Vacondio, Minetti (2015) Shoulder 3D range of motion and humerus rotation in two volleyball spike techniques. Sports Biomechanics 14(2)",
+      "url": "https://air.unimi.it/handle/2434/350660",
+      "type": "study",
+      "used_for": [
+        "attack_arm_cock",
+        "quick_attack_contact"
+      ]
+    },
+    {
+      "title": "Volleyball aerial spike as a kinetic chain (pelvis -> trunk -> upper arm -> forearm; maximum shoulder external rotation as key event) - PMC article",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12751981/",
+      "type": "study",
+      "used_for": [
+        "attack_arm_cock"
+      ]
+    },
+    {
+      "title": "Investigation of shoulder kinematics in volleyball spikes (ISBS 2008)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/1914/1783",
+      "type": "study",
+      "used_for": [
+        "attack_arm_cock"
+      ]
+    },
+    {
+      "title": "Kinematic differences between successful and faulty spikes in young volleyball players (Sarvestan et al., J Sports Sci 2020)",
+      "url": "https://lida.sport-iat.de/dvv/Record/4066763?lng=en",
+      "type": "study",
+      "used_for": [
+        "approach_penultimate",
+        "approach_takeoff"
+      ]
+    },
+    {
+      "title": "Hsieh (2019) Joint angular positions that influence volleyball attack height in men's players (ISBS 2019)",
+      "url": "https://commons.nmu.edu/isbs/vol37/iss1/85",
+      "type": "study",
+      "used_for": [
+        "quick_attack_contact",
+        "slide_attack_contact"
+      ]
+    },
+    {
+      "title": "Martinez, Marquez, Hsieh (ISBS 2021) attack height groups: higher take-off CoM and wider inter-ankle distance at take-off",
+      "url": "https://commons.nmu.edu/isbs/vol39/iss1/24",
+      "type": "study",
+      "used_for": [
+        "approach_takeoff"
+      ]
+    },
+    {
+      "title": "Influence of the step number of the approach run on the jumping kinematics in volleyball spike jumps (2- vs 3-step approach, female athletes)",
+      "url": "https://oasis.library.unlv.edu/scholarship_kin/vol4/iss1/15/",
+      "type": "study",
+      "used_for": [
+        "approach_penultimate",
+        "approach_takeoff"
+      ]
+    },
+    {
+      "title": "Palao, Manzanares, Valades (2014) Anthropometric, physical, and age differences by the player position and the performance level in volleyball. J Hum Kinet 44:223-236 (1454 men, 1452 women, Olympics/World Championships 2000-2012)",
+      "url": "https://johk.pl/?p=3222",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Millan-Sanchez, Morante Rabago, Urena (2019) The middle blocker in volleyball: a systematic review. Journal of Human Sport & Exercise 14(1):24-46",
+      "url": "https://www.jhse.ua.es/article/view/2019-v14-n1-middle-blocker-volleyball-systematic-review",
+      "type": "study",
+      "used_for": [
+        "traits",
+        "block_landing",
+        "quick_attack_contact",
+        "ready_medium"
+      ]
+    },
+    {
+      "title": "Anthropometric characteristics of players at the 2017 FIVB Girls' U18 World Championship by position (Int J Sport Exerc Health Res 2021; 240 players)",
+      "url": "https://lida.sport-iat.de/dvv/Record/4071056?lng=en",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Anthropometric and physical characteristics by playing position in young (13-15 y) female volleyball players (Biology of Sport 2017; table 3)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5377555/table/t0003",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Serbian youth national team (about 15.7 y) anthropometry and jumping by position (middle blockers about 201.6 cm)",
+      "url": "https://www.bib.irb.hr:8443/504423",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Anthropometric and jump reach differences by position in men's U19 players (IJSSC 2023)",
+      "url": "https://lida.sport-iat.de/ta/Record/4075496?lng=en",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Do height and weight play an important role in block and attack efficiency in high-level men's volleyball? (Papers on Anthropology 2017)",
+      "url": "https://ojs.utlib.ee/index.php/PoA/article/view/13543",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Study on the body height of male volleyball players (Univ. Tsukuba; London 2012 Olympic middle blockers 203.8 +/- 4.9 cm)",
+      "url": "https://tsukuba.repo.nii.ac.jp/record/38485/files/%E7%94%B7%E5%AD%90%E3%83%90%E3%83%AC%E3%83%BC%E3%83%9C%E3%83%BC%E3%83%AB%E9%81%B8%E6%89%8B%E3%81%AE%E8%BA%AB%E9%95%B7%E3%81%AB%E9%96%A2%E3%81%99%E3%82%8B%E7%A0%94%E7%A9%B6.pdf",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Anthropometric characteristics and motor abilities of young elite female volleyball players by playing position (Serbian U17, Applied Sciences 2024)",
+      "url": "https://doaj.org/article/cbf4886cd74f4ea38b1b4633286728c8",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Positional differences in standing height, standing reach height, arm and leg length of female premier-league volleyball players (Central European J Sport Sci Med 2022)",
+      "url": "https://doaj.org/article/24527f9d134e491aa2e50f8bb71820e5",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Physical performance and positional differences among young female volleyball players (Australian Catholic University)",
+      "url": "https://acuresearchbank.acu.edu.au/item/88483/physical-performance-and-positional-differences-among-young-female-volleyball-players",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Differences of body dimensions in female volleyball players (cadets) in relation to volleyball playing position",
+      "url": "https://lida.sport-iat.de/dvv/Record/4064696",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Bruin Sports Analytics - height importance in volleyball (height vs block points for middle blockers)",
+      "url": "https://www.bruinsportsanalytics.com/post/height-importance-volleyball",
+      "type": "technique article",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "XbotGo blog - Average volleyball player height by position (national-team MB about 205 cm men / 191 cm women; low-reliability secondary source)",
+      "url": "https://xbotgo.com/blogs/knowledge/average-volleyball-player-height",
+      "type": "technique article",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Player profile page: Maxwell Holt (USA MB) - 2.05 m, spike 351 cm, block 333 cm",
+      "url": "https://en.wikipedia.org/wiki/Maxwell_Holt",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Player profile page: Matteo Piano (ITA MB) - 2.08-2.09 m, spike 349 cm, block 320 cm",
+      "url": "https://en.wikipedia.org/wiki/Matteo_Piano",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Volleyball World player page: Matteo Piano (208 cm)",
+      "url": "https://en.volleyballworld.com/volleyball/competitions/superlega/2022-2023/players/141936",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Player profile page: Ivan Iakovlev (RUS MB) - spike 357 cm, block 336 cm",
+      "url": "https://en.wikipedia.org/wiki/Ivan_Iakovlev",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Player profile page: Saso Stalekar (SLO MB) - spike 354 cm, block 338 cm",
+      "url": "https://en.wikipedia.org/wiki/Sa%C5%A1o_%C5%A0talekar",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Player profile page: Foluke Akinradewo Gunderson (USA MB) - 191 cm, spike 330 cm, block 300 cm",
+      "url": "https://en.wikipedia.org/wiki/Foluke_Gunderson",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "USA Volleyball athlete page: Foluke Akinradewo (6 ft 3 in middle blocker)",
+      "url": "https://usavolleyball.org/athlete/foluke-akinradewo/",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Player profile page: Anna Danesi (ITA MB) - 1.96-1.98 m, spike 315 cm, block 306 cm",
+      "url": "https://en.wikipedia.org/wiki/Anna_Danesi",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "CEV player profile: Anna Danesi - 196 cm, spike 312 cm, block 306 cm",
+      "url": "https://eurovolley.cev.eu/team/10870-taly/player/43071-danesi-anna",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Volleyball World Paris 2024 player page: Anna Danesi (195 cm, middle blocker)",
+      "url": "https://en.volleyballworld.com/volleyball/competitions/volleyball-olympic-games-paris-2024/players/136694",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Player profile page: Eda Erdem Dundar (TUR MB) - 188 cm, spike 315 cm, block 302 cm",
+      "url": "https://en.wikipedia.org/wiki/Eda_Erdem",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Volleyball World Tokyo 2020 player page: Eda Erdem (188 cm, middle blocker)",
+      "url": "https://en.volleyballworld.com/volleyball/competitions/olympics-2020/players/138782",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "bianet - Volleyball player Eda Erdem breaks historical record (block 302 cm, spike 308 cm)",
+      "url": "https://bianet.org/haber/volleyball-player-eda-erdem-breaks-historical-record-250007",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Volleyball Canada one-page skill description - Blocking 2-Player (uses FIVB photo sequences)",
+      "url": "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Blocking_2-Player_for_e_module_skill_description.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "block_ready",
+        "swing_block_takeoff",
+        "block_jump_peak",
+        "block_read_base"
+      ]
+    },
+    {
+      "title": "Volleyball Canada one-page skill description - Blocking 3-Player",
+      "url": "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Blocking_3-Player_for_e_module_skill_description.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "block_ready",
+        "block_footwork_crossover",
+        "swing_block_takeoff"
+      ]
+    },
+    {
+      "title": "Volleyball Canada one-page skill description - Blocking: step block, outside movement",
+      "url": "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Blocking_Step_Block_Outside_movement_for_e_module_skill_description.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "block_ready",
+        "block_footwork_sidestep"
+      ]
+    },
+    {
+      "title": "Volleyball Canada one-page skill description - Hitting the 12 (one-foot / slide-type set)",
+      "url": "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Hitting_the_12_for_e_module_skill_description.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "slide_takeoff",
+        "slide_attack_contact"
+      ]
+    },
+    {
+      "title": "Volleyball Canada one-page skill description - Attacking Basics: 51 (quick set in front of the setter)",
+      "url": "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Attacking_Basics_-_51_for_e_module_skill_description_copy.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "approach_penultimate",
+        "approach_takeoff",
+        "quick_attack_contact",
+        "free_ball_ready"
+      ]
+    },
+    {
+      "title": "USA Volleyball (VolleyballUSA, Spring 2008) - Staying square to the volleyball net while blocking: five steps",
+      "url": "https://usavolleyball.org/resource/staying-square-to-the-volleyball-net-while-blocking-five-steps/",
+      "type": "coaching manual",
+      "used_for": [
+        "block_ready",
+        "block_read_base",
+        "block_footwork_sidestep",
+        "block_footwork_crossover",
+        "block_jump_peak"
+      ]
+    },
+    {
+      "title": "USA Volleyball (VolleyballUSA, Winter 2017-18) - Pro tips for attacking: middle blockers and beach",
+      "url": "https://usavolleyball.org/resource/pro-tips-for-attacking-middle-blockers-and-beach/",
+      "type": "technique article",
+      "used_for": [
+        "approach_penultimate",
+        "quick_attack_contact"
+      ]
+    },
+    {
+      "title": "The Art of Coaching Volleyball - Quick middle attack",
+      "url": "https://www.theartofcoachingvolleyball.com/quick-middle-attack/",
+      "type": "video analysis",
+      "used_for": [
+        "approach_penultimate",
+        "approach_takeoff",
+        "quick_attack_contact"
+      ]
+    },
+    {
+      "title": "The Art of Coaching Volleyball - Remedy common middle attack issues",
+      "url": "https://www.theartofcoachingvolleyball.com/remedy-common-middle-attack-issues/",
+      "type": "video analysis",
+      "used_for": [
+        "approach_takeoff",
+        "quick_attack_contact"
+      ]
+    },
+    {
+      "title": "Volleyball Magazine - attack approach footwork for right-handers",
+      "url": "https://volleyballmag.com/?p=65248",
+      "type": "technique article",
+      "used_for": [
+        "approach_penultimate",
+        "approach_takeoff",
+        "slide_takeoff"
+      ]
+    },
+    {
+      "title": "Coaches Insider - One-foot take-off footwork drill (Matt Darling, Gannon Univ.)",
+      "url": "https://coachesinsider.com/volleyball/one-foot-takeoff-footwork-drill-with-matt-darling-gannon-univ",
+      "type": "video analysis",
+      "used_for": [
+        "slide_takeoff"
+      ]
+    },
+    {
+      "title": "Coaches Insider - Blocking: creating a seal over the net (Mackenzie Chrisman)",
+      "url": "https://coachesinsider.com/volleyball/blocking-creating-a-seal-over-the-net-with-mackenzie-chrisman-northeastern-junior-college",
+      "type": "video analysis",
+      "used_for": [
+        "block_jump_peak"
+      ]
+    },
+    {
+      "title": "Physical Education Update - Volleyball: coaching cue for sealing the net (hands then forearms within about 2-4 in of the net)",
+      "url": "https://www.physicaleducationupdate.com/public/910.cfm",
+      "type": "technique article",
+      "used_for": [
+        "block_jump_peak",
+        "block_landing"
+      ]
+    },
+    {
+      "title": "Physical Education Update - Volleyball: height & position (palms just over the tape, hands about shoulder-width, thumbs up)",
+      "url": "https://www.physicaleducationupdate.com/public/575.cfm",
+      "type": "technique article",
+      "used_for": [
+        "block_jump_peak"
+      ]
+    },
+    {
+      "title": "University of Pretoria - Tips for blocking in volleyball (thumbs up, fingers out)",
+      "url": "https://upwebtest.up.ac.za/media/shared/Legacy/sitefiles/file/5573/5421/5459/tipsforblockinginvolleyball.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "block_jump_peak"
+      ]
+    },
+    {
+      "title": "Better at Volleyball - Six steps to dominate with incredible blocking (stance, penetration, timing cue)",
+      "url": "https://betteratvolleyball.com/six-steps-to-dominate-in-volleyball-with-incredible-blocking/",
+      "type": "technique article",
+      "used_for": [
+        "block_ready",
+        "block_read_base",
+        "block_jump_peak",
+        "block_jump_takeoff"
+      ]
+    },
+    {
+      "title": "CoachingVB - Video review: blocking penetration drill",
+      "url": "https://coachingvb.com/video-review-blocking-penetration-drill",
+      "type": "video analysis",
+      "used_for": [
+        "block_jump_peak"
+      ]
+    },
+    {
+      "title": "CoachingVB - Middle blocker in volleyball: role, responsibilities, and training priorities",
+      "url": "https://coachingvb.com/middle-blocker-in-volleyball-role-responsibilities-and-training-priorities/",
+      "type": "technique article",
+      "used_for": [
+        "traits",
+        "transition_retreat",
+        "free_ball_ready",
+        "approach_penultimate"
+      ]
+    },
+    {
+      "title": "SportsEdTV - Middle blocker in volleyball",
+      "url": "https://sportsedtv.com/blog/middle-blocker-in-volleyball",
+      "type": "technique article",
+      "used_for": [
+        "approach_penultimate",
+        "transition_retreat"
+      ]
+    },
+    {
+      "title": "Volleyball Vault - 4 simple but effective volleyball middle blocker drills",
+      "url": "https://volleyballvault.com/?p=4017",
+      "type": "technique article",
+      "used_for": [
+        "approach_takeoff",
+        "quick_attack_contact"
+      ]
+    },
+    {
+      "title": "Volleyball1on1 - Jeff Nygaard on middle blocking",
+      "url": "https://www.volleyball1on1.com/tag/indoor-volleyball",
+      "type": "video analysis",
+      "used_for": [
+        "block_read_base",
+        "approach_penultimate"
+      ]
+    },
+    {
+      "title": "Human Kinetics book excerpt - Transition (moving from blocking to attacking)",
+      "url": "https://us.humankinetics.com/blogs/excerpt/transition",
+      "type": "coaching manual",
+      "used_for": [
+        "transition_retreat",
+        "free_ball_ready",
+        "cover",
+        "ready_medium"
+      ]
+    },
+    {
+      "title": "Gold Medal Squared - swing blocking (swing block now dominant in high-level women's volleyball)",
+      "url": "https://goldmedalsquared.com/?p=7608",
+      "type": "technique article",
+      "used_for": [
+        "swing_block_takeoff"
+      ]
+    },
+    {
+      "title": "VolleyCountry - Volleyball approach: 3 mistakes (approach too close to the net, bent arms/stiff wrists in the load, short choppy steps)",
+      "url": "https://volleycountry.com/training/volleyball-approach-3-mistakes-that-stop-you-from-hitting-like-a-pro",
+      "type": "technique article",
+      "used_for": [
+        "approach_penultimate",
+        "approach_takeoff"
+      ]
+    }
+  ]
+}

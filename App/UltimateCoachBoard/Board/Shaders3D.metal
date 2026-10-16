@@ -185,7 +185,6 @@ fragment float4 avatarFragment(AvatarOut in [[stage_in]], constant Scene3DUnifor
     float3 n = normalize(in.normal);
     float3 l = normalize(u.light.xyz);
     float3 v = normalize(u.eye.xyz - in.world);
-    float diffuse = max(dot(n, l), 0.0);
     float rim = pow(1.0 - max(dot(n, v), 0.0), 3.0);
     // Materials: 0 skin, 1 jersey (team colour), 2 shorts, 3 knee pads, 4 shoes, 5 hair, 6 socks.
     float3 base;

@@ -1,0 +1,1745 @@
+{
+  "position": "setter",
+  "traits": {
+    "stature_m": {
+      "elite_men": 1.93,
+      "elite_women": 1.82,
+      "youth_women_u16": 1.71
+    },
+    "standing_reach_m": {
+      "elite_men": 2.5,
+      "elite_women": 2.34,
+      "youth_women_u16": 2.19
+    },
+    "spike_reach_m": {
+      "elite_men": 3.4,
+      "elite_women": 3.05,
+      "youth_women_u16": 2.7
+    },
+    "block_reach_m": {
+      "elite_men": 3.22,
+      "elite_women": 2.86,
+      "youth_women_u16": 2.6
+    },
+    "build_notes": "ALL TRAIT NUMBERS ARE ESTIMATES (position-specific means could not be read from full texts). Basis: elite men setters profiled 1.98-2.00 m with spike 345-363 cm and block 320-340 cm (Giannelli, Christenson - tall examples); professional men overall spike ~3.43 m / block ~3.27 m (cited from Palao 2014) and setters are generally shorter than hitters/middles, so typical elite setter set slightly lower. Elite women setters profiled 1.78-1.88 m, spike 303-313 cm, block 279-305 cm (Orro, Wolosz, Poulter); elite women overall ~1.82 m with ~2.34 m reach (Valades & Palao). Standing reach estimated as ~1.29-1.30 x stature. U16 girls: competitive (regional/national-pathway) setters estimated ~1.71 m; Serbian U17 national-team mean ~1.77 m (all positions) and setters are shorter than hitters/middles in youth samples; club-level U16 setters will often be 1.62-1.70 m. Build: lean, athletic, usually lighter and shorter than middles/opposites, with lower squat strength and jump than hitters (Marques 2009; national-team data); long arms and strong fingers/wrists matter more than mass. Gear: regular team jersey (not the contrasting libero shirt), shorts (women: spandex), low-profile knee pads, court shoes; ankle braces and finger tape (buddy-taped fingers) are common on setters. Right-handed setter assumed; left-handed setters are mirrored.",
+    "sources": [
+      "https://pmc.ncbi.nlm.nih.gov/articles/PMC4327374/",
+      "https://www.bisp-surf.de/Record/PU200909004105",
+      "https://doisrpska.nub.rs/index.php/sportskenaukeizdravlje/article/download/9899/9564/22713",
+      "https://www.ucg.ac.me/skladiste/blog_1019/objava_183973/fajlovi/D2_Marko%20Joksimovi%c4%87_FSFV.pdf",
+      "https://doaj.org/article/cbf4886cd74f4ea38b1b4633286728c8",
+      "https://doaj.org/article/24527f9d134e491aa2e50f8bb71820e5",
+      "https://acuresearchbank.acu.edu.au/item/88483/physical-performance-and-positional-differences-among-young-female-volleyball-players",
+      "https://www.atlantis-press.com/article/125934798.pdf",
+      "https://www.researchgate.net/publication/331533713_Spike_and_block_reach_of_the_master_Volleyball_during_the_match_according_to_the_classification",
+      "https://www.researchgate.net/publication/280881704_Monitoring_ball_speed_of_the_volleyball_spike_throughout_the_season_for_elite_womens_volleyball_players",
+      "https://www.bruinsportsanalytics.com/post/height-importance-volleyball",
+      "https://eurovolley.cev.eu/team/11805-italy/player/47161-giannelli-simone",
+      "https://en.wikipedia.org/wiki/Simone_Giannelli",
+      "https://en.volleyballworld.com/volleyball/competitions/club-world-championship-men/players/144005",
+      "https://stacy.olympics.com/tokyo-2020/olympic-games/en/results/volleyball/athlete-profile-n1337750-giannelli-simone.htm",
+      "https://en.wikipedia.org/wiki/Micah_Christenson",
+      "https://www.cev.eu/team/12151-zenit-kazan/player/63870-christenson-micah",
+      "https://www.teamusa.com/profiles/micah-christenson-879522",
+      "https://en.wikipedia.org/wiki/Alessia_Orro",
+      "https://prod.cev.eu/team/12047-saugella-monza/player/47275-orro-alessia",
+      "https://en.volleyballworld.com/volleyball/competitions/volleyball-olympic-games-paris-2024/players/150441",
+      "https://en.wikipedia.org/wiki/Jordyn_Poulter",
+      "https://en.volleyballworld.com/volleyball/competitions/volleyball-nations-league/players/143517",
+      "https://en.wikipedia.org/wiki/Joanna_Wo%C5%82osz",
+      "https://en.volleyballworld.com/volleyball/competitions/volleyball-olympic-games-paris-2024/players/118591",
+      "https://usavolleyball.org/event/2024-olympic-games-usa-women-vs-france/"
+    ]
+  },
+  "techniques": [
+    {
+      "id": "setter_ready_at_target",
+      "name": "Setter ready at target (pass in the air)",
+      "phase": "ready",
+      "handedness": "right",
+      "description": "Setter has arrived at the target (right of centre, ~1 m off the net), feet already set with the right foot ahead and hips nearly square to the left antenna but slightly open to the court so the passer is in view (yaw ~100). Knees softly bent (~45-60 deg), trunk almost upright, chin lifted to track the incoming pass; hands are on their way up at chin/face height but not yet in the setting window.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.26,
+        "stagger_m": 0.16,
+        "yaw_deg": 100
+      },
+      "angles": {
+        "lumbar_flex": 4,
+        "thoracic_flex": 6,
+        "trunk_lateral": 0,
+        "trunk_twist": -10,
+        "neck_flex": -15,
+        "l_shoulder_flex": 70,
+        "l_shoulder_abd": 22,
+        "l_shoulder_ext_rot": -15,
+        "l_elbow_flex": 115,
+        "l_wrist_ext": 25,
+        "l_hip_flex": 27,
+        "l_hip_abd": 6,
+        "l_hip_ext_rot": 10,
+        "l_knee_flex": 59,
+        "l_ankle_dorsi": 22,
+        "r_shoulder_flex": 70,
+        "r_shoulder_abd": 22,
+        "r_shoulder_ext_rot": -15,
+        "r_elbow_flex": 115,
+        "r_wrist_ext": 25,
+        "r_hip_flex": 32,
+        "r_hip_abd": 6,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 45,
+        "r_ankle_dorsi": 13
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Gold Medal Squared - Get your setters going in serve receive - https://www.goldmedalsquared.com/post/get-your-setters-going-in-serve-receive",
+        "Gold Medal Squared (Tom Black) - Setting off a lead leg (right foot forward; jump set when the quick is involved, pivot otherwise) - https://www.goldmedalsquared.com/post/setting-off-a-lead-leg",
+        "Volleyball Magazine - setter footwork and hands - https://volleyballmag.com/?p=65257",
+        "Human Kinetics excerpt - Overhead passing - https://us.humankinetics.com/blogs/excerpt/overhead-passing",
+        "Active.com - 4 Steps to Proper Volleyball Setting - https://www.active.com/volleyball/articles/4-steps-to-proper-volleyball-setting",
+        "Cabarkapa et al. (2022) Kinetic and Kinematic Characteristics of Setting Motions in Female Volleyball Players. Biomechanics 2(4):538-546... - https://www.mdpi.com/2673-7078/2/4/42",
+        "Estimated: no study reports a full-body posture for this instant; knee/hip values chosen to match the set-contact posture below and anatomical leg geometry (FK-checked: both feet on the floor, back heel just lifted)."
+      ]
+    },
+    {
+      "id": "set_front_contact",
+      "name": "Front set - ball contact (standing)",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Ball is caught in a window ~10-15 cm above and slightly in front of the forehead; thumbs point back toward the eyes, the hands are cocked back (wrists ~60-70 deg extended) and the elbows point out and forward at roughly chin height (forearms ~35-40 deg below horizontal from hand to elbow, elbows ~100 deg flexed). Body faces the left antenna with the right shoulder to the net, right foot ~18 cm ahead, knees softly bent (~40 front / ~55 back, back heel slightly lifted), trunk nearly vertical, eyes looking up through the hands.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.22,
+        "stagger_m": 0.18,
+        "yaw_deg": 90
+      },
+      "angles": {
+        "lumbar_flex": 2,
+        "thoracic_flex": 3,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -25,
+        "l_shoulder_flex": 135,
+        "l_shoulder_abd": 25,
+        "l_shoulder_ext_rot": -45,
+        "l_elbow_flex": 100,
+        "l_wrist_ext": 65,
+        "l_hip_flex": 22,
+        "l_hip_abd": 4,
+        "l_hip_ext_rot": 10,
+        "l_knee_flex": 55,
+        "l_ankle_dorsi": 21,
+        "r_shoulder_flex": 135,
+        "r_shoulder_abd": 25,
+        "r_shoulder_ext_rot": -45,
+        "r_elbow_flex": 100,
+        "r_wrist_ext": 65,
+        "r_hip_flex": 28,
+        "r_hip_abd": 4,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 40,
+        "r_ankle_dorsi": 12
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Ridgway & Wilkerson - A kinematic analysis of the front set and back set in volleyball - https://ojs.ub.uni-konstanz.de/cpa/article/view/1517",
+        "Ridgway, Hay & Gench - Kinematics of the high outside set and the two-set in volleyball - https://ojs.ub.uni-konstanz.de/cpa/article/view/1463",
+        "ISBS Proceedings - hand and wrist mechanics of the overhead set - https://ojs.ub.uni-konstanz.de/cpa/article/view/1508",
+        "Lin Mei-Hsiu (2010) Kinematical analysis of volleyball setter in different set movement - NTNU master thesis (7 college female setters,... - https://etds.lib.ntnu.edu.tw/thesis/detail/84c73efc9daa0ff8b300e1573b684204",
+        "Cabarkapa et al. (2022) Kinetic and Kinematic Characteristics of Setting Motions in Female Volleyball Players. Biomechanics 2(4):538-546... - https://www.mdpi.com/2673-7078/2/4/42",
+        "Volleyball Canada - Setting the C set, skill description - https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Setting_the_C_set_for_e_module_skill_description.pdf",
+        "Human Kinetics excerpt - Overhead passing - https://us.humankinetics.com/blogs/excerpt/overhead-passing",
+        "Active.com - 4 Steps to Proper Volleyball Setting - https://www.active.com/volleyball/articles/4-steps-to-proper-volleyball-setting",
+        "Gold Medal Squared (Tom Black) - Setting off a lead leg (right foot forward; jump set when the quick is involved, pivot otherwise) - https://www.goldmedalsquared.com/post/setting-off-a-lead-leg",
+        "Estimated: the studies above measured these joints but their numeric tables were not retrievable here; values derived from coaching descriptions + forward-kinematics check (wrists ~13 cm in front of and level with forehead, finger pads ~14 cm above it)."
+      ]
+    },
+    {
+      "id": "set_front_release",
+      "name": "Front set - release / follow-through",
+      "phase": "release",
+      "handedness": "right",
+      "description": "Legs and arms have extended together: arms finish pointing up and forward along the set trajectory toward the left antenna (shoulders ~150 deg flexed, elbows nearly straight ~15 deg), hands about shoulder-width apart and the wrists back to almost neutral (they flex during projection but do not pass neutral). Knees nearly straight (~20 deg), weight moving onto the front (right) foot, chin up following the ball.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.27,
+        "stagger_m": 0.18,
+        "yaw_deg": 90
+      },
+      "angles": {
+        "lumbar_flex": 0,
+        "thoracic_flex": 2,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -30,
+        "l_shoulder_flex": 150,
+        "l_shoulder_abd": 2,
+        "l_shoulder_ext_rot": -10,
+        "l_elbow_flex": 15,
+        "l_wrist_ext": 10,
+        "l_hip_flex": 4,
+        "l_hip_abd": 4,
+        "l_hip_ext_rot": 10,
+        "l_knee_flex": 22,
+        "l_ankle_dorsi": 15,
+        "r_shoulder_flex": 150,
+        "r_shoulder_abd": 2,
+        "r_shoulder_ext_rot": -10,
+        "r_elbow_flex": 15,
+        "r_wrist_ext": 10,
+        "r_hip_flex": 14,
+        "r_hip_abd": 4,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 18,
+        "r_ankle_dorsi": 4
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "ISBS Proceedings - hand and wrist mechanics of the overhead set - https://ojs.ub.uni-konstanz.de/cpa/article/view/1508",
+        "Ridgway & Wilkerson - A kinematic analysis of the front set and back set in volleyball - https://ojs.ub.uni-konstanz.de/cpa/article/view/1517",
+        "Human Kinetics excerpt - Overhead passing - https://us.humankinetics.com/blogs/excerpt/overhead-passing",
+        "Dong et al. (2024) The contribution of upper or lower extremity of male athletes differs as distances of overhead volleyball pass... - https://doaj.org/article/7c9d2b47e6ca47a98fbeb4820899a424",
+        "Biomechanics analysis of distance adjustment in volleyball overhead pass - https://fis.dshs-koeln.de/en/publications/biomechanics-analysis-of-distance-adjustment-in-volleyball-overhe/",
+        "Volleyball teaching cards (Scribd) - overhead pass cues: extend legs, back and arms for force - https://www.scribd.com/document/375091939/teaching-cards-changed",
+        "Estimated from coaching cues ('extend elbows as the knees extend', 'freeze the hands toward the target') and the ISBS observation that the wrist returns toward but not past neutral."
+      ]
+    },
+    {
+      "id": "set_back_contact",
+      "name": "Back set - ball contact",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Looks almost identical to the front-set contact (disguise): same right-foot-forward stance facing the left antenna, but the ball is taken a little further back, more directly above the forehead/hairline, so the shoulders are slightly more flexed (~142 deg) and the head tilts back further. Trunk stays upright; elite setters avoid an early hip thrust or arch because blockers read it.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.23,
+        "stagger_m": 0.18,
+        "yaw_deg": 90
+      },
+      "angles": {
+        "lumbar_flex": 0,
+        "thoracic_flex": 0,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -32,
+        "l_shoulder_flex": 142,
+        "l_shoulder_abd": 25,
+        "l_shoulder_ext_rot": -45,
+        "l_elbow_flex": 100,
+        "l_wrist_ext": 70,
+        "l_hip_flex": 17,
+        "l_hip_abd": 4,
+        "l_hip_ext_rot": 10,
+        "l_knee_flex": 50,
+        "l_ankle_dorsi": 21,
+        "r_shoulder_flex": 142,
+        "r_shoulder_abd": 25,
+        "r_shoulder_ext_rot": -45,
+        "r_elbow_flex": 100,
+        "r_wrist_ext": 70,
+        "r_hip_flex": 24,
+        "r_hip_abd": 4,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 38,
+        "r_ankle_dorsi": 14
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Ridgway & Wilkerson - A kinematic analysis of the front set and back set in volleyball - https://ojs.ub.uni-konstanz.de/cpa/article/view/1517",
+        "A Protocol for the Biomechanical Evaluation of the Types of Setting Motions in Volleyball Based on Kinematics and Muscle Synergies - https://pmc.ncbi.nlm.nih.gov/articles/PMC12821510/",
+        "Lin Mei-Hsiu (2010) Kinematical analysis of volleyball setter in different set movement - NTNU master thesis (7 college female setters,... - https://etds.lib.ntnu.edu.tw/thesis/detail/84c73efc9daa0ff8b300e1573b684204",
+        "The Art of Coaching Volleyball - Setter training: disguising the back set - https://www.theartofcoachingvolleyball.com/setter-training-for-volleyball-disguising-the-back-set/",
+        "The NVL - 4 steps to reading a volleyball setter - https://thenvl.com/?p=3051",
+        "CoachUp - Great habits to improve setting ability - https://www.coachup.com/nation/?p=580",
+        "Estimated: back sets show greater head, trunk and shoulder angular displacement than front sets (per protocol-2026 review of Ridgway & Wilkerson) - applied here mainly in the release posture."
+      ]
+    },
+    {
+      "id": "set_back_release",
+      "name": "Back set - release / follow-through",
+      "phase": "release",
+      "handedness": "right",
+      "description": "Arms extend up and slightly back over the head (shoulders ~172 deg flexed on a trunk that is extending ~15 deg), hips pushed forward over the feet, upper back gently arched and head tipped back to watch the ball travel behind toward the right antenna. Knees nearly straight; back heel lifted. Keep the arch modest - Dunning-style coaching keeps the body neutral to disguise the set.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.26,
+        "stagger_m": 0.2,
+        "yaw_deg": 90
+      },
+      "angles": {
+        "lumbar_flex": -6,
+        "thoracic_flex": -9,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -35,
+        "l_shoulder_flex": 172,
+        "l_shoulder_abd": 2,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 12,
+        "l_wrist_ext": 10,
+        "l_hip_flex": -6,
+        "l_hip_abd": 4,
+        "l_hip_ext_rot": 10,
+        "l_knee_flex": 31,
+        "l_ankle_dorsi": 12,
+        "r_shoulder_flex": 172,
+        "r_shoulder_abd": 2,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 12,
+        "r_wrist_ext": 10,
+        "r_hip_flex": 0,
+        "r_hip_abd": 4,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 14,
+        "r_ankle_dorsi": 14
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Volleyball Canada - Setting the C set, skill description - https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Setting_the_C_set_for_e_module_skill_description.pdf",
+        "Better at Volleyball - 9 tips for amazing back setting - https://betteratvolleyball.com/9-tips-for-amazing-back-setting/",
+        "US Sports Camps - Volleyball tips: setting - https://www.ussportscamps.com/tips/volleyball/volleyball-tips-setting",
+        "The Art of Coaching Volleyball - Setter training: disguising the back set - https://www.theartofcoachingvolleyball.com/setter-training-for-volleyball-disguising-the-back-set/",
+        "A Protocol for the Biomechanical Evaluation of the Types of Setting Motions in Volleyball Based on Kinematics and Muscle Synergies - https://pmc.ncbi.nlm.nih.gov/articles/PMC12821510/",
+        "Ridgway & Wilkerson - A kinematic analysis of the front set and back set in volleyball - https://ojs.ub.uni-konstanz.de/cpa/article/view/1517",
+        "Estimated: arch magnitude (lumbar -6, thoracic -9, neck -35) chosen as a moderate value between 'arch the back' cues and 'stay neutral' cues."
+      ]
+    },
+    {
+      "id": "set_jump_contact",
+      "name": "Jump set - ball contact",
+      "phase": "contact (airborne, rising or near peak)",
+      "handedness": "right",
+      "description": "Setter jumps off both feet (feet close, right slightly ahead) facing the left antenna and contacts the ball on the way up or near the peak with the same high hand window above the forehead; arms are a little higher than in the standing set. Legs hang slightly flexed (hips ~15, knees ~30 deg) with the ankles plantarflexed after take-off; trunk upright.",
+      "root": {
+        "jump_m": 0.3,
+        "stance_width_m": 0.18,
+        "stagger_m": 0.1,
+        "yaw_deg": 90
+      },
+      "angles": {
+        "lumbar_flex": 2,
+        "thoracic_flex": 3,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -22,
+        "l_shoulder_flex": 137,
+        "l_shoulder_abd": 25,
+        "l_shoulder_ext_rot": -45,
+        "l_elbow_flex": 98,
+        "l_wrist_ext": 60,
+        "l_hip_flex": 12,
+        "l_hip_abd": 0,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 30,
+        "l_ankle_dorsi": -35,
+        "r_shoulder_flex": 137,
+        "r_shoulder_abd": 25,
+        "r_shoulder_ext_rot": -45,
+        "r_elbow_flex": 98,
+        "r_wrist_ext": 60,
+        "r_hip_flex": 18,
+        "r_hip_abd": 0,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 28,
+        "r_ankle_dorsi": -35
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Gold Medal Squared (Tom Black) - Setting off a lead leg (right foot forward; jump set when the quick is involved, pivot otherwise) - https://www.goldmedalsquared.com/post/setting-off-a-lead-leg",
+        "Volleybrains podcast 112 - Marco Meoni setting masterclass - https://volleybrains.com/marco-meoni/",
+        "Setter Guide (Scribd) - hands up earlier than you think; once airborne the knees can no longer control the ball - https://www.scribd.com/document/78695091/Setter-Guide",
+        "Volleyball Canada - Setting the 41, skill description - https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Setting_the_41_for_e_module_skill_description.pdf",
+        "A comparative study of some kinematical characteristics for front jump set between male and female volleyball players - https://lida.sport-iat.de/dvv/Record/4022535",
+        "Ridgway, Hay & Gench - Kinematics of the high outside set and the two-set in volleyball - https://ojs.ub.uni-konstanz.de/cpa/article/view/1463",
+        "Hernandez, Urena, Martinez & Ona - Estudio del comportamiento de la colocadora en voleibol a traves del analisis cinematico de angulos corporales - https://doaj.org/article/31e12ff62ccd49748ef2df45ef055454",
+        "Estimated: jump height 0.30 m is a typical setter jump-set value (estimate, not measured); arm angles reuse the standing-set geometry."
+      ]
+    },
+    {
+      "id": "setter_dump",
+      "name": "Setter dump (left-hand attack on two)",
+      "phase": "contact (airborne)",
+      "handedness": "right",
+      "description": "Front-row setter jumps exactly as for a jump set, then at the last instant lets the right hand fall away and uses the LEFT hand (which sits on the court side of the ball) to push the ball over the net to the right and down. Left arm reaches high over the head (shoulder ~165 deg, elbow ~30 deg) with the wrist snapping down; chest and shoulders turn slightly toward the net and the trunk leans a little toward it.",
+      "root": {
+        "jump_m": 0.38,
+        "stance_width_m": 0.18,
+        "stagger_m": -0.05,
+        "yaw_deg": 78
+      },
+      "angles": {
+        "lumbar_flex": 0,
+        "thoracic_flex": 0,
+        "trunk_lateral": 8,
+        "trunk_twist": 12,
+        "neck_flex": -25,
+        "l_shoulder_flex": 165,
+        "l_shoulder_abd": -5,
+        "l_shoulder_ext_rot": 10,
+        "l_elbow_flex": 30,
+        "l_wrist_ext": -20,
+        "l_hip_flex": 28,
+        "l_hip_abd": 0,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 40,
+        "l_ankle_dorsi": -30,
+        "r_shoulder_flex": 105,
+        "r_shoulder_abd": 30,
+        "r_shoulder_ext_rot": -30,
+        "r_elbow_flex": 95,
+        "r_wrist_ext": 20,
+        "r_hip_flex": 22,
+        "r_hip_abd": 0,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 35,
+        "r_ankle_dorsi": -30
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Gold Medal Squared - setter dump (looks like a set until the last instant, then swiped over with the left hand) - https://goldmedalsquared.com/?p=7964",
+        "IMG Academy+ - Volleyball setting drill: setter dump - https://plus.imgacademy.com/resources/videos/volleyball-setting-drill-setter-dump",
+        "Volleyball Vault - Setter dump: everything you need to know - https://volleyballvault.com/?p=4364",
+        "The Art of Coaching Volleyball - Setter training: disguising the back set - https://www.theartofcoachingvolleyball.com/setter-training-for-volleyball-disguising-the-back-set/",
+        "The NVL - 4 steps to reading a volleyball setter - https://thenvl.com/?p=3051",
+        "Better at Beach - What the setter dump looks like in beach volleyball - https://betteratbeach.com/blog/can-you-setter-dump-in-beach-volleyball",
+        "Estimated: no kinematic study of the dump was found; posture built from coaching descriptions (neutral, set-like body until contact; left-hand swipe; low trajectory over the tape)."
+      ]
+    },
+    {
+      "id": "setter_penetration_run",
+      "name": "Setter release / penetration run from right back",
+      "phase": "sprint stride (push-off)",
+      "handedness": "right",
+      "description": "Back-row setter releases from area 1 as soon as the serve is struck and sprints to the target with an athletic forward lean (~15 deg), arms swinging (not held up), head turned toward the passer. Snapshot shows the left foot pushing off on the toes while the right knee drives forward; the final steps (R-L-R) then convert into the set-ready stance.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.18,
+        "stagger_m": 0.44,
+        "yaw_deg": 15
+      },
+      "angles": {
+        "lumbar_flex": 5,
+        "thoracic_flex": 10,
+        "trunk_lateral": 0,
+        "trunk_twist": -8,
+        "neck_flex": -10,
+        "l_shoulder_flex": 50,
+        "l_shoulder_abd": 10,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 90,
+        "l_wrist_ext": 0,
+        "l_hip_flex": -12,
+        "l_hip_abd": 0,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 15,
+        "l_ankle_dorsi": -25,
+        "r_shoulder_flex": -35,
+        "r_shoulder_abd": 10,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 85,
+        "r_wrist_ext": 0,
+        "r_hip_flex": 65,
+        "r_hip_abd": 0,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 100,
+        "r_ankle_dorsi": 10
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Gold Medal Squared - Get your setters going in serve receive - https://www.goldmedalsquared.com/post/get-your-setters-going-in-serve-receive",
+        "Coaches Insider - Setting drills (setters sprint to the net from right back, middle back and left front, then set outside) - https://coachesinsider.com/volleyball/setting-drills-article/",
+        "The Art of Coaching Volleyball - Joe Sagula's setter training drill - https://www.theartofcoachingvolleyball.com/joe-sagulas-setter-draining-drill/",
+        "Sportstars Magazine - Lindsey Berg volleyball footwork - https://sportstarsmag.com/2020/03/lindsey-berg-volleyball-footwork/",
+        "Volleyball1on1 - setting technique lesson - https://www.volleyball1on1.com/?p=78392",
+        "Volleyball Magazine - setter footwork and hands - https://volleyballmag.com/?p=65257",
+        "Estimated from generic sprint mechanics plus setter footwork descriptions; no measured setter-specific data."
+      ]
+    },
+    {
+      "id": "block_ready",
+      "name": "Block ready - right-front setter at the net",
+      "phase": "ready",
+      "handedness": "right",
+      "description": "Front-row setter stands square to the net in right front, feet about shoulder width, knees bent ~40 deg, trunk upright, hands up in front of the face at about forehead height with palms toward the net and elbows bent ~95 deg, eyes on the opposing setter/hitter.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.4,
+        "stagger_m": 0.0,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 3,
+        "thoracic_flex": 3,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -8,
+        "l_shoulder_flex": 100,
+        "l_shoulder_abd": 8,
+        "l_shoulder_ext_rot": 10,
+        "l_elbow_flex": 95,
+        "l_wrist_ext": 25,
+        "l_hip_flex": 30,
+        "l_hip_abd": 10,
+        "l_hip_ext_rot": 5,
+        "l_knee_flex": 42,
+        "l_ankle_dorsi": 12,
+        "r_shoulder_flex": 100,
+        "r_shoulder_abd": 8,
+        "r_shoulder_ext_rot": 10,
+        "r_elbow_flex": 95,
+        "r_wrist_ext": 25,
+        "r_hip_flex": 30,
+        "r_hip_abd": 10,
+        "r_hip_ext_rot": 5,
+        "r_knee_flex": 42,
+        "r_ankle_dorsi": 12
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Biomechanic Differences Between Anticipated and Unanticipated Volleyball Block Jump: Implications for Lower Limb Injury Risk - https://pmc.ncbi.nlm.nih.gov/articles/PMC11595254/",
+        "ISBS Proceedings paper on volleyball block jump technique - https://ojs.ub.uni-konstanz.de/cpa/article/view/244",
+        "ISBS Proceedings paper on volleyball block / spike jumps - https://ojs.ub.uni-konstanz.de/cpa/article/view/3163",
+        "Elite junior volleyball block jump - knee and ankle angles vs block-jump height - https://ptj.uswr.ac.ir/article-1-395-en.html",
+        "The NVL - 4 steps to reading a volleyball setter - https://thenvl.com/?p=3051",
+        "The Art of Coaching Volleyball - Base position for setter attack - https://www.theartofcoachingvolleyball.com/base-position-for-setter-attack/",
+        "Estimated: knee flexion 42 deg is the standing ready; the countermovement before take-off deepens to ~70-90 deg (ISBS case study ~70 deg; elite juniors ~93 deg knee angle reported, definition not confirmed)."
+      ]
+    },
+    {
+      "id": "block_jump_peak",
+      "name": "Block jump - peak",
+      "phase": "peak",
+      "handedness": "right",
+      "description": "At the top of the block jump the arms are extended up and forward over the net (shoulders ~160 deg, elbows almost straight), hands about a ball-width apart with the wrists firm and angled slightly down into the opponent court; trunk slightly piked (~10 deg) and the legs hang with hips and knees ~20 deg flexed, ankles plantarflexed.",
+      "root": {
+        "jump_m": 0.45,
+        "stance_width_m": 0.3,
+        "stagger_m": 0.0,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 5,
+        "thoracic_flex": 5,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -10,
+        "l_shoulder_flex": 160,
+        "l_shoulder_abd": -2,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 5,
+        "l_wrist_ext": -10,
+        "l_hip_flex": 18,
+        "l_hip_abd": 4,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 22,
+        "l_ankle_dorsi": -35,
+        "r_shoulder_flex": 160,
+        "r_shoulder_abd": -2,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 5,
+        "r_wrist_ext": -10,
+        "r_hip_flex": 18,
+        "r_hip_abd": 4,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 22,
+        "r_ankle_dorsi": -35
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Biomechanic Differences Between Anticipated and Unanticipated Volleyball Block Jump: Implications for Lower Limb Injury Risk - https://pmc.ncbi.nlm.nih.gov/articles/PMC11595254/",
+        "ISBS Proceedings paper on volleyball block / spike jumps - https://ojs.ub.uni-konstanz.de/cpa/article/view/3163",
+        "ISBS Proceedings paper on volleyball block jump technique - https://ojs.ub.uni-konstanz.de/cpa/article/view/244",
+        "Elite junior volleyball block jump - knee and ankle angles vs block-jump height - https://ptj.uswr.ac.ir/article-1-395-en.html",
+        "Comparison of landing kinematics and kinetics between experienced and novice volleyball players during block and spike jumps - https://pmc.ncbi.nlm.nih.gov/articles/PMC9188216",
+        "Estimated: jump 0.45 m chosen so hand height matches typical setter block reach minus standing reach (see traits); joint angles estimated."
+      ]
+    },
+    {
+      "id": "block_landing",
+      "name": "Block landing - initial contact",
+      "phase": "landing",
+      "handedness": "right",
+      "description": "Setter lands from the block on the forefeet with knees only slightly flexed (~11 deg) and hips nearly straight at the instant of floor contact, arms still coming down in front of the head; the knees then flex further to absorb load. Teaching point: land with more knee flexion (low-flexion landings are linked to ACL risk).",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.3,
+        "stagger_m": 0.0,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 3,
+        "thoracic_flex": 4,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -5,
+        "l_shoulder_flex": 135,
+        "l_shoulder_abd": 10,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 25,
+        "l_wrist_ext": 0,
+        "l_hip_flex": 2,
+        "l_hip_abd": 4,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 11,
+        "l_ankle_dorsi": -28,
+        "r_shoulder_flex": 135,
+        "r_shoulder_abd": 10,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 25,
+        "r_wrist_ext": 0,
+        "r_hip_flex": 2,
+        "r_hip_abd": 4,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 11,
+        "r_ankle_dorsi": -28
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "ISBS Proceedings - block jump vs side-step block landing - https://ojs.ub.uni-konstanz.de/cpa/article/view/6567",
+        "Comparison of landing kinematics and kinetics between experienced and novice volleyball players during block and spike jumps - https://pmc.ncbi.nlm.nih.gov/articles/PMC9188216",
+        "Identification of types of landings after blocking in volleyball associated with risk of ACL injury - https://lida.sport-iat.de/ta/Record/4041496",
+        "Volleyball-specific fatigue and landing kinematics - https://lida.sport-iat.de/ta/Record/4096485",
+        "ISB 2013 poster - sex differences in volleyball landing - https://media.isbweb.org/images/conferences/isb-congresses/2013/poster/ps1-14u.pdf",
+        "Partly measured: knee ~11 deg and hip ~0 deg at initial contact follow the ISBS block-landing means (10.8 / 12.3 deg); arms, trunk and ankle are estimated."
+      ]
+    },
+    {
+      "id": "ready_medium",
+      "name": "Back-row defensive base (right back)",
+      "phase": "ready",
+      "handedness": "right",
+      "description": "When in the back row the setter defends right back before releasing: medium athletic stance, feet a bit wider than shoulders with the right foot slightly ahead, knees ~65-70 deg, trunk leaning ~18 deg, hands relaxed in front at waist height, body angled toward the cross-court attacker.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.55,
+        "stagger_m": 0.08,
+        "yaw_deg": 15
+      },
+      "angles": {
+        "lumbar_flex": 8,
+        "thoracic_flex": 10,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -20,
+        "l_shoulder_flex": 50,
+        "l_shoulder_abd": 12,
+        "l_shoulder_ext_rot": 10,
+        "l_elbow_flex": 60,
+        "l_wrist_ext": 10,
+        "l_hip_flex": 44,
+        "l_hip_abd": 24,
+        "l_hip_ext_rot": 10,
+        "l_knee_flex": 69,
+        "l_ankle_dorsi": 22,
+        "r_shoulder_flex": 50,
+        "r_shoulder_abd": 12,
+        "r_shoulder_ext_rot": 10,
+        "r_elbow_flex": 60,
+        "r_wrist_ext": 10,
+        "r_hip_flex": 48,
+        "r_hip_abd": 24,
+        "r_hip_ext_rot": 10,
+        "r_knee_flex": 65,
+        "r_ankle_dorsi": 17
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Ridgway & Hamilton - The Kinematics of Forearm Passing in Low Skilled and High Skilled Volleyball Players - https://ojs.ub.uni-konstanz.de/cpa/article/view/2336",
+        "Munerati et al. (2016) Relationship between knee angle in squat test and defence or reception efficacy in amateur volleyball players - https://expertise.unimi.it/resource/item/463213",
+        "Volleyball Canada - Basic Passing, skill description - https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+        "Estimated from forearm-pass kinematics (skilled passers start with ~45 deg knee flexion and ~28 deg trunk flexion) adjusted to a deeper defensive base."
+      ]
+    },
+    {
+      "id": "dig_low",
+      "name": "Low dig - right-back defence (contact)",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Low, wide platform dig in right back: knees ~95-100 deg, trunk leaning ~34 deg, arms straight and joined into a platform angled down toward the floor at knee-to-thigh height, wrists pointing down, head up watching the ball. Right (sideline) foot slightly ahead so the platform faces the middle of the court.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.51,
+        "stagger_m": 0.08,
+        "yaw_deg": 20
+      },
+      "angles": {
+        "lumbar_flex": 14,
+        "thoracic_flex": 20,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -32,
+        "l_shoulder_flex": 80,
+        "l_shoulder_abd": -18,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 5,
+        "l_wrist_ext": -15,
+        "l_hip_flex": 62,
+        "l_hip_abd": 36,
+        "l_hip_ext_rot": 10,
+        "l_knee_flex": 99,
+        "l_ankle_dorsi": 32,
+        "r_shoulder_flex": 80,
+        "r_shoulder_abd": -18,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 5,
+        "r_wrist_ext": -15,
+        "r_hip_flex": 68,
+        "r_hip_abd": 36,
+        "r_hip_ext_rot": 10,
+        "r_knee_flex": 95,
+        "r_ankle_dorsi": 27
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Ridgway & Hamilton - The Kinematics of Forearm Passing in Low Skilled and High Skilled Volleyball Players - https://ojs.ub.uni-konstanz.de/cpa/article/view/2336",
+        "Voleybolcularin manset paslarinin kinematik analizi - https://avesis.omu.edu.tr/yayin/0c444ab4-ee04-402c-bbf5-1a3497fda353/voleybolcularin-manset-paslarinin-kinematik-analizi",
+        "Munerati et al. (2016) Relationship between knee angle in squat test and defence or reception efficacy in amateur volleyball players - https://expertise.unimi.it/resource/item/463213",
+        "Moving vs stationary defence - hip angle at ball contact - https://pessj.uodiyala.edu.iq/index.php/1/article/download/2035/1344/2188",
+        "Volleyball Canada - Basic Passing, skill description - https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+        "Estimated: trunk lean anchored on skilled forearm-pass trunk flexion (~20-28 deg) and deepened for a defensive dig; knee depth estimated."
+      ]
+    },
+    {
+      "id": "set_forearm",
+      "name": "Forearm (bump) set from a low pass",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "When the pass is too low or far for hands, the setter faces the left antenna, drops into a medium stance (knees ~60-67 deg, trunk ~20 deg) and lifts the ball with a straight-armed platform at waist height, finishing with a gentle leg-driven upward follow-through.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.43,
+        "stagger_m": 0.1,
+        "yaw_deg": 90
+      },
+      "angles": {
+        "lumbar_flex": 8,
+        "thoracic_flex": 12,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -25,
+        "l_shoulder_flex": 75,
+        "l_shoulder_abd": -18,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 5,
+        "l_wrist_ext": -15,
+        "l_hip_flex": 41,
+        "l_hip_abd": 16,
+        "l_hip_ext_rot": 8,
+        "l_knee_flex": 67,
+        "l_ankle_dorsi": 21,
+        "r_shoulder_flex": 75,
+        "r_shoulder_abd": -18,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 5,
+        "r_wrist_ext": -15,
+        "r_hip_flex": 45,
+        "r_hip_abd": 16,
+        "r_hip_ext_rot": 8,
+        "r_knee_flex": 60,
+        "r_ankle_dorsi": 15
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Ridgway & Hamilton - The Kinematics of Forearm Passing in Low Skilled and High Skilled Volleyball Players - https://ojs.ub.uni-konstanz.de/cpa/article/view/2336",
+        "Voleybolcularin manset paslarinin kinematik analizi - https://avesis.omu.edu.tr/yayin/0c444ab4-ee04-402c-bbf5-1a3497fda353/voleybolcularin-manset-paslarinin-kinematik-analizi",
+        "Volleyball Canada - Basic Passing, skill description - https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+        "Estimated from forearm-pass kinematics and setting footwork orientation (yaw 90 = facing the left antenna)."
+      ]
+    },
+    {
+      "id": "cover",
+      "name": "Attack coverage behind the hitter",
+      "phase": "ready (coverage)",
+      "handedness": "right",
+      "description": "After setting, the setter follows and crouches low behind the attacking hitter (here toward the left side, yaw ~45): wide stance, knees ~92-95 deg, trunk ~27 deg forward, arms low and in front with palms up ready to play a blocked ball, head tipped back to watch the block.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.49,
+        "stagger_m": 0.05,
+        "yaw_deg": 45
+      },
+      "angles": {
+        "lumbar_flex": 12,
+        "thoracic_flex": 15,
+        "trunk_lateral": 0,
+        "trunk_twist": 0,
+        "neck_flex": -45,
+        "l_shoulder_flex": 55,
+        "l_shoulder_abd": 5,
+        "l_shoulder_ext_rot": 15,
+        "l_elbow_flex": 25,
+        "l_wrist_ext": 15,
+        "l_hip_flex": 65,
+        "l_hip_abd": 32,
+        "l_hip_ext_rot": 10,
+        "l_knee_flex": 95,
+        "l_ankle_dorsi": 25,
+        "r_shoulder_flex": 55,
+        "r_shoulder_abd": 5,
+        "r_shoulder_ext_rot": 15,
+        "r_elbow_flex": 25,
+        "r_wrist_ext": 15,
+        "r_hip_flex": 68,
+        "r_hip_abd": 32,
+        "r_hip_ext_rot": 10,
+        "r_knee_flex": 92,
+        "r_ankle_dorsi": 24
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Ridgway & Hamilton - The Kinematics of Forearm Passing in Low Skilled and High Skilled Volleyball Players - https://ojs.ub.uni-konstanz.de/cpa/article/view/2336",
+        "Coaches Insider - Setting drills (setters sprint to the net from right back, middle back and left front, then set outside) - https://coachesinsider.com/volleyball/setting-drills-article/",
+        "Estimated: no study or manual examined here gave coverage angles; built from the low-defence posture with the head raised toward the block."
+      ]
+    },
+    {
+      "id": "transition_retreat",
+      "name": "Transition off the net after blocking (front-row setter)",
+      "phase": "transition step",
+      "handedness": "right",
+      "description": "After landing from a block the right-front setter turns toward the court (pivoting on the right foot, yaw ~135) and steps off the net with the left foot to find the dig and move to the setting target, staying in a moderate crouch with arms swinging low.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.18,
+        "stagger_m": -0.15,
+        "yaw_deg": 135
+      },
+      "angles": {
+        "lumbar_flex": 8,
+        "thoracic_flex": 10,
+        "trunk_lateral": 0,
+        "trunk_twist": 10,
+        "neck_flex": -10,
+        "l_shoulder_flex": -15,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 80,
+        "l_wrist_ext": 0,
+        "l_hip_flex": 36,
+        "l_hip_abd": 0,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 36,
+        "l_ankle_dorsi": 0,
+        "r_shoulder_flex": 35,
+        "r_shoulder_abd": 15,
+        "r_shoulder_ext_rot": 0,
+        "r_elbow_flex": 80,
+        "r_wrist_ext": 0,
+        "r_hip_flex": 32,
+        "r_hip_abd": 0,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 48,
+        "r_ankle_dorsi": 16
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Coaches Insider - Setting drills (setters sprint to the net from right back, middle back and left front, then set outside) - https://coachesinsider.com/volleyball/setting-drills-article/",
+        "Gold Medal Squared - Get your setters going in serve receive - https://www.goldmedalsquared.com/post/get-your-setters-going-in-serve-receive",
+        "Estimated: transition footwork described qualitatively only; angles are generic running/stepping values."
+      ]
+    },
+    {
+      "id": "serve_float_toss",
+      "name": "Standing float serve - toss with arm cocked",
+      "phase": "toss / arm cock",
+      "handedness": "right",
+      "description": "Right-handed setter serving from behind the end line: left foot ahead, weight on the back foot, chest turned slightly right; the left arm has lifted the ball up in front of the hitting shoulder (left shoulder ~150 deg, arm straight) while the right elbow is drawn high and back at about shoulder height with the hand behind the ear (bow-and-arrow).",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.22,
+        "stagger_m": -0.3,
+        "yaw_deg": -15
+      },
+      "angles": {
+        "lumbar_flex": 0,
+        "thoracic_flex": -3,
+        "trunk_lateral": 0,
+        "trunk_twist": 20,
+        "neck_flex": -25,
+        "l_shoulder_flex": 150,
+        "l_shoulder_abd": -8,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 10,
+        "l_wrist_ext": 10,
+        "l_hip_flex": 16,
+        "l_hip_abd": 4,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 1,
+        "l_ankle_dorsi": -15,
+        "r_shoulder_flex": 50,
+        "r_shoulder_abd": 100,
+        "r_shoulder_ext_rot": 55,
+        "r_elbow_flex": 100,
+        "r_wrist_ext": 30,
+        "r_hip_flex": 10,
+        "r_hip_abd": 4,
+        "r_hip_ext_rot": 20,
+        "r_knee_flex": 30,
+        "r_ankle_dorsi": 20
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Korkmaz (2018) jump-float vs standing float serve kinematics, Pamukkale University thesis (ball leaves hand at 9-15 deg, during descent... - https://gcris.pau.edu.tr/handle/11499/2444",
+        "Calso (2007) Biomechanical analysis of the volleyball overhead float serve (experienced vs inexperienced player, shoulder/elbow/wrist ROM) - https://upchklibrary.yolasite.com/resources/BIOMECHANICAL%20ANALYSIS%20OF%20THE%20VOLLEYBALL%20OVERHEAD%20FLOAT%20SERVE.doc",
+        "3D motion capture of straight vs diagonal jump serves in professional males - https://www.preprints.org/manuscript/202402.1625/v1",
+        "Estimated: no full-body float-serve angle set was retrievable; positions FK-checked (right hand ~10 cm above and behind the head, toss hand at ~2.1 m for a 1.80 m avatar)."
+      ]
+    },
+    {
+      "id": "serve_float_contact",
+      "name": "Standing float serve - ball contact",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Weight has shifted onto the front (left) foot with the right foot trailing on its toes; the hitting arm is high and in front of the right shoulder (shoulder ~160 deg flexed, elbow ~15 deg) and the wrist is firm/neutral for a no-spin punch; trunk square to the net, left arm pulled down in front of the body.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.24,
+        "stagger_m": -0.5,
+        "yaw_deg": -5
+      },
+      "angles": {
+        "lumbar_flex": 4,
+        "thoracic_flex": 4,
+        "trunk_lateral": 0,
+        "trunk_twist": -8,
+        "neck_flex": -15,
+        "l_shoulder_flex": 40,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 90,
+        "l_wrist_ext": 0,
+        "l_hip_flex": 25,
+        "l_hip_abd": 4,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 30,
+        "l_ankle_dorsi": 5,
+        "r_shoulder_flex": 160,
+        "r_shoulder_abd": 12,
+        "r_shoulder_ext_rot": 15,
+        "r_elbow_flex": 15,
+        "r_wrist_ext": 5,
+        "r_hip_flex": -4,
+        "r_hip_abd": 4,
+        "r_hip_ext_rot": 10,
+        "r_knee_flex": 44,
+        "r_ankle_dorsi": 13
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Reeser et al. (2010) Upper limb biomechanics during the volleyball serve and spike (14 female collegiate players; shoulder abduction... - https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065",
+        "Korkmaz (2018) jump-float vs standing float serve kinematics, Pamukkale University thesis (ball leaves hand at 9-15 deg, during descent... - https://gcris.pau.edu.tr/handle/11499/2444",
+        "Calso (2007) Biomechanical analysis of the volleyball overhead float serve (experienced vs inexperienced player, shoulder/elbow/wrist ROM) - https://upchklibrary.yolasite.com/resources/BIOMECHANICAL%20ANALYSIS%20OF%20THE%20VOLLEYBALL%20OVERHEAD%20FLOAT%20SERVE.doc",
+        "Estimated: Reeser et al. report ~130 deg humeral abduction (elevation) at contact for serves/spikes; the arm elevation here (~150 deg from the trunk axis) is somewhat higher because the float contact is above the shoulder and slightly in front."
+      ]
+    },
+    {
+      "id": "serve_jump_float_contact",
+      "name": "Jump float serve - ball contact",
+      "phase": "contact (airborne)",
+      "handedness": "right",
+      "description": "Many elite setters jump-float: after a short (2-3 step) approach and a low toss, ball is struck with a firm wrist just after the peak of a modest jump (~0.3 m), arm high in front of the hitting shoulder, trunk nearly square, legs slightly flexed with plantarflexed ankles.",
+      "root": {
+        "jump_m": 0.3,
+        "stance_width_m": 0.18,
+        "stagger_m": -0.23,
+        "yaw_deg": -5
+      },
+      "angles": {
+        "lumbar_flex": 3,
+        "thoracic_flex": 2,
+        "trunk_lateral": 0,
+        "trunk_twist": -5,
+        "neck_flex": -18,
+        "l_shoulder_flex": 60,
+        "l_shoulder_abd": 15,
+        "l_shoulder_ext_rot": 0,
+        "l_elbow_flex": 85,
+        "l_wrist_ext": 0,
+        "l_hip_flex": 20,
+        "l_hip_abd": 0,
+        "l_hip_ext_rot": 0,
+        "l_knee_flex": 25,
+        "l_ankle_dorsi": -35,
+        "r_shoulder_flex": 162,
+        "r_shoulder_abd": 12,
+        "r_shoulder_ext_rot": 15,
+        "r_elbow_flex": 12,
+        "r_wrist_ext": 5,
+        "r_hip_flex": 5,
+        "r_hip_abd": 0,
+        "r_hip_ext_rot": 0,
+        "r_knee_flex": 25,
+        "r_ankle_dorsi": -35
+      },
+      "confidence": "estimated",
+      "evidence": [
+        "Huang & Hu (2007) Kinematic analysis of volleyball jump topspin and float serve (ISBS) - https://ojs.ub.uni-konstanz.de/cpa/article/view/476",
+        "Korkmaz (2018) jump-float vs standing float serve kinematics, Pamukkale University thesis (ball leaves hand at 9-15 deg, during descent... - https://gcris.pau.edu.tr/handle/11499/2444",
+        "Reeser et al. (2010) Upper limb biomechanics during the volleyball serve and spike (14 female collegiate players; shoulder abduction... - https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065",
+        "Jump-serve kinematics in youth and adult male players - https://pmc.ncbi.nlm.nih.gov/articles/PMC10402994",
+        "Estimated: Korkmaz reports the jump-float contact during the descent after the centre-of-mass peak; jump height and angles estimated."
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "title": "Ridgway & Wilkerson - A kinematic analysis of the front set and back set in volleyball (ISBS Proceedings; 7 NCAA D-I female setters, 200 fps film; wrist, elbow, knee, ankle angles, trunk/thigh inclination)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/1517",
+      "type": "study",
+      "used_for": [
+        "set_front_contact",
+        "set_front_release",
+        "set_back_contact",
+        "set_back_release"
+      ]
+    },
+    {
+      "title": "Ridgway, Hay & Gench - Kinematics of the high outside set and the two-set in volleyball (ISBS Proceedings; 10 NCAA female setters; knee/elbow/hip/left-wrist angles at contact and release; wrist more extended in the 2-set)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/1463",
+      "type": "study",
+      "used_for": [
+        "set_front_contact",
+        "set_front_release",
+        "set_jump_contact"
+      ]
+    },
+    {
+      "title": "Cabarkapa et al. (2022) Kinetic and Kinematic Characteristics of Setting Motions in Female Volleyball Players. Biomechanics 2(4):538-546 (front/middle/back sets, stationary vs step-in; proficient setters use less knee flexion, shoulder flexion and ankle dorsiflexion at start of the concentric phase)",
+      "url": "https://www.mdpi.com/2673-7078/2/4/42",
+      "type": "study",
+      "used_for": [
+        "setter_ready_at_target",
+        "set_front_contact",
+        "set_back_contact"
+      ]
+    },
+    {
+      "title": "A Protocol for the Biomechanical Evaluation of the Types of Setting Motions in Volleyball Based on Kinematics and Muscle Synergies (Methods and Protocols, 2026; reviews setting literature: greater head/trunk/shoulder angular displacement in back sets)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12821510/",
+      "type": "study",
+      "used_for": [
+        "set_front_contact",
+        "set_back_contact",
+        "set_back_release"
+      ]
+    },
+    {
+      "title": "Hernandez, Urena, Martinez & Ona - Estudio del comportamiento de la colocadora en voleibol a traves del analisis cinematico de angulos corporales (2 top-level Spanish setters; wider elbow/shoulder/hip angles precede quick sets)",
+      "url": "https://doaj.org/article/31e12ff62ccd49748ef2df45ef055454",
+      "type": "study",
+      "used_for": [
+        "set_front_contact",
+        "set_jump_contact"
+      ]
+    },
+    {
+      "title": "ISBS Proceedings - hand and wrist mechanics of the overhead set (MP joints extended and wrists slightly hyperextended before contact, forced into further hyperextension by the ball; wrist flexes during projection but does not pass neutral)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/1508",
+      "type": "study",
+      "used_for": [
+        "set_front_contact",
+        "set_front_release",
+        "set_back_contact",
+        "set_jump_contact"
+      ]
+    },
+    {
+      "title": "Lin Mei-Hsiu (2010) Kinematical analysis of volleyball setter in different set movement - NTNU master thesis (7 college female setters, 3D 125 Hz; elbow is the key joint; 4-ball has lower contact height; back sets have longer hand-holding time)",
+      "url": "https://etds.lib.ntnu.edu.tw/thesis/detail/84c73efc9daa0ff8b300e1573b684204",
+      "type": "study",
+      "used_for": [
+        "set_front_contact",
+        "set_back_contact",
+        "set_jump_contact"
+      ]
+    },
+    {
+      "title": "A comparative study of some kinematical characteristics for front jump set between male and female volleyball players (World J. Sport Sci., 2010)",
+      "url": "https://lida.sport-iat.de/dvv/Record/4022535",
+      "type": "study",
+      "used_for": [
+        "set_jump_contact"
+      ]
+    },
+    {
+      "title": "Dong et al. (2024) The contribution of upper or lower extremity of male athletes differs as distances of overhead volleyball pass increase. Journal of Men's Health 20(10)",
+      "url": "https://doaj.org/article/7c9d2b47e6ca47a98fbeb4820899a424",
+      "type": "study",
+      "used_for": [
+        "set_front_contact",
+        "set_front_release"
+      ]
+    },
+    {
+      "title": "Biomechanics analysis of distance adjustment in volleyball overhead pass (12 elite male players, 3/6/9 m targets; leg movement changes with distance)",
+      "url": "https://fis.dshs-koeln.de/en/publications/biomechanics-analysis-of-distance-adjustment-in-volleyball-overhe/",
+      "type": "study",
+      "used_for": [
+        "set_front_release"
+      ]
+    },
+    {
+      "title": "Biomechanic Differences Between Anticipated and Unanticipated Volleyball Block Jump: Implications for Lower Limb Injury Risk (15 elite males)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11595254/",
+      "type": "study",
+      "used_for": [
+        "block_ready",
+        "block_jump_peak"
+      ]
+    },
+    {
+      "title": "ISBS Proceedings paper on volleyball block / spike jumps (archive id 3163; search summary: countermovement knee flexion around 70 deg reported, elastic contribution best near 65 deg)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/3163",
+      "type": "study",
+      "used_for": [
+        "block_ready",
+        "block_jump_peak"
+      ]
+    },
+    {
+      "title": "ISBS Proceedings paper on volleyball block jump technique (archive id 244; deeper pre-jump knee flexion vs time cost for the block)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/244",
+      "type": "study",
+      "used_for": [
+        "block_ready",
+        "block_jump_peak"
+      ]
+    },
+    {
+      "title": "Elite junior volleyball block jump - knee and ankle angles vs block-jump height (30 elite junior males; knee angle 93.4 +/- 4.8 deg)",
+      "url": "https://ptj.uswr.ac.ir/article-1-395-en.html",
+      "type": "study",
+      "used_for": [
+        "block_ready"
+      ]
+    },
+    {
+      "title": "Identification of types of landings after blocking in volleyball associated with risk of ACL injury",
+      "url": "https://lida.sport-iat.de/ta/Record/4041496",
+      "type": "study",
+      "used_for": [
+        "block_landing"
+      ]
+    },
+    {
+      "title": "Comparison of landing kinematics and kinetics between experienced and novice volleyball players during block and spike jumps (BMC Sports Sci Med Rehabil 2022)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9188216",
+      "type": "study",
+      "used_for": [
+        "block_landing"
+      ]
+    },
+    {
+      "title": "ISBS Proceedings - block jump vs side-step block landing (knee flexion at initial contact ~10.8 and ~12.3 deg, hip flexion near zero)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/6567",
+      "type": "study",
+      "used_for": [
+        "block_landing"
+      ]
+    },
+    {
+      "title": "Volleyball-specific fatigue and landing kinematics (2025; reduced knee and hip flexion at initial contact when fatigued)",
+      "url": "https://lida.sport-iat.de/ta/Record/4096485",
+      "type": "study",
+      "used_for": [
+        "block_landing"
+      ]
+    },
+    {
+      "title": "ISB 2013 poster - sex differences in volleyball landing (no sagittal differences at initial contact)",
+      "url": "https://media.isbweb.org/images/conferences/isb-congresses/2013/poster/ps1-14u.pdf",
+      "type": "study",
+      "used_for": [
+        "block_landing"
+      ]
+    },
+    {
+      "title": "Ridgway & Hamilton - The Kinematics of Forearm Passing in Low Skilled and High Skilled Volleyball Players (ISBS; skilled: knee angle ~135 deg = ~45 deg flexion and trunk flexion ~28 deg at start, ~20 deg at follow-through)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/2336",
+      "type": "study",
+      "used_for": [
+        "dig_low",
+        "set_forearm",
+        "ready_medium",
+        "cover"
+      ]
+    },
+    {
+      "title": "Voleybolcularin manset paslarinin kinematik analizi (forearm-pass kinematics, Super League vs 1st League players; shoulder/elbow/knee/trunk angles)",
+      "url": "https://avesis.omu.edu.tr/yayin/0c444ab4-ee04-402c-bbf5-1a3497fda353/voleybolcularin-manset-paslarinin-kinematik-analizi",
+      "type": "study",
+      "used_for": [
+        "dig_low",
+        "set_forearm"
+      ]
+    },
+    {
+      "title": "Munerati et al. (2016) Relationship between knee angle in squat test and defence or reception efficacy in amateur volleyball players",
+      "url": "https://expertise.unimi.it/resource/item/463213",
+      "type": "study",
+      "used_for": [
+        "dig_low",
+        "ready_medium"
+      ]
+    },
+    {
+      "title": "Moving vs stationary defence - hip angle at ball contact (Diyala Physical Education Sciences Journal, 2024)",
+      "url": "https://pessj.uodiyala.edu.iq/index.php/1/article/download/2035/1344/2188",
+      "type": "study",
+      "used_for": [
+        "dig_low"
+      ]
+    },
+    {
+      "title": "Reeser et al. (2010) Upper limb biomechanics during the volleyball serve and spike (14 female collegiate players; shoulder abduction ~130 deg at ball contact for all skills; float serve second-lowest loads)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065",
+      "type": "study",
+      "used_for": [
+        "serve_float_contact",
+        "serve_jump_float_contact"
+      ]
+    },
+    {
+      "title": "Huang & Hu (2007) Kinematic analysis of volleyball jump topspin and float serve (ISBS)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/476",
+      "type": "study",
+      "used_for": [
+        "serve_jump_float_contact"
+      ]
+    },
+    {
+      "title": "Korkmaz (2018) jump-float vs standing float serve kinematics, Pamukkale University thesis (ball leaves hand at 9-15 deg, during descent after the centre-of-mass peak)",
+      "url": "https://gcris.pau.edu.tr/handle/11499/2444",
+      "type": "study",
+      "used_for": [
+        "serve_float_toss",
+        "serve_float_contact",
+        "serve_jump_float_contact"
+      ]
+    },
+    {
+      "title": "Calso (2007) Biomechanical analysis of the volleyball overhead float serve (experienced vs inexperienced player, shoulder/elbow/wrist ROM)",
+      "url": "https://upchklibrary.yolasite.com/resources/BIOMECHANICAL%20ANALYSIS%20OF%20THE%20VOLLEYBALL%20OVERHEAD%20FLOAT%20SERVE.doc",
+      "type": "study",
+      "used_for": [
+        "serve_float_toss",
+        "serve_float_contact"
+      ]
+    },
+    {
+      "title": "Jump-serve kinematics in youth and adult male players (2023; shoulder extension in cocking and centre-of-gravity height predict ball speed)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10402994",
+      "type": "study",
+      "used_for": [
+        "serve_jump_float_contact"
+      ]
+    },
+    {
+      "title": "3D motion capture of straight vs diagonal jump serves in professional males (preprint 2024; pelvis/torso backward rotation during arm cocking)",
+      "url": "https://www.preprints.org/manuscript/202402.1625/v1",
+      "type": "study",
+      "used_for": [
+        "serve_float_toss"
+      ]
+    },
+    {
+      "title": "Palao, Manzanares & Valades (2014) Anthropometric, Physical, and Age Differences by the Player Position and the Performance Level in Volleyball. J Hum Kinet (1454 men, 1452 women, Olympics/World Champs 2000-2012)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC4327374/",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Marques et al. (2009) Physical fitness qualities of professional volleyball players: determination of positional differences (setters had poorer squat performance)",
+      "url": "https://www.bisp-surf.de/Record/PU200909004105",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Karalic et al. (2023) body dimensions, reach, spike and block reach of 14-16 year old female players by position (9 setters) - Sports Science and Health",
+      "url": "https://doisrpska.nub.rs/index.php/sportskenaukeizdravlje/article/download/9899/9564/22713",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Joksimovic et al. (2023) Morphological characteristics of elite female volleyball players under 19",
+      "url": "https://www.ucg.ac.me/skladiste/blog_1019/objava_183973/fajlovi/D2_Marko%20Joksimovi%c4%87_FSFV.pdf",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Milic et al. (2024) Applied Sciences - anthropometric and motor traits by position in Serbian U17 national-team players (mean height ~176.8 cm)",
+      "url": "https://doaj.org/article/cbf4886cd74f4ea38b1b4633286728c8",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Bekele et al. (2022) positional differences in anthropometry of female players (Central European Journal of Sport Sciences and Medicine)",
+      "url": "https://doaj.org/article/24527f9d134e491aa2e50f8bb71820e5",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Physical performance and positional differences among young female volleyball players (middle blockers and hitters taller than setters)",
+      "url": "https://acuresearchbank.acu.edu.au/item/88483/physical-performance-and-positional-differences-among-young-female-volleyball-players",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Nasuka - club players: mean height 182.3 cm (excl. libero), spike reach ~321 cm, block reach ~311 cm (Atlantis Press)",
+      "url": "https://www.atlantis-press.com/article/125934798.pdf",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Spike and block reach of master volleyball players according to classification (cites professional men: spike reach 3.43 m, block reach 3.27 m)",
+      "url": "https://www.researchgate.net/publication/331533713_Spike_and_block_reach_of_the_master_Volleyball_during_the_match_according_to_the_classification",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Valades & Palao - monitoring spike ball speed in elite women's volleyball (search summary: elite women mean height 1.82 m, reach 2.34 m)",
+      "url": "https://www.researchgate.net/publication/280881704_Monitoring_ball_speed_of_the_volleyball_spike_throughout_the_season_for_elite_womens_volleyball_players",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Bruin Sports Analytics - height importance in volleyball (VNL 2024 heights by position; setters show the widest height range)",
+      "url": "https://www.bruinsportsanalytics.com/post/height-importance-volleyball",
+      "type": "technique article",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "CEV player profile - Simone Giannelli (setter, ITA): 199 cm, spike 363, block 335",
+      "url": "https://eurovolley.cev.eu/team/11805-italy/player/47161-giannelli-simone",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Wikipedia - Simone Giannelli: 2.00 m, spike 352 cm, block 330 cm",
+      "url": "https://en.wikipedia.org/wiki/Simone_Giannelli",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Volleyball World player page - Giannelli Simone (200 cm)",
+      "url": "https://en.volleyballworld.com/volleyball/competitions/club-world-championship-men/players/144005",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Olympics.com Tokyo 2020 athlete profile - Giannelli Simone (1.98 m)",
+      "url": "https://stacy.olympics.com/tokyo-2020/olympic-games/en/results/volleyball/athlete-profile-n1337750-giannelli-simone.htm",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Wikipedia - Micah Christenson (setter, USA): 1.98 m, spike 349 cm, block 340 cm",
+      "url": "https://en.wikipedia.org/wiki/Micah_Christenson",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "CEV player profile - Micah Christenson: 198 cm, spike 345, block 320",
+      "url": "https://www.cev.eu/team/12151-zenit-kazan/player/63870-christenson-micah",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Team USA profile - Micah Christenson (6'6\", setter)",
+      "url": "https://www.teamusa.com/profiles/micah-christenson-879522",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Wikipedia - Alessia Orro (setter, ITA): 178 cm, spike 304, block 285",
+      "url": "https://en.wikipedia.org/wiki/Alessia_Orro",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "CEV player profile - Alessia Orro: 180 cm, spike 305, block 279",
+      "url": "https://prod.cev.eu/team/12047-saugella-monza/player/47275-orro-alessia",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Volleyball World Paris 2024 player page - Orro Alessia (178 cm)",
+      "url": "https://en.volleyballworld.com/volleyball/competitions/volleyball-olympic-games-paris-2024/players/150441",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Wikipedia - Jordyn Poulter (setter, USA): 1.88 m, spike 313, block 305",
+      "url": "https://en.wikipedia.org/wiki/Jordyn_Poulter",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Volleyball World VNL player page - Poulter Jordyn (188 cm, setter)",
+      "url": "https://en.volleyballworld.com/volleyball/competitions/volleyball-nations-league/players/143517",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Wikipedia - Joanna Wolosz (setter, POL): 1.81 m, spike 303, block 281",
+      "url": "https://en.wikipedia.org/wiki/Joanna_Wo%C5%82osz",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Volleyball World Paris 2024 player page - Wolosz Joanna (181 cm)",
+      "url": "https://en.volleyballworld.com/volleyball/competitions/volleyball-olympic-games-paris-2024/players/118591",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "USA Volleyball - 2024 Olympic Games USA women vs France (starting line-up heights; setters 6-1 / 6-2)",
+      "url": "https://usavolleyball.org/event/2024-olympic-games-usa-women-vs-france/",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Volleyball Canada - Setting the C set, skill description (FIVB photo sequence: elbows out and hands open before contact, contact above forehead, straight back; back-row release with arms/wrists extending back, head tipping back, upper back arching)",
+      "url": "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Setting_the_C_set_for_e_module_skill_description.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "set_front_contact",
+        "set_back_release"
+      ]
+    },
+    {
+      "title": "Volleyball Canada - Setting the B set, skill description (back straight, wrists cocked at contact)",
+      "url": "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Setting_the_B_set_for_e_module_skill_description.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "set_front_contact",
+        "set_jump_contact"
+      ]
+    },
+    {
+      "title": "Volleyball Canada - Setting the 41, skill description (contact as high as possible, ball met in front of and above the head)",
+      "url": "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Setting_the_41_for_e_module_skill_description.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "set_jump_contact",
+        "set_front_contact"
+      ]
+    },
+    {
+      "title": "Volleyball Canada - Setting High Ball, skill description",
+      "url": "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Setting_High_Ball_for_e_module_skill_description.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "set_front_contact",
+        "set_front_release",
+        "set_jump_contact"
+      ]
+    },
+    {
+      "title": "Volleyball Canada - Basic Passing, skill description (lean toward target, weight to front foot at contact)",
+      "url": "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "dig_low",
+        "set_forearm",
+        "ready_medium"
+      ]
+    },
+    {
+      "title": "Human Kinetics excerpt - Overhead passing (Schmidt, Volleyball: Steps to Success): ball lined up with forehead, one foot slightly ahead, feet/hips/shoulders square, thumbs toward forehead, elbows extend as knees extend",
+      "url": "https://us.humankinetics.com/blogs/excerpt/overhead-passing",
+      "type": "coaching manual",
+      "used_for": [
+        "setter_ready_at_target",
+        "set_front_contact",
+        "set_front_release"
+      ]
+    },
+    {
+      "title": "City of St. Paul Parks & Recreation - Muni 8-week training: Volleyball (hands above forehead, elbows slightly down and forward)",
+      "url": "https://www.stpaul.gov/sites/default/files/Media%20Root/Parks%20%26%20Recreation/Muni%208_week_training_-_Volleyball.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "set_front_contact"
+      ]
+    },
+    {
+      "title": "University of Georgia open textbook - Volleyball: Passing chapter (hands above head in a triangle, elbows high)",
+      "url": "https://open.online.uga.edu/volleyball/chapter/passing",
+      "type": "coaching manual",
+      "used_for": [
+        "set_front_contact"
+      ]
+    },
+    {
+      "title": "Volleyball teaching cards (Scribd) - overhead pass cues: extend legs, back and arms for force",
+      "url": "https://www.scribd.com/document/375091939/teaching-cards-changed",
+      "type": "coaching manual",
+      "used_for": [
+        "set_front_contact",
+        "set_front_release"
+      ]
+    },
+    {
+      "title": "FIVB Beach Volleyball Drill-book p.60 - setting (low body position allows late adjustments; consistent trajectory)",
+      "url": "https://www.fivb.org/EN/Development/Document/FIVB_BeachVolleyball_Drill-Book/English/files/assets/basic-html/page60.html",
+      "type": "coaching manual",
+      "used_for": [
+        "setter_ready_at_target",
+        "set_front_contact"
+      ]
+    },
+    {
+      "title": "Volleyball Magazine - setter footwork and hands (land hip-width, right foot forward / left back; bring hands up once feet are set)",
+      "url": "https://volleyballmag.com/?p=65257",
+      "type": "technique article",
+      "used_for": [
+        "setter_ready_at_target",
+        "set_front_contact"
+      ]
+    },
+    {
+      "title": "CoachUp - Great habits to improve setting ability (hips aimed at the left side even for back sets; left-right footwork, weight on right foot)",
+      "url": "https://www.coachup.com/nation/?p=580",
+      "type": "technique article",
+      "used_for": [
+        "set_front_contact",
+        "set_back_contact"
+      ]
+    },
+    {
+      "title": "SportsEdTV - How to set in volleyball (pivot hips toward the left-front target)",
+      "url": "https://sportsedtv.com/blog/how-to-set-in-volleyball",
+      "type": "technique article",
+      "used_for": [
+        "set_front_contact"
+      ]
+    },
+    {
+      "title": "Active.com - 4 Steps to Proper Volleyball Setting (right foot slightly ahead, knees bent; ball, forehead and hips in a vertical line)",
+      "url": "https://www.active.com/volleyball/articles/4-steps-to-proper-volleyball-setting",
+      "type": "technique article",
+      "used_for": [
+        "set_front_contact",
+        "setter_ready_at_target"
+      ]
+    },
+    {
+      "title": "Better at Beach - Hand setting mechanics (square up to the antenna/target; target shifts with the pass)",
+      "url": "https://betteratbeach.com/blog/handsettingmechanics",
+      "type": "technique article",
+      "used_for": [
+        "set_front_contact"
+      ]
+    },
+    {
+      "title": "Gold Medal Squared - Get your setters going in serve receive (setter release from area 1: three steps starting with the right foot, two shuffle steps, then the final R-L-R pattern)",
+      "url": "https://www.goldmedalsquared.com/post/get-your-setters-going-in-serve-receive",
+      "type": "coaching manual",
+      "used_for": [
+        "setter_penetration_run",
+        "setter_ready_at_target"
+      ]
+    },
+    {
+      "title": "Gold Medal Squared (Tom Black) - Setting off a lead leg (right foot forward; jump set when the quick is involved, pivot otherwise)",
+      "url": "https://www.goldmedalsquared.com/post/setting-off-a-lead-leg",
+      "type": "coaching manual",
+      "used_for": [
+        "set_front_contact",
+        "set_jump_contact",
+        "setter_ready_at_target"
+      ]
+    },
+    {
+      "title": "Gold Medal Squared - setter dump (looks like a set until the last instant, then swiped over with the left hand)",
+      "url": "https://goldmedalsquared.com/?p=7964",
+      "type": "coaching manual",
+      "used_for": [
+        "setter_dump"
+      ]
+    },
+    {
+      "title": "Sportstars Magazine - Lindsey Berg volleyball footwork (left-right pattern, turn to zone 4, push off left foot, step right and transfer weight forward)",
+      "url": "https://sportstarsmag.com/2020/03/lindsey-berg-volleyball-footwork/",
+      "type": "technique article",
+      "used_for": [
+        "setter_penetration_run",
+        "set_front_contact"
+      ]
+    },
+    {
+      "title": "The Art of Coaching Volleyball - Setter training: disguising the back set (John Dunning: hip thrust, arching and looking back are giveaways; keep the body neutral)",
+      "url": "https://www.theartofcoachingvolleyball.com/setter-training-for-volleyball-disguising-the-back-set/",
+      "type": "video analysis",
+      "used_for": [
+        "set_back_contact",
+        "set_back_release",
+        "setter_dump"
+      ]
+    },
+    {
+      "title": "The Art of Coaching Volleyball - Joe Sagula's setter training drill (footwork, squaring to target, setting from right back)",
+      "url": "https://www.theartofcoachingvolleyball.com/joe-sagulas-setter-draining-drill/",
+      "type": "video analysis",
+      "used_for": [
+        "setter_penetration_run",
+        "set_front_contact"
+      ]
+    },
+    {
+      "title": "The Art of Coaching Volleyball - Base position for setter attack (defending the setter dump)",
+      "url": "https://www.theartofcoachingvolleyball.com/base-position-for-setter-attack/",
+      "type": "video analysis",
+      "used_for": [
+        "setter_dump",
+        "block_ready"
+      ]
+    },
+    {
+      "title": "Coaches Insider - Setting drills (setters sprint to the net from right back, middle back and left front, then set outside)",
+      "url": "https://coachesinsider.com/volleyball/setting-drills-article/",
+      "type": "coaching manual",
+      "used_for": [
+        "setter_penetration_run",
+        "transition_retreat"
+      ]
+    },
+    {
+      "title": "Volleyball1on1 - setting technique lesson (three-part hand sequence lift-cushion-release; footwork framed as three patterns incl. in-system two-step left-right)",
+      "url": "https://www.volleyball1on1.com/?p=78392",
+      "type": "video analysis",
+      "used_for": [
+        "set_front_contact",
+        "setter_penetration_run"
+      ]
+    },
+    {
+      "title": "Better at Volleyball - 9 tips for amazing back setting (push hips forward, slight arch, stay balanced)",
+      "url": "https://betteratvolleyball.com/9-tips-for-amazing-back-setting/",
+      "type": "technique article",
+      "used_for": [
+        "set_back_release"
+      ]
+    },
+    {
+      "title": "US Sports Camps - Volleyball tips: setting (back set: hips forward, arch, follow through behind and over the head)",
+      "url": "https://www.ussportscamps.com/tips/volleyball/volleyball-tips-setting",
+      "type": "technique article",
+      "used_for": [
+        "set_back_release"
+      ]
+    },
+    {
+      "title": "IMG Academy+ - Volleyball setting drill: setter dump (explode up to a neutral position, hands as for a normal set, square to the net)",
+      "url": "https://plus.imgacademy.com/resources/videos/volleyball-setting-drill-setter-dump",
+      "type": "video analysis",
+      "used_for": [
+        "setter_dump"
+      ]
+    },
+    {
+      "title": "Volleyball Vault - Setter dump: everything you need to know (cross the net low, front row only)",
+      "url": "https://volleyballvault.com/?p=4364",
+      "type": "technique article",
+      "used_for": [
+        "setter_dump"
+      ]
+    },
+    {
+      "title": "The NVL - 4 steps to reading a volleyball setter (shoulders, ball distance from body, arched back)",
+      "url": "https://thenvl.com/?p=3051",
+      "type": "technique article",
+      "used_for": [
+        "setter_dump",
+        "set_back_contact"
+      ]
+    },
+    {
+      "title": "Better at Beach - What the setter dump looks like in beach volleyball",
+      "url": "https://betteratbeach.com/blog/can-you-setter-dump-in-beach-volleyball",
+      "type": "technique article",
+      "used_for": [
+        "setter_dump"
+      ]
+    },
+    {
+      "title": "Volleybrains podcast 112 - Marco Meoni setting masterclass (jump set to anticipate the offence; set on the way up, not at the peak)",
+      "url": "https://volleybrains.com/marco-meoni/",
+      "type": "video analysis",
+      "used_for": [
+        "set_jump_contact"
+      ]
+    },
+    {
+      "title": "Setter Guide (Scribd) - hands up earlier than you think; once airborne the knees can no longer control the ball",
+      "url": "https://www.scribd.com/document/78695091/Setter-Guide",
+      "type": "coaching manual",
+      "used_for": [
+        "set_jump_contact",
+        "setter_ready_at_target"
+      ]
+    },
+    {
+      "title": "SwimOutlet - How to set a volleyball (contact with the finger pads, not the palms; very brief contact - as summarised in search results)",
+      "url": "https://www.swimoutlet.com/guides/how-to-set-a-volleyball",
+      "type": "technique article",
+      "used_for": [
+        "set_front_contact"
+      ]
+    }
+  ]
+}

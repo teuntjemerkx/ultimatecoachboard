@@ -1,7 +1,7 @@
 import UIKit
 import CoachBoardCore
 
-/// Launch-argument demo states (`-demoScreen launcher|setup|live|advanced|setbreak|log|studio|studio3d|pov`) so CI can capture screenshots of
+/// Launch-argument demo states (`-demoScreen launcher|setup|live|advanced|setbreak|log|studio|studio3d|pov|gallery`) so CI can capture screenshots of
 /// real screens in the Simulator. Only reachable through launch arguments; never shown to a coach.
 enum DemoMode {
     static var screen: String? {
@@ -105,6 +105,26 @@ enum DemoMode {
             } else {
                 c.tool = .zone
             }
+            model.screen = .studio(c)
+        case "gallery":
+            // Every technique of the posture library side by side, each in the variant of the position that uses it
+            // most, seen side-on from the bench. Jersey numbers index the legend in the diagnostics.
+            let roles: [Posture: String] = [.readyHigh: "S", .lowDefence: "L", .pass: "L", .angledPass: "OH2", .overheadPass: "L",
+                                            .dig: "L", .sprawl: "L", .set: "S", .backSet: "S", .jumpSet: "S", .quickAttack: "MB1",
+                                            .landing: "OPP", .blockReady: "MB1", .block: "MB1", .blockLanding: "MB2",
+                                            .floatServe: "S", .jumpServe: "OPP", .cover: "OH2", .reach: "MB1"]
+            let xs = [-3.4, -1.15, 1.15, 3.4], zs = [-7.5, -4.5, -1.5, 1.5, 4.5, 7.5]
+            var tokens: [SceneToken] = []
+            for (i, posture) in PostureStrip.order.enumerated() {
+                let role = roles[posture] ?? "OH1"
+                tokens.append(SceneToken(side: .home, label: "\(i + 1)", role: role,
+                                         point: FloorPoint(x: xs[i % 4], z: zs[i / 4]), posture: posture))
+            }
+            let c = StudioController(scene: TacticalScene(title: "Technique gallery", tokens: tokens))
+            c.tool = .select
+            c.toggle3D()
+            note("gallery: " + tokens.map { "\($0.label)=\($0.posture!.rawValue)/\($0.role)" }.joined(separator: " "))
+            note("posture library: " + PostureLibrary.shared.positions.map { "\($0.key) \($0.value.techniques.count)" }.sorted().joined(separator: ", "))
             model.screen = .studio(c)
         case "setbreak":
             guard let c = try? LiveController(setup: setup) else { return }

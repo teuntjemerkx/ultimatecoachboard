@@ -164,6 +164,8 @@ final class TimelineTests: XCTestCase {
         let hand = s.fingertip(mid, left: true).y
         XCTAssertGreaterThan(hand, s.fingertip(a, left: true).y)
         XCTAssertLessThan(hand, s.fingertip(b, left: true).y)
-        XCTAssertEqual(min(mid[Joint.lAnkle.rawValue].translation.y, mid[Joint.rAnkle.rawValue].translation.y), s.ankleHeight, accuracy: 1e-9)
+        // The feet rise with the blended jump (the block posture is the block jump at its peak).
+        let jump = (Posture.ready.params(for: s).jump + Posture.block.params(for: s).jump) / 2
+        XCTAssertEqual(min(mid[Joint.lAnkle.rawValue].translation.y, mid[Joint.rAnkle.rawValue].translation.y), s.ankleHeight + jump, accuracy: 1e-9)
     }
 }

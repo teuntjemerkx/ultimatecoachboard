@@ -18,8 +18,13 @@ public struct PosedPlayer: Sendable {
 }
 
 extension SceneToken {
-    /// Default stature by role when none is set (metres): liberos shortest, middles tallest.
+    /// Default stature by role when none is set (metres): the research library's elite men's figure for the
+    /// position when it has one, else liberos shortest and middles tallest.
     public static func defaultStature(role: String) -> Double {
+        if let position = PostureLibrary.position(forRole: role),
+           let h = PostureLibrary.shared.positions[position]?.traits?.stature_m?["elite_men"], (1.5...2.3).contains(h) {
+            return h
+        }
         switch role {
         case "L": return 1.80
         case "S", "S1", "S2": return 1.90

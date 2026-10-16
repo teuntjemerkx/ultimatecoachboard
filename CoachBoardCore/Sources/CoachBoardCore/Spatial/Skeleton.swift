@@ -315,8 +315,9 @@ public struct AvatarMesh: Sendable {
         // The jersey hangs over the waistband: it starts below the shorts' top and is a little wider there.
         tube(pos(.pelvis) + up * (0.03 * h), pos(.chest), side: x, r0: (0.099 * h, 0.067 * h), r1: (0.104 * h, 0.068 * h),
              capLength: 0.01 * h, driver: .spine, blend: .chest, material: { _ in .jersey }, segments: segments)
-        tube(pos(.chest) - up * (0.02 * h), pos(.neck) - up * (0.012 * h), side: x, r0: (0.106 * h, 0.07 * h), r1: (0.118 * h, 0.062 * h),
-             capLength: 0.03 * h, driver: .chest, blend: nil, material: { _ in .jersey }, segments: segments)
+        // Chest: broadest at the shoulders, sloping to the neck (trapezius) through a long top cap.
+        tube(pos(.chest) - up * (0.02 * h), pos(.neck) - up * (0.035 * h), side: x, r0: (0.106 * h, 0.07 * h), r1: (0.116 * h, 0.064 * h),
+             capLength: 0.055 * h, driver: .chest, blend: nil, material: { _ in .jersey }, segments: segments)
         // Neck and head (hair over the top and back).
         tube(pos(.neck), pos(.head) + up * (0.025 * h), side: x, r0: (0.03 * h, 0.031 * h), r1: (0.028 * h, 0.03 * h),
              driver: .neck, blend: .head, material: { _ in .skin }, segments: segments)
@@ -329,21 +330,21 @@ public struct AvatarMesh: Sendable {
             let wrist: Joint = left ? .lWrist : .rWrist
             let hip: Joint = left ? .lHip : .rHip, knee: Joint = left ? .lKnee : .rKnee, ankle: Joint = left ? .lAnkle : .rAnkle
             // Deltoid under the sleeve, upper arm, forearm, flat hand (palm toward the thigh at rest).
-            tube(pos(shoulder) + up * (0.012 * h), pos(shoulder) - up * (0.05 * h), side: x, r0: (0.036 * h, 0.034 * h),
-                 r1: (0.03 * h, 0.03 * h), driver: shoulder, blend: nil, material: { _ in .jersey }, segments: segments)
-            tube(pos(shoulder), pos(elbow), side: x, r0: (0.029 * h, 0.03 * h), r1: (0.021 * h, 0.022 * h), bulge: 0.12, bulgeAt: 0.4,
+            tube(pos(shoulder) - up * (0.008 * h), pos(shoulder) - up * (0.06 * h), side: x, r0: (0.034 * h, 0.033 * h),
+                 r1: (0.031 * h, 0.031 * h), capLength: 0.022 * h, driver: shoulder, blend: nil, material: { _ in .jersey }, segments: segments)
+            tube(pos(shoulder), pos(elbow), side: x, r0: (0.031 * h, 0.032 * h), r1: (0.022 * h, 0.023 * h), bulge: 0.14, bulgeAt: 0.42,
                  driver: shoulder, blend: elbow, material: sleeve, segments: segments)
-            tube(pos(elbow), pos(wrist), side: x, r0: (0.021 * h, 0.022 * h), r1: (0.014 * h, 0.016 * h), bulge: 0.14, bulgeAt: 0.25,
+            tube(pos(elbow), pos(wrist), side: x, r0: (0.022 * h, 0.023 * h), r1: (0.015 * h, 0.017 * h), bulge: 0.16, bulgeAt: 0.25,
                  driver: elbow, blend: wrist, material: { _ in .skin }, segments: segments)
             tube(pos(wrist), pos(wrist) - up * s.handLength, side: x, r0: (0.011 * h, 0.026 * h), r1: (0.008 * h, 0.021 * h),
                  driver: wrist, blend: nil, material: { _ in .skin }, segments: segments)
             // Thigh (shorts over the top), knee pad, shank with the calf, sock, shoe.
-            tube(pos(hip), pos(knee), side: x, r0: (0.053 * h, 0.057 * h), r1: (0.032 * h, 0.034 * h), bulge: 0.06, bulgeAt: 0.3,
+            tube(pos(hip), pos(knee), side: x, r0: (0.056 * h, 0.06 * h), r1: (0.034 * h, 0.036 * h), bulge: 0.08, bulgeAt: 0.3,
                  driver: hip, blend: knee, material: { $0 < 0.32 ? .shorts : .skin }, segments: segments)
             tube(pos(knee) + up * (0.032 * h) + V3(0, 0, 0.004 * h), pos(knee) - up * (0.03 * h) + V3(0, 0, 0.004 * h), side: x,
                  r0: (0.038 * h, 0.04 * h), r1: (0.037 * h, 0.039 * h), capLength: 0.012 * h,
                  driver: hip, blend: knee, blendFrom: 0, material: { _ in .pads }, segments: segments)
-            tube(pos(knee), pos(ankle), side: x, r0: (0.032 * h, 0.034 * h), r1: (0.019 * h, 0.021 * h), bulge: 0.2, bulgeAt: 0.28,
+            tube(pos(knee), pos(ankle), side: x, r0: (0.033 * h, 0.036 * h), r1: (0.02 * h, 0.022 * h), bulge: 0.22, bulgeAt: 0.28,
                  driver: knee, blend: ankle, material: { $0 > 0.78 ? .socks : .skin }, segments: segments)
             tube(pos(ankle) + V3(0, -0.024 * h, -0.032 * h), pos(ankle) + V3(0, -0.03 * h, 0.118 * h), side: x,
                  r0: (0.025 * h, 0.024 * h), r1: (0.027 * h, 0.016 * h), capLength: 0.02 * h,
