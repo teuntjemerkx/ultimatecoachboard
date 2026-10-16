@@ -101,7 +101,9 @@ jobs:
             fi
           }
           # Every screen in the default (recommended) template, then Live and 3D Studio in each other template.
-          for s in launcher setup live advanced setbreak log studio studio3d pov rally rallyeye videomark videowatch video3d videoeye gallery; do shot "$s" "$s"; done
+          for s in launcher setup live advanced setbreak log studio studio3d pov rally rallyeye gallery; do shot "$s" "$s"; done
+          # The sample video is built at launch (ray-cast hall, rebuild, clip): give it time.
+          for s in videomark videowatch video3d videoeye; do WAIT=45 shot "$s" "$s"; done
           for s in launcher live studio rally; do shot "advanced_${s}" "$s" -advanced; done
           shot realmark realmark
           WAIT=120 shot realvideo realvideo
