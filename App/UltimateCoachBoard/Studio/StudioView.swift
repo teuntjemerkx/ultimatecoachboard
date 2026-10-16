@@ -2,13 +2,16 @@ import SwiftUI
 import MetalKit
 import CoachBoardCore
 
-/// Screen 8 in 2D: the Analysis Canvas for manual scenes, with the Zone & Hatching tools (Section 3.5, W3).
+/// Screen 8: the Analysis Canvas for manual scenes. Simple shows the lineup bar (system, rotation, who serves, play
+/// a rally), moving players and drawing; Advanced adds the zone tools, keyframes, postures, ball contacts and gaze.
 struct StudioView: View {
     @Bindable var controller: StudioController
     var onExit: () -> Void
     @State private var showScenes = false
     @State private var renaming = false
     @State private var newTitle = ""
+
+    private var advanced: Bool { ThemeStore.shared.advanced }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -23,7 +26,10 @@ struct StudioView: View {
                             .overlay { AlternativeChip(controller: controller) }
                     }
                     if controller.tool == .zone || controller.selectedZone != nil {
-                        ZoneStrip(controller: controller).padding(12)
+                        Group {
+                            if advanced { ZoneStrip(controller: controller) } else { SimpleZoneStrip(controller: controller) }
+                        }
+                        .padding(12)
                     }
                     if controller.view3D && controller.povPlayer != nil {
                         FieldRings().allowsHitTesting(false)
@@ -38,59 +44,78 @@ struct StudioView: View {
                         if controller.view3D && (controller.selectedTokenValue != nil || controller.povPlayer != nil) {
                             POVStrip(controller: controller)
                         }
-                        if controller.view3D && controller.selectedTokenValue != nil {
+                        if advanced && controller.view3D && controller.selectedTokenValue != nil {
                             PostureStrip(controller: controller)
                         }
-                        if !controller.scene.timeline.isEmpty {
+                        if advanced && !controller.scene.timeline.isEmpty {
                             BallStrip(controller: controller)
                         }
-                        TimelineStrip(controller: controller)
-                    }
-                    .padding(.bottom, 16)
-                    .frame(maxWidth: .infinity)
-                    if controller.scene.zones.isEmpty && controller.scene.ink.isEmpty {
-                        VStack {
-                            Spacer()
-                            Text("Draw a zone or drag a player").font(.system(size: 15))
-                                .foregroundStyle(Tokens.textSecondary.color)
-                                .padding(.bottom, 84)
+                        if !controller.scene.timeline.isEmpty || advanced {
+                            TimelineStrip(controller: controller)
                         }
-                        .frame(maxWidth: .infinity)
-                        .allowsHitTesting(false)
+                        if controller.povPlayer == nil {
+                            LineupBar(controller: controller)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 14)
+                    .frame(maxWidth: .infinity)
+                    if controller.scene.timeline.isEmpty && controller.scene.zones.isEmpty && controller.scene.ink.isEmpty
+                        && controller.selectedToken == nil {
+                        Text(hint)
+                            .font(.themed(15, .medium))
+                            .foregroundStyle(Tokens.textSecondary.color)
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .background(Tokens.canvasRaised.withAlpha(0.9).color, in: Capsule())
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 14)
+                            .allowsHitTesting(false)
                     }
                 }
             }
         }
         .background(Tokens.canvasBase.color)
         .sheet(isPresented: $showScenes) { SceneListSheet(controller: controller) }
-        .alert("Scene title", isPresented: $renaming) {
-            TextField("Title", text: $newTitle)
-            Button("Rename") { controller.rename(newTitle) }
+        .alert("Name this board", isPresented: $renaming) {
+            TextField("Name", text: $newTitle)
+            Button("Save") { controller.rename(newTitle) }
             Button("Cancel", role: .cancel) {}
         }
         .onDisappear { controller.save() }
     }
 
+    private var hint: String {
+        switch controller.tool {
+        case .select: return "Drag a player to move them, or play a rally below"
+        case .pen: return "Draw with one finger"
+        case .zone: return "Draw a zone with one finger"
+        }
+    }
+
     private var topBar: some View {
-        HStack(spacing: 16) {
-            Text("STUDIO").font(.sectionLabel).foregroundStyle(Tokens.accent.color)
+        HStack(spacing: 12) {
             Button { newTitle = controller.scene.title; renaming = true } label: {
-                Text(controller.scene.title).font(.themed(15, .semibold))
+                HStack(spacing: 6) {
+                    Text(controller.scene.title).font(.themed(17, .semibold)).lineLimit(1)
+                    Image(systemName: "pencil").font(.themed(12, .semibold)).foregroundStyle(Tokens.textSecondary.color)
+                }
             }
             .foregroundStyle(Tokens.text.color)
-            Text("\(controller.scene.zones.count) zone\(controller.scene.zones.count == 1 ? "" : "s")")
-                .font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
-            Spacer()
-            Toggle("Snap", isOn: $controller.snapping).toggleStyle(.button).font(.sectionLabel)
-            if controller.view3D {
-                Button("BENCH VIEW") { controller.resetCamera() }.font(.sectionLabel)
+            .accessibilityLabel("Rename this board")
+            if advanced {
+                Text("\(controller.scene.zones.count) zone\(controller.scene.zones.count == 1 ? "" : "s")")
+                    .font(.themed(13, .medium)).foregroundStyle(Tokens.textSecondary.color)
             }
-            Button(controller.view3D ? "2D" : "3D") { controller.toggle3D() }
-                .font(.sectionLabel)
-                .disabled(controller.exiting3D)
-                .accessibilityLabel(controller.view3D ? "Back to the 2D board" : "Show the board in 3D")
-            Button("SWITCH ENDS") { controller.homeOnLeft.toggle() }.font(.sectionLabel)
-            Button("SCENES") { showScenes = true }.font(.sectionLabel)
+            Spacer()
+            if advanced {
+                StudioChip("Snap", symbol: "scope", on: controller.snapping) { controller.snapping.toggle() }
+                StudioChip("Swap ends", symbol: "arrow.left.arrow.right") { controller.homeOnLeft.toggle() }
+            }
+            if controller.view3D {
+                StudioChip("Reset view", symbol: "camera.metering.center.weighted") { controller.resetCamera() }
+            }
+            viewSwitch
+            StudioChip("Boards", symbol: "square.stack") { showScenes = true }
         }
         .foregroundStyle(Tokens.text.color)
         .padding(.horizontal, 16)
@@ -99,18 +124,45 @@ struct StudioView: View {
         .overlay(alignment: .bottom) { Rectangle().fill(Tokens.hairline.color).frame(height: 1) }
     }
 
+    /// 2D or 3D as one segmented control.
+    private var viewSwitch: some View {
+        HStack(spacing: 2) {
+            segment("2D", on: !controller.view3D) { if controller.view3D { controller.toggle3D() } }
+            segment("3D", on: controller.view3D) { if !controller.view3D { controller.toggle3D() } }
+        }
+        .padding(3)
+        .background(Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall + 3))
+        .disabled(controller.exiting3D)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(controller.view3D ? "Showing 3D" : "Showing 2D")
+    }
+
+    private func segment(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).font(.themed(14, .bold))
+                .frame(width: 52, height: 38)
+                .background(on ? Tokens.accent.color : .clear, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+                .foregroundStyle(on ? Tokens.onAccent.color : Tokens.text.color)
+        }
+        .buttonStyle(.plain)
+    }
+
     private var toolRail: some View {
-        VStack(spacing: 8) {
-            toolButton(.select, "SELECT", "hand.point.up.left")
-            toolButton(.pen, "PEN", "pencil.tip")
-            toolButton(.zone, "ZONE", "square.dashed")
-            Divider().overlay(Tokens.hairline.color).padding(.horizontal, 10)
-            railButton("UNDO", "arrow.uturn.backward", enabled: controller.editor.canUndo) { controller.undo() }
-            railButton("REDO", "arrow.uturn.forward", enabled: controller.editor.canRedo) { controller.redo() }
-            railButton("DELETE", "trash", enabled: controller.selectedZone != nil) { controller.deleteSelection() }
-            railButton("CLEAR INK", "eraser", enabled: !controller.scene.ink.isEmpty) { controller.clearInk() }
+        VStack(spacing: 6) {
+            toolButton(.select, "Move", "hand.point.up.left")
+            toolButton(.pen, "Draw", "pencil.tip")
+            toolButton(.zone, "Zone", "square.dashed")
+            Divider().overlay(Tokens.hairline.color).padding(.horizontal, 10).padding(.vertical, 4)
+            railButton("Undo", "arrow.uturn.backward", enabled: controller.editor.canUndo) { controller.undo() }
+            railButton("Redo", "arrow.uturn.forward", enabled: controller.editor.canRedo) { controller.redo() }
+            if controller.selectedZone != nil {
+                railButton("Delete", "trash", enabled: true) { controller.deleteSelection() }
+            }
+            if !controller.scene.ink.isEmpty {
+                railButton("Erase", "eraser", enabled: true) { controller.clearInk() }
+            }
             Spacer()
-            railButton("EXIT", "xmark", enabled: true) { controller.save(); onExit() }
+            railButton("Home", "house", enabled: true) { controller.save(); onExit() }
         }
         .padding(.vertical, 12)
         .frame(width: Tokens.railWidth)
@@ -123,21 +175,22 @@ struct StudioView: View {
         return Button { controller.tool = tool } label: {
             VStack(spacing: 4) {
                 Image(systemName: symbol).font(.themed(20, .semibold))
-                Text(title).font(.themed(9, .semibold))
+                Text(title).font(.themed(11, .semibold))
             }
             .frame(width: Tokens.targetLivePrimary, height: Tokens.targetLivePrimary)
-            .background(on ? Tokens.accent.withAlpha(0.2).color : .clear, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+            .background(on ? Tokens.accent.color : .clear, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
         }
-        .foregroundStyle(on ? Tokens.accent.color : Tokens.text.color)
+        .foregroundStyle(on ? Tokens.onAccent.color : Tokens.text.color)
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 
     private func railButton(_ title: String, _ symbol: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Image(systemName: symbol).font(.themed(18, .semibold))
-                Text(title).font(.themed(9, .semibold))
+                Text(title).font(.themed(11, .semibold))
             }
-            .frame(width: Tokens.targetLivePrimary, height: 52)
+            .frame(width: Tokens.targetLivePrimary, height: 54)
         }
         .foregroundStyle(Tokens.text.color)
         .disabled(!enabled)
@@ -145,78 +198,66 @@ struct StudioView: View {
     }
 }
 
-/// W3: one strip, one level deep. It edits the selected zone, or sets the defaults for the next stroke.
+/// W3: one strip, one level deep. It edits the selected zone, or sets the defaults for the next stroke (Advanced).
 struct ZoneStrip: View {
     @Bindable var controller: StudioController
 
-    private let shapes: [(String, ShapeKind?)] = [("AUTO", nil), ("RECT", .rect), ("CIRCLE", .circle), ("ELLIPSE", .ellipse),
-                                                  ("POLY", .polygon), ("FREE", .freeform)]
-    private let patterns: [(String, ZonePattern)] = [("CROSS", .crossHatch), ("DIAG", .diagonal), ("DOTS", .dots),
-                                                     ("GLOW", .glowFill), ("OUTLINE", .outline)]
-    private let tags: [(String, ZoneTag)] = [("NO-FLY", .noFly), ("SERVE TGT", .serveTarget), ("TIP ALERT", .tipAlert),
-                                             ("FREE BALL", .freeBall), ("RESPONSIBILITY", .responsibility), ("CUSTOM", .custom)]
+    private let shapes: [(String, ShapeKind?)] = [("Auto", nil), ("Rectangle", .rect), ("Circle", .circle), ("Ellipse", .ellipse),
+                                                  ("Polygon", .polygon), ("Free", .freeform)]
+    private let patterns: [(String, ZonePattern)] = [("Cross", .crossHatch), ("Lines", .diagonal), ("Dots", .dots),
+                                                     ("Glow", .glowFill), ("Outline", .outline)]
+    private let tags: [(String, ZoneTag)] = [("No-fly", .noFly), ("Serve target", .serveTarget), ("Tip alert", .tipAlert),
+                                             ("Free ball", .freeBall), ("Responsibility", .responsibility), ("Custom", .custom)]
 
     var body: some View {
         let style = controller.stripStyle
-        VStack(alignment: .leading, spacing: 8) {
-            row("SHAPE") {
+        VStack(alignment: .leading, spacing: 6) {
+            row("Shape") {
                 ForEach(shapes.indices, id: \.self) { i in
-                    chip(shapes[i].0, on: controller.forcedShape == shapes[i].1) { controller.setShape(shapes[i].1) }
+                    StudioChip(shapes[i].0, on: controller.forcedShape == shapes[i].1) { controller.setShape(shapes[i].1) }
                 }
             }
-            row("FILL") {
+            row("Fill") {
                 ForEach(patterns.indices, id: \.self) { i in
                     let pattern = patterns[i].1
-                    chip(patterns[i].0, on: style.pattern == pattern) { controller.updateStyle { $0.pattern = pattern } }
+                    StudioChip(patterns[i].0, on: style.pattern == pattern) { controller.updateStyle { $0.pattern = pattern } }
                 }
             }
-            row("DENSITY") {
+            row("Density") {
                 Slider(value: Binding(get: { 0.75 - style.spacing }, set: { v in controller.updateStyle { $0.spacing = 0.75 - v } }),
                        in: 0.15...0.6)
                     .frame(width: 160)
-                Text("ANGLE \(Int((style.angle * 180 / .pi).rounded()))\u{00B0}").font(.dataMono).frame(width: 96)
+                Text("Angle \(Int((style.angle * 180 / .pi).rounded()))\u{00B0}").font(.dataMono).frame(width: 96)
                 Stepper("", onIncrement: { controller.updateStyle { $0.angle += .pi / 12 } },
                         onDecrement: { controller.updateStyle { $0.angle -= .pi / 12 } })
                     .labelsHidden()
             }
-            row("EDGE") {
-                chip("SOLID", on: style.edge == .solid) { controller.updateStyle { $0.edge = .solid } }
-                chip("DASHED", on: style.edge == .dashed) { controller.updateStyle { $0.edge = .dashed } }
+            row("Edge") {
+                StudioChip("Solid", on: style.edge == .solid) { controller.updateStyle { $0.edge = .solid } }
+                StudioChip("Dashed", on: style.edge == .dashed) { controller.updateStyle { $0.edge = .dashed } }
                 Spacer().frame(width: 16)
-                chip("US COLOUR", on: style.tint == .pink) { controller.updateStyle { $0.tint = .pink } }
-                chip("THEM COLOUR", on: style.tint == .cyan) { controller.updateStyle { $0.tint = .cyan } }
+                StudioChip("Ours", on: style.tint == .pink) { controller.updateStyle { $0.tint = .pink } }
+                StudioChip("Theirs", on: style.tint == .cyan) { controller.updateStyle { $0.tint = .cyan } }
             }
-            row("TAG") {
+            row("Tag") {
                 ForEach(tags.indices, id: \.self) { i in
-                    chip(tags[i].0, on: controller.stripTag == tags[i].1) { controller.setTag(tags[i].1) }
+                    StudioChip(tags[i].0, on: controller.stripTag == tags[i].1) { controller.setTag(tags[i].1) }
                 }
             }
-            Text(controller.selectedZone == nil ? "Defaults for the next stroke" : "Editing the selected zone")
-                .font(.system(size: 11)).foregroundStyle(Tokens.textSecondary.color)
+            Text(controller.selectedZone == nil ? "Settings for the next zone you draw" : "Editing the selected zone")
+                .font(.themed(12, .medium)).foregroundStyle(Tokens.textSecondary.color)
         }
-        .padding(12)
-        .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.accent.withAlpha(0.5).color))
-        .frame(maxWidth: 660, alignment: .leading)
+        .studioPanel(emphasis: true)
+        .frame(maxWidth: 760, alignment: .leading)
     }
 
     private func row<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         HStack(spacing: 6) {
-            Text(title).font(.themed(10, .semibold))
+            Text(title).font(.themed(12, .semibold))
                 .foregroundStyle(Tokens.textSecondary.color)
                 .frame(width: 64, alignment: .leading)
-            content()
+            ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 6) { content() } }
         }
-    }
-
-    private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title).font(.themed(11, .bold))
-                .padding(.horizontal, 8).frame(minHeight: 32)
-                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
-                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.text.color)
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -251,24 +292,24 @@ struct SceneListSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("New scene from a formation") {
+                Section("New board") {
                     Picker("System", selection: $system) {
                         ForEach(TeamSystem.allCases, id: \.self) { Text($0.displayName).tag($0) }
                     }
-                    Picker("Rotation", selection: $rotation) { ForEach(1...6, id: \.self) { Text("R\($0)").tag($0) } }
+                    Picker("Rotation", selection: $rotation) { ForEach(1...6, id: \.self) { Text("\($0)").tag($0) } }
                         .pickerStyle(.segmented)
-                    Picker("Phase", selection: $phase) {
+                    Picker("We", selection: $phase) {
                         Text("Receive").tag("receive")
                         Text("Serve").tag("serve")
                     }
                     .pickerStyle(.segmented)
-                    Button("Create") {
+                    Button("Create board") {
                         controller.open(SceneStore.newScene(system: system, rotation: rotation, phase: phase))
                         controller.save()
                         dismiss()
                     }
                 }
-                Section("Saved scenes") {
+                Section("Saved boards") {
                     ForEach(scenes) { s in
                         Button {
                             controller.open(s)
@@ -276,7 +317,7 @@ struct SceneListSheet: View {
                         } label: {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(s.title).font(.themed(15, .semibold))
-                                Text("\(s.zones.count) zones \u{00B7} \(s.modifiedAt.formatted(date: .abbreviated, time: .shortened))")
+                                Text(s.modifiedAt.formatted(date: .abbreviated, time: .shortened))
                                     .font(.system(size: 12)).foregroundStyle(Tokens.textSecondary.color)
                             }
                         }
@@ -290,7 +331,7 @@ struct SceneListSheet: View {
             }
             .scrollContentBackground(.hidden)
             .background(Tokens.canvasBase.color)
-            .navigationTitle("Scenes")
+            .navigationTitle("Boards")
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .onAppear {
                 controller.save()
@@ -490,14 +531,14 @@ struct PostureStrip: View {
     var body: some View {
         if let token = controller.selectedTokenValue {
             HStack(spacing: 6) {
-                Text("#\(token.label) POSTURE").font(.themed(10, .semibold))
+                Text("\(token.label) body").font(.themed(13, .semibold))
                     .foregroundStyle(Tokens.textSecondary.color)
                 let explicit = controller.selectedExplicitPosture
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
-                        chip("AUTO", on: explicit == nil) { controller.setPosture(nil) }
+                        StudioChip("Auto", on: explicit == nil) { controller.setPosture(nil) }
                         ForEach(Self.order, id: \.self) { p in
-                            chip(p.title, on: explicit == p) { controller.setPosture(p) }
+                            StudioChip(p.title.sentenceCased, on: explicit == p) { controller.setPosture(p) }
                         }
                     }
                 }
@@ -508,120 +549,99 @@ struct PostureStrip: View {
             .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.accent.withAlpha(0.5).color))
         }
     }
-
-    private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title).font(.themed(11, .bold))
-                .padding(.horizontal, 8).frame(minHeight: 36)
-                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
-                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.text.color)
-        }
-        .buttonStyle(.plain)
-    }
 }
 
-/// The rally timeline (Section 3.5.7): phase markers, play, and the selected item's keyframe at the marker.
-/// Edits made while resting on a later marker become keyframes there; the first marker holds the base scene.
+/// The rally timeline (Section 3.5.7): play, the phase markers and (Advanced) the selected item's keyframe at the
+/// marker. Edits made while resting on a later marker become keyframes there; the first marker holds the base scene.
 struct TimelineStrip: View {
     let controller: StudioController
+    private var advanced: Bool { ThemeStore.shared.advanced }
 
     var body: some View {
         HStack(spacing: 6) {
             if controller.scene.timeline.isEmpty {
-                chip("ANIMATE BY PHASE", on: false) { controller.enableTimeline() }
-                    .accessibilityHint("Adds the markers serve to defence; players and zones can then change per phase")
+                StudioChip("Animate by phase", symbol: "film") { controller.enableTimeline() }
+                    .accessibilityHint("Adds the phases serve to defence; players and zones can then change per phase")
             } else {
                 Button { controller.togglePlay() } label: {
-                    Image(systemName: controller.playing ? "stop.fill" : "play.fill")
-                        .font(.themed(16, .bold))
-                        .frame(width: 44, height: 36)
-                        .background(Tokens.accent.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
-                        .foregroundStyle(Tokens.canvasBase.color)
+                    Image(systemName: controller.playing ? "pause.fill" : "play.fill")
+                        .font(.themed(18, .bold))
+                        .frame(width: 56, height: 44)
+                        .background(Tokens.accentActive.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+                        .foregroundStyle(Tokens.onAccent.color)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(controller.playing ? "Stop" : "Play the rally")
-                ForEach(controller.scene.timeline, id: \.self) { phase in
-                    let on = controller.currentPhase == phase
+                .accessibilityLabel(controller.playing ? "Pause" : "Play the rally")
+                let shown = Int(controller.time.rounded())
+                ForEach(Array(controller.scene.timeline.enumerated()), id: \.element) { i, phase in
+                    let on = shown == i
                     Button { controller.go(to: phase) } label: {
                         VStack(spacing: 2) {
-                            Text(phase.title).font(.themed(11, .bold))
-                            Circle().frame(width: 5, height: 5)
-                                .opacity(controller.selectionHasKey(at: phase) ? 1 : 0)
+                            Text(phase.displayName).font(.themed(13, .bold))
+                            if advanced {
+                                Circle().frame(width: 5, height: 5)
+                                    .opacity(controller.selectionHasKey(at: phase) ? 1 : 0)
+                            }
                         }
-                        .padding(.horizontal, 8).frame(minHeight: 36)
+                        .padding(.horizontal, 10).frame(minHeight: 44)
                         .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
-                        .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.text.color)
+                        .foregroundStyle(on ? Tokens.onAccent.color : Tokens.text.color)
                     }
                     .buttonStyle(.plain)
                 }
-                if controller.selectedToken != nil || controller.selectedZone != nil, let phase = controller.currentPhase,
+                if advanced, controller.selectedToken != nil || controller.selectedZone != nil, let phase = controller.currentPhase,
                    controller.scene.timeline.first != phase {
                     Divider().frame(height: 28).overlay(Tokens.hairline.color)
                     if controller.selectionHasKey(at: phase) {
-                        chip("CLEAR KEY", on: false) { controller.clearSelectionKey() }
+                        StudioChip("Clear key") { controller.clearSelectionKey() }
                     } else {
-                        chip("HOLD HERE", on: false) { controller.pinSelection() }
+                        StudioChip("Hold here") { controller.pinSelection() }
                     }
-                    if controller.selectedZone != nil {
-                        let hidden = (controller.frame.intensities[controller.selectedZone!] ?? 1) < 0.5
-                        chip(hidden ? "SHOW" : "HIDE", on: hidden) { controller.toggleSelectedZoneVisibility() }
+                    if let zone = controller.selectedZone {
+                        let hidden = (controller.frame.intensities[zone] ?? 1) < 0.5
+                        StudioChip(hidden ? "Show" : "Hide", on: hidden) { controller.toggleSelectedZoneVisibility() }
                     }
                 }
                 Divider().frame(height: 28).overlay(Tokens.hairline.color)
-                chip("STATIC", on: false) { controller.disableTimeline() }
+                if advanced {
+                    StudioChip("Static") { controller.disableTimeline() }
+                } else {
+                    StudioChip("Clear rally", symbol: "xmark") { controller.backToLineup() }
+                }
             }
         }
-        .padding(10)
-        .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.hairline.color))
-    }
-
-    private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title).font(.themed(11, .bold))
-                .padding(.horizontal, 8).frame(minHeight: 36)
-                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
-                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.text.color)
-        }
-        .buttonStyle(.plain)
+        .studioPanel()
     }
 }
 
-/// POV controls (Section 5.1): fly into the selected player's eyes, gaze rays on or off, back to the orbit camera.
+/// Eye view (Section 5.1): fly into the selected player's eyes and back; Advanced adds the sight lines.
 struct POVStrip: View {
     let controller: StudioController
+    private var advanced: Bool { ThemeStore.shared.advanced }
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             if let pov = controller.povPlayer {
                 let label = controller.scene.tokens.first { $0.id == pov }?.label ?? ""
-                Text("POV \(label) \u{00B7} HEAD-LOCKED").font(.themed(10, .semibold))
+                Text("Eye view of \(label)").font(.themed(13, .semibold))
                     .foregroundStyle(Tokens.textSecondary.color)
-                chip("LOOK AHEAD", on: controller.povYaw == 0 && controller.povPitch == 0) { controller.look(dx: controller.povYaw, dy: -controller.povPitch) }
-                if controller.selectedToken != nil && controller.selectedToken != pov {
-                    chip("POV \(controller.selectedTokenValue?.label ?? "")", on: false) { controller.enterPOV() }
+                StudioChip("Look ahead", on: controller.povYaw == 0 && controller.povPitch == 0) {
+                    controller.look(dx: controller.povYaw, dy: -controller.povPitch)
                 }
-                chip("EXIT POV", on: true) { controller.exitPOV() }
+                if let other = controller.selectedTokenValue, other.id != pov {
+                    StudioChip("Switch to \(other.label)", symbol: "eye") { controller.enterPOV() }
+                }
+                StudioChip("Leave eye view", symbol: "xmark", prominent: true) { controller.exitPOV() }
             } else if let token = controller.selectedTokenValue {
-                chip("POV \(token.label)", on: false) { controller.enterPOV() }
+                StudioChip("See what \(token.label) sees", symbol: "eye", prominent: true) { controller.enterPOV() }
                     .accessibilityLabel("See through the eyes of \(token.label)")
-                chip("GAZE", on: controller.gazePlayer == token.id) { controller.toggleGaze() }
-                    .accessibilityLabel("Gaze rays and field of view of \(token.label)")
+                if advanced {
+                    StudioChip("Sight lines", on: controller.gazePlayer == token.id) { controller.toggleGaze() }
+                        .accessibilityLabel("Sight lines and field of view of \(token.label)")
+                }
             }
         }
-        .padding(10)
-        .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.accent.withAlpha(0.5).color))
-    }
-
-    private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title).font(.themed(11, .bold))
-                .padding(.horizontal, 8).frame(minHeight: 36)
-                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
-                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.text.color)
-        }
-        .buttonStyle(.plain)
+        .studioPanel(emphasis: true)
     }
 }
 
@@ -632,21 +652,21 @@ struct GazePanel: View {
     var body: some View {
         let readouts = controller.gazeReadouts
         VStack(alignment: .leading, spacing: 6) {
-            Text("LINE OF SIGHT").font(.themed(10, .semibold))
+            Text("What they can see").font(.themed(13, .semibold))
                 .foregroundStyle(Tokens.textSecondary.color)
             if readouts.isEmpty {
-                Text(controller.povPlayer != nil ? "Tap a player to add a target" : "No targets")
-                    .font(.system(size: 12)).foregroundStyle(Tokens.textSecondary.color)
+                Text(controller.povPlayer != nil ? "Tap a player to check if they can be seen" : "No players to check")
+                    .font(.themed(13, .medium)).foregroundStyle(Tokens.textSecondary.color)
             }
             ForEach(readouts, id: \.self) { r in
                 HStack(spacing: 6) {
                     Circle().fill((r.visibility.fraction >= 0.5 ? Tokens.text : RGBA(hex: 0xFF3B1A)).color).frame(width: 8, height: 8)
-                    Text(r.text).font(.themed(12, .medium)).foregroundStyle(Tokens.text.color)
+                    Text(r.text).font(.themed(13, .medium)).foregroundStyle(Tokens.text.color)
                 }
             }
             if controller.povPlayer != nil {
-                Text("Head orientation, not eye tracking: the rings show the central field around where the head points.")
-                    .font(.system(size: 10)).foregroundStyle(Tokens.textSecondary.color)
+                Text("Shows where the head points, not the eyes. The rings mark sharp and side vision.")
+                    .font(.themed(12, .medium)).foregroundStyle(Tokens.textSecondary.color)
                     .frame(maxWidth: 300, alignment: .leading)
             }
         }
@@ -676,49 +696,60 @@ struct FieldRings: View {
 }
 
 /// Ball contacts at the current marker (Section 5.4): who plays the ball and how; the physics flies it to the
-/// next contact. The readout describes the flight in the air at the current moment.
+/// next contact. The readout describes the flight in the air at the current moment (Advanced).
 struct BallStrip: View {
     let controller: StudioController
 
     var body: some View {
         HStack(spacing: 6) {
-            Text("BALL").font(.themed(10, .semibold))
+            Text("Ball").font(.themed(13, .semibold))
                 .foregroundStyle(Tokens.textSecondary.color)
             if let phase = controller.currentPhase, let selected = controller.selectedTokenValue {
                 let contact = controller.currentContact
                 if contact?.player == selected.id, let kind = contact?.kind {
                     ForEach(ContactKind.choices(at: phase), id: \.self) { k in
-                        chip(k.title, on: k == kind) { controller.setContact(k) }
+                        StudioChip(k.displayName, on: k == kind) { controller.setContact(k) }
                     }
-                    chip("NO BALL", on: false) { controller.removeContact() }
+                    StudioChip("No ball") { controller.removeContact() }
                     if controller.currentContactIsLast {
-                        chip(controller.aimingLanding ? "TAP THE FLOOR" : "AIM", on: controller.aimingLanding) { controller.aimLanding() }
+                        StudioChip(controller.aimingLanding ? "Tap the floor" : "Aim", symbol: "scope", on: controller.aimingLanding) {
+                            controller.aimLanding()
+                        }
                     }
                 } else {
-                    chip(contact == nil ? "\(selected.label) PLAYS IT" : "\(selected.label) PLAYS IT INSTEAD", on: false) {
+                    StudioChip(contact == nil ? "\(selected.label) plays it" : "\(selected.label) plays it instead") {
                         controller.setContact()
                     }
                 }
             } else if controller.scene.contacts == nil {
-                Text("Select a player on a marker to place the first contact")
-                    .font(.system(size: 12)).foregroundStyle(Tokens.textSecondary.color)
+                Text("Pick a player on a phase to give them the ball")
+                    .font(.themed(13, .medium)).foregroundStyle(Tokens.textSecondary.color)
             }
             if let summary = controller.ballSummary {
                 Text(summary).font(.dataMono).foregroundStyle(Tokens.text.color).lineLimit(1)
             }
         }
-        .padding(10)
-        .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.hairline.color))
+        .studioPanel()
     }
+}
 
-    private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title).font(.themed(11, .bold))
-                .padding(.horizontal, 8).frame(minHeight: 36)
-                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
-                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.text.color)
+extension ContactKind {
+    var displayName: String {
+        switch self {
+        case .floatServe: return "Float serve"
+        case .jumpServe: return "Jump serve"
+        case .pass: return "Pass"
+        case .quickSet: return "Quick set"
+        case .secondTempoSet: return "Second tempo"
+        case .highSet: return "High set"
+        case .attack: return "Attack"
+        case .freeball: return "Free ball"
+        case .dig: return "Dig"
         }
-        .buttonStyle(.plain)
     }
+}
+
+extension String {
+    /// "LOW DEFENCE" reads "Low defence".
+    var sentenceCased: String { self.prefix(1).uppercased() + self.dropFirst().lowercased() }
 }

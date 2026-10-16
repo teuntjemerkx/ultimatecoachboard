@@ -1,7 +1,7 @@
 import UIKit
 import CoachBoardCore
 
-/// Launch-argument demo states (`-demoScreen launcher|setup|live|advanced|setbreak|log|studio|studio3d|pov|gallery`) so CI can capture screenshots of
+/// Launch-argument demo states (`-demoScreen launcher|setup|live|advanced|setbreak|log|studio|studio3d|pov|rally|rallyeye|gallery`) so CI can capture screenshots of
 /// real screens in the Simulator. Only reachable through launch arguments; never shown to a coach.
 enum DemoMode {
     static var screen: String? {
@@ -104,6 +104,21 @@ enum DemoMode {
                 note("pov gaze: " + c.gazeReadouts.map(\.text).joined(separator: " | "))
             } else {
                 c.tool = .zone
+            }
+            model.screen = .studio(c)
+        case "rally", "rallyeye":
+            // One tap: the lineup plays a rally out (attack on the left); shown in 3D at the attack, the ball in the air.
+            let c = StudioController(scene: SceneStore.newScene(labels: [.p1: "8", .p2: "12", .p3: "4", .p4: "9", .p5: "14", .p6: "2"]))
+            c.playRally(.left)
+            c.scrub(to: screen == "rally" ? 2.7 : 2.85)
+            c.toggle3D()
+            note("rally: " + c.ballPlan.segments.map { $0.summary(netHeight: c.netHeight) }.joined(separator: " | "))
+            note("rally facing at 2.7: " + c.frame.tokens.map { "\($0.side == .home ? "" : "o")\($0.label):\(Int(($0.facing * 180 / .pi).rounded()))" }
+                .joined(separator: " "))
+            if screen == "rallyeye" {
+                // The opposing middle blocker's eyes as the set goes up.
+                c.selectToken(c.scene.tokens.first { $0.side == .opponent && $0.role == "MB1" }?.id)
+                c.enterPOV()
             }
             model.screen = .studio(c)
         case "gallery":

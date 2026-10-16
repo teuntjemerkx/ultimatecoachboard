@@ -154,6 +154,8 @@ struct BoardScene: Equatable {
         var isLibero: Bool
         var isServer: Bool
         var selected: Bool
+        /// Where the player looks (radians from +Z toward +X); a dot on the ring shows it. Nil draws none.
+        var facing: Double? = nil
     }
 
     struct Tether: Equatable {
@@ -480,6 +482,13 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
             if t.isLibero {
                 tokens.append(TokenInstance(center: c, radius: Float(radius) * scale - 6, ring: 1.5, shape: home ? 0 : 1,
                                             glow: 0, fill: SIMD4(0, 0, 0, 0), ringColor: ringColor))
+            }
+            if let f = t.facing {
+                // Facing: a dot just outside the ring, toward where the player looks.
+                let ahead = v(FloorPoint(x: p.x + sin(f), z: p.z + cos(f))) - c
+                let len = max((ahead.x * ahead.x + ahead.y * ahead.y).squareRoot(), 1e-3)
+                tokens.append(TokenInstance(center: c + ahead / len * (Float(radius) * scale + 5), radius: 4, ring: 2, shape: 0,
+                                            glow: 0, fill: ringColor, ringColor: ringColor))
             }
             if t.isServer {
                 // Server marker: a short bar outside the ring.

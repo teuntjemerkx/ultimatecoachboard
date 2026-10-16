@@ -95,7 +95,8 @@ jobs:
             fi
           }
           # Every screen in the default (recommended) template, then Live and 3D Studio in each other template.
-          for s in launcher setup live advanced setbreak log studio studio3d pov gallery; do shot "$s" "$s"; done
+          for s in launcher setup live advanced setbreak log studio studio3d pov rally rallyeye gallery; do shot "$s" "$s"; done
+          for s in launcher live studio rally; do shot "advanced_${s}" "$s" -advanced; done
           for t in night broadcast whiteboard neon; do
             for s in launcher live studio3d; do shot "${t}_${s}" "$s" -theme "$t"; done
           done

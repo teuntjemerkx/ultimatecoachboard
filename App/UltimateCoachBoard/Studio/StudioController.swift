@@ -30,14 +30,17 @@ enum SceneStore {
         try? FileManager.default.removeItem(at: dir.appendingPathComponent("\(id.uuidString).json"))
     }
 
-    /// A fresh scene: the home team in its template's R1 receive formation, the opponent serving.
+    /// A fresh scene: both teams placed from a setup (by default home receiving in rotation 1, the opponent
+    /// serving). `labels` names the home players by the court position they hold in that rotation.
     static func newScene(system: TeamSystem = .fiveOneOutside, rotation: Int = 1, phase: String = "receive",
                          labels: [CourtPosition: String] = [:]) -> TacticalScene {
-        let home = (try? TemplateLibrary.template(id: system.templateID)) ?? (try? TemplateLibrary.shipped(TeamSystem.fiveOneOutside.rawValue))
-        let opponent = try? TemplateLibrary.shipped(TeamSystem.fiveOneOutside.rawValue)
-        guard let home, let opponent else { return TacticalScene(title: "New scene") }
-        return TacticalScene.fromFormations(title: "\(system.displayName) R\(rotation) \(phase)", home: home, homeRotation: rotation,
-                                            homePhase: phase, opponent: opponent, opponentRotation: 1, homeLabels: labels)
+        let template = try? TemplateLibrary.template(id: system.templateID)
+        let r = template.map { $0.rotations.contains(rotation) ? rotation : ($0.rotations.first ?? rotation) } ?? rotation
+        var setup = SceneSetup(homeSystem: system.templateID, homeRotation: r, homeServes: phase == "serve")
+        if let f = template?.formation(rotation: r, phase: "receive") {
+            for p in f.players { if let pos = p.courtPosition, let label = labels[pos] { setup.labels["home.\(p.role)"] = label } }
+        }
+        return TacticalScene.placed(title: "Rotation \(r)", setup: setup)
     }
 }
 
@@ -51,7 +54,7 @@ final class StudioController {
     private(set) var editor: SceneEditor
     var scene: TacticalScene { editor.scene }
 
-    var tool: Tool = .zone
+    var tool: Tool = .select
     var boardSize: CGSize = .zero
     var homeOnLeft = true
     var geometry: BoardGeometry { BoardGeometry(size: boardSize, homeOnLeft: homeOnLeft) }
@@ -255,6 +258,60 @@ final class StudioController {
         scheduleSave()
     }
 
+    // MARK: - Lineup and autopilot
+
+    /// The systems, rotations and server the players stand in (a hand-made scene reads as the default).
+    var setup: SceneSetup { scene.setup ?? SceneSetup() }
+
+    /// Re-places both teams after changing the setup (system, rotation, who serves). One undo step.
+    func changeSetup(_ change: (inout SceneSetup) -> Void) {
+        var s = setup
+        change(&s)
+        stopTimeline()
+        time = 0
+        editor.place(s)
+        clearPlayerSelection()
+        scheduleSave()
+    }
+
+    /// Next (or previous) rotation for a team, as after a side-out.
+    func rotate(_ side: Side = .home, forward: Bool = true) {
+        stopTimeline()
+        time = 0
+        editor.rotate(side, forward: forward)
+        clearPlayerSelection()
+        scheduleSave()
+    }
+
+    /// Plays the rally out from the lineup and shows it: serve, pass, set, the attack, cover and defence.
+    func playRally(_ attack: AttackOption) {
+        stopTimeline()
+        time = 0
+        editor.playOut(attack)
+        clearPlayerSelection()
+        scheduleSave()
+        togglePlay()
+    }
+
+    /// Back to the lineup without the rally.
+    func backToLineup() {
+        stopTimeline()
+        time = 0
+        editor.place(setup)
+        scheduleSave()
+    }
+
+    /// Rotations the home system has, for the lineup picker.
+    func rotations(_ side: Side) -> [Int] {
+        (try? TemplateLibrary.template(id: setup.system(side)))?.rotations ?? [1]
+    }
+
+    private func clearPlayerSelection() {
+        if let id = selectedToken, !scene.tokens.contains(where: { $0.id == id }) { selectedToken = nil }
+        povPlayer = nil
+        gazePlayer = nil
+    }
+
     // MARK: - Timeline (Section 3.5.7)
 
     /// Timeline position in phase-index units; markers sit at whole numbers.
@@ -264,8 +321,8 @@ final class StudioController {
     /// Seconds per phase interval during playback.
     static let secondsPerPhase = 1.1
 
-    /// The scene as shown at the current timeline position.
-    var frame: SceneFrame { scene.frame(at: time) }
+    /// The scene as shown at the current timeline position, players facing the ball (or the server).
+    var frame: SceneFrame { scene.liveFrame(at: time, plan: scene.timeline.isEmpty ? nil : ballPlan) }
 
     /// The marker the board rests on, or nil between markers and in a static scene.
     var currentPhase: RallyPhase? {
@@ -477,8 +534,17 @@ final class StudioController {
         guard let target = dragTarget, abs(dragOffset.dx) + abs(dragOffset.dz) > 0.01 else { return }
         switch target {
         case .token(let id):
-            if let t = frame.tokens.first(where: { $0.id == id }) {
-                editor.move(token: id, to: FloorPoint(x: t.point.x + dragOffset.dx, z: t.point.z + dragOffset.dz), phase: editPhase)
+            let f = frame
+            if let t = f.tokens.first(where: { $0.id == id }) {
+                var p = FloorPoint(x: t.point.x + dragOffset.dx, z: t.point.z + dragOffset.dz)
+                if snapping {
+                    // Drop help: onto a formation spot when close, and never inside a teammate.
+                    let r = PlacementAssist.adjust(p, token: id, side: t.side, others: f.tokens.filter { $0.side == t.side },
+                                                   spots: PlacementAssist.spots(for: t.side, setup: scene.setup))
+                    p = r.point
+                    if let s = r.snapped { show([.point(s)]) }
+                }
+                editor.move(token: id, to: p, phase: editPhase)
             }
         case .zone(let id):
             editor.move(zone: id, by: dragOffset.dx, dragOffset.dz, phase: editPhase)
@@ -634,7 +700,7 @@ final class StudioController {
             var p = t.point
             if case .token(let id) = dragTarget, id == t.id { p = FloorPoint(x: p.x + dragOffset.dx, z: p.z + dragOffset.dz) }
             s.tokens.append(.init(id: t.id, side: t.side, point: p, label: t.label, isLibero: t.role == "L",
-                                  isServer: false, selected: t.id == selectedToken))
+                                  isServer: false, selected: t.id == selectedToken, facing: t.facing))
         }
         s.zones = f.zones.map { z in
             if case .zone(let id) = dragTarget, id == z.id { return z.translated(by: dragOffset.dx, dragOffset.dz) }
