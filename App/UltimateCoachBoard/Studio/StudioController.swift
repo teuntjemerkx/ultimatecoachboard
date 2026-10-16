@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import CoreGraphics
+import simd
 import CoachBoardCore
 
 /// Manual scenes on disk (Application Support/Scenes, one JSON file per scene).
@@ -88,6 +89,74 @@ final class StudioController {
 
     init(scene: TacticalScene) {
         editor = SceneEditor(scene: scene)
+    }
+
+    // MARK: - Video scenes (Section 4)
+
+    /// A rally rebuilt from a video: played back in seconds, watched from any player's eyes, in the hall of the clip.
+    private(set) var video: VideoScene?
+    private(set) var videoFolder: URL?
+    /// Slow motion plays the clip at half speed.
+    var slowMotion = false
+
+    convenience init(video: VideoScene, folder: URL) {
+        self.init(scene: TacticalScene(title: video.title))
+        self.video = video
+        videoFolder = folder
+        view3D = true
+    }
+
+    var videoDuration: Double { video?.duration ?? 0 }
+
+    func toggleVideoPlay() {
+        if playing { stopTimeline(); return }
+        let end = videoDuration
+        if time >= end - 1e-3 { time = 0 }
+        playing = true
+        tween(to: end, duration: (end - time) / (slowMotion ? 0.5 : 1), playback: true)
+    }
+
+    func scrubVideo(to t: Double) {
+        stopTimeline()
+        time = max(0, min(videoDuration, t))
+    }
+
+    /// The orbit camera placed where the video was filmed, so the 3D view opens on the picture the coach knows.
+    var videoBoardCamera: BoardCamera? {
+        guard let cam = video?.camera else { return nil }
+        let f = cam.forward, c = cam.center
+        var target = c + f * 20
+        if f.y < -0.03 { target = c + f * min(60, c.y / -f.y) }
+        target = V3(target.x, 0, target.z)
+        let d = c - target
+        let distance = max(4, d.length)
+        return BoardCamera(target: target, heading: atan2(d.z, d.x), pitch: asin(max(-1, min(1, d.y / distance))),
+                           distance: distance, fovY: min(1.4, max(0.3, cam.fovY)))
+    }
+
+    /// The hall of the clip around the court: the clean plate through the video camera.
+    var backdrop: Scene3D.Backdrop? {
+        guard let video, let folder = videoFolder, let plate = video.plateFile else { return nil }
+        let m = video.camera.normalizedProjection.map(Float.init)
+        guard m.count == 12 else { return nil }
+        let rows = [SIMD4(m[0], m[1], m[2], m[3]), SIMD4(m[4], m[5], m[6], m[7]), SIMD4<Float>(0, 0, 0, 0), SIMD4(m[8], m[9], m[10], m[11])]
+        let env = video.environment
+        return Scene3D.Backdrop(plate: folder.appendingPathComponent(plate), worldToImage: simd_float4x4(rows: rows),
+                                halfWidth: env.halfWidth, halfLength: env.halfLength, height: env.height)
+    }
+
+    /// The ball now: the video's reconstructed flight, or the scene's ball plan.
+    var ballNow: V3? {
+        if let video { return video.ballPosition(at: time) }
+        return scene.timeline.isEmpty ? nil : ballPlan.position(at: time)
+    }
+
+    /// The video's ball flights as point lists for drawing.
+    private var videoBallPaths: [[V3]] {
+        (video?.ball ?? []).map { seg in
+            let n = max(2, Int((seg.t1 - seg.t0) * 30))
+            return (0...n).map { seg.position(at: seg.t0 + (seg.t1 - seg.t0) * Double($0) / Double(n)) }
+        }
     }
 
     // MARK: - 2D / 3D
@@ -180,7 +249,7 @@ final class StudioController {
         let yaw = povPlayer == id ? povYaw : 0, pitch = povPlayer == id ? povPitch : 0
         let pov = viewer.skeleton.povPose(viewer.joints, aspect: 1, yaw: yaw, pitch: pitch)
         let headForward = viewer.skeleton.povPose(viewer.joints, aspect: 1).forward
-        let ball = scene.timeline.isEmpty ? nil : ballPlan.position(at: time)
+        let ball = ballNow
         let readouts = Gaze.readouts(viewer: viewer, pov: pov, targets: currentGazeTargets(players), players: players,
                                      netHeight: netHeight, ball: ball)
         return (pov.eye, headForward, viewer.token.side, readouts)
@@ -321,8 +390,12 @@ final class StudioController {
     /// Seconds per phase interval during playback.
     static let secondsPerPhase = 1.1
 
-    /// The scene as shown at the current timeline position, players facing the ball (or the server).
-    var frame: SceneFrame { scene.liveFrame(at: time, plan: scene.timeline.isEmpty ? nil : ballPlan) }
+    /// The scene as shown at the current timeline position, players facing the ball (or the server); a video scene
+    /// at the current second.
+    var frame: SceneFrame {
+        if let video { return video.sceneFrame(at: time) }
+        return scene.liveFrame(at: time, plan: scene.timeline.isEmpty ? nil : ballPlan)
+    }
 
     /// The marker the board rests on, or nil between markers and in a static scene.
     var currentPhase: RallyPhase? {
@@ -478,14 +551,15 @@ final class StudioController {
     }
 
     /// Whether a one-finger pan starting here would move something (in 3D an empty select pan orbits instead).
+    /// A video scene is read-only: every pan orbits.
     func panWouldEdit(world w: FloorPoint, token: UUID?) -> Bool {
-        tool != .select || token != nil || frame.zone(at: w) != nil
+        video == nil && (tool != .select || token != nil || frame.zone(at: w) != nil)
     }
 
     /// One step of a one-finger pan on the floor; `token` is the player under the finger when it began.
     func pan(_ phase: BoardMTKView.PanPhase, world w: FloorPoint, token: UUID?) {
-        // Edits land on a phase marker; while the timeline plays, the board is read-only.
-        if playing { return }
+        // Edits land on a phase marker; while the timeline plays, and in a video scene, the board is read-only.
+        if playing || video != nil { return }
         switch phase {
         case .began:
             alternative = nil
@@ -688,7 +762,10 @@ final class StudioController {
         }
     }
 
-    func save() { SceneStore.save(scene) }
+    func save() {
+        guard video == nil else { return }
+        SceneStore.save(scene)
+    }
 
     // MARK: - Board scene
 
@@ -711,7 +788,13 @@ final class StudioController {
         s.selectedZone = selectedZone
         s.ink = scene.ink.map(\.points) + (liveStroke.count > 1 ? [liveStroke] : [])
         s.highlights = highlights
-        if !scene.timeline.isEmpty {
+        if video != nil {
+            s.ballPaths = videoBallPaths.map { $0.map(\.floor) }
+            if let b = ballNow {
+                s.ball = b.floor
+                s.ballHeight = b.y
+            }
+        } else if !scene.timeline.isEmpty {
             let plan = ballPlan
             s.ballPaths = plan.segments.compactMap { $0.trajectory?.samples.map { $0.p.floor } }
             if let b = plan.position(at: time) {
@@ -738,7 +821,11 @@ final class StudioController {
         s.zoneIntensities = flat.zoneIntensities
         s.selectedZone = flat.selectedZone
         s.netHeight = netHeight
-        if !scene.timeline.isEmpty {
+        if video != nil {
+            s.ballPaths = videoBallPaths
+            s.ball = ballNow
+            s.backdrop = backdrop
+        } else if !scene.timeline.isEmpty {
             let plan = ballPlan
             s.ballPaths = plan.segments.compactMap { seg in seg.trajectory.map { t in stride(from: 0, to: t.samples.count, by: 3).map { t.samples[$0].p } + [t.end] } }
             s.ball = plan.position(at: time)

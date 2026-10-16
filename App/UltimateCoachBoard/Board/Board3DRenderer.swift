@@ -847,6 +847,16 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         if eye.z < l { out += quad(V3(-w, 0, l), V3(w, 0, l), V3(w, h, l), V3(-w, h, l)) }
         if eye.z > -l { out += quad(V3(-w, 0, -l), V3(w, 0, -l), V3(w, h, -l), V3(-w, h, -l)) }
         if eye.y < h { out += quad(V3(-w, h, -l), V3(w, h, -l), V3(w, h, l), V3(-w, h, l)) }
+        // The hall floor beyond the board's floor (10 x 17 m half extents), when the hall is bigger.
+        let fw = 10.0, fl = 17.0
+        if l > fl {
+            out += quad(V3(-w, 0, fl), V3(w, 0, fl), V3(w, 0, l), V3(-w, 0, l))
+            out += quad(V3(-w, 0, -l), V3(w, 0, -l), V3(w, 0, -fl), V3(-w, 0, -fl))
+        }
+        if w > fw {
+            out += quad(V3(fw, 0, -fl), V3(w, 0, -fl), V3(w, 0, fl), V3(fw, 0, fl))
+            out += quad(V3(-w, 0, -fl), V3(-fw, 0, -fl), V3(-fw, 0, fl), V3(-w, 0, fl))
+        }
         return out
     }
 

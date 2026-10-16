@@ -1,7 +1,7 @@
 import UIKit
 import CoachBoardCore
 
-/// Launch-argument demo states (`-demoScreen launcher|setup|live|advanced|setbreak|log|studio|studio3d|pov|rally|rallyeye|gallery`) so CI can capture screenshots of
+/// Launch-argument demo states (`-demoScreen launcher|setup|live|advanced|setbreak|log|studio|studio3d|pov|rally|rallyeye|videomark|video3d|videoeye|gallery`) so CI can capture screenshots of
 /// real screens in the Simulator. Only reachable through launch arguments; never shown to a coach.
 enum DemoMode {
     static var screen: String? {
@@ -118,6 +118,27 @@ enum DemoMode {
             if screen == "rallyeye" {
                 // The opposing middle blocker's eyes as the set goes up.
                 c.selectToken(c.scene.tokens.first { $0.side == .opponent && $0.role == "MB1" }?.id)
+                c.enterPOV()
+            }
+            model.screen = .studio(c)
+        case "videomark":
+            // Video to 3D, step 2: the dots near the corners of a hall seen from the stands, the court fitted over it.
+            let importer = VideoImportModel()
+            if let still = VideoDemo.still() { importer.demo(still: still, camera: VideoDemo.camera) }
+            note("videomark: fit \(importer.fit) lines \(importer.courtLines.count)")
+            model.screen = .videoImport(importer)
+        case "video3d", "videoeye":
+            // A rally filmed by a synthetic camera, rebuilt by the real pipeline, in the hall from its plate.
+            let start = Date()
+            guard let saved = VideoDemo.saved() else { note("video: demo failed"); return }
+            let (scene, folder) = saved
+            note(String(format: "video: %d players, %d ball flights, %.1f s, built in %.1f s", scene.players.count, scene.ball.count,
+                        scene.duration, Date().timeIntervalSince(start)))
+            let c = StudioController(video: scene, folder: folder)
+            c.scrubVideo(to: screen == "video3d" ? 2.4 : 3.2)
+            if screen == "videoeye" {
+                // The home libero's eyes: the attack across the net, the hall from the video behind it.
+                c.selectToken(c.frame.tokens.first { $0.side == .home && $0.label == "2" }?.id ?? c.frame.tokens.first { $0.side == .home }?.id)
                 c.enterPOV()
             }
             model.screen = .studio(c)

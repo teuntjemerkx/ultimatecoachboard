@@ -23,7 +23,8 @@ struct PickedMovie: Transferable {
 /// Video to 3D (Section 4): choose a clip, drag four dots onto the court corners, and the app builds a 3D rally
 /// from the video with Apple's on-device Vision models. The hall in 3D is painted from the clip itself.
 struct VideoImportView: View {
-    @State private var model = VideoImportModel()
+    @State var model = VideoImportModel()
+    @State private var saved: [SavedVideo] = []
     var onDone: (VideoScene, URL) -> Void
     var onCancel: () -> Void
 
@@ -44,6 +45,7 @@ struct VideoImportView: View {
         .onChange(of: model.finished) { _, done in
             if done, let scene = model.result, let folder = model.folder { onDone(scene, folder) }
         }
+        .onAppear { saved = VideoStore.list() }
     }
 
     private var header: some View {
@@ -101,6 +103,27 @@ struct VideoImportView: View {
                 Task { await model.load(item) }
             }
             if model.loading { ProgressView("Opening the video…").font(.themed(15, .medium)) }
+            if !saved.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Your videos").font(.themed(15, .semibold)).foregroundStyle(Tokens.textSecondary.color)
+                    ForEach(saved.prefix(4)) { item in
+                        Button { onDone(item.scene, item.folder) } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "cube.transparent").font(.themed(17, .semibold)).foregroundStyle(Tokens.accent.color)
+                                Text(item.scene.title).font(.themed(17, .semibold))
+                                Spacer()
+                                Text(String(format: "%.0f s", item.scene.duration)).font(.themed(15, .regular))
+                                    .foregroundStyle(Tokens.textSecondary.color)
+                                Image(systemName: "chevron.right").font(.themed(14, .semibold))
+                            }
+                            .padding(.horizontal, 16).frame(width: 440, height: 52)
+                            .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
+                            .foregroundStyle(Tokens.text.color)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
             VStack(alignment: .leading, spacing: 10) {
                 tip("arrow.up.circle", "Best filmed from high up, behind an end line.")
                 tip("timer", "4 to 10 seconds: one rally.")

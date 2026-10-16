@@ -33,6 +33,8 @@ struct RootView: View {
                 MatchLogView(summary: summary, onClose: { model.backToLauncher() }, onResume: { model.resume($0) })
             case .studio(let controller):
                 StudioView(controller: controller, onExit: { model.backToLauncher() })
+            case .videoImport(let importer):
+                VideoImportView(model: importer, onDone: { model.openVideo($0, folder: $1) }, onCancel: { model.backToLauncher() })
             }
         }
         // The template decides light or dark for system controls and sheets; Tokens are read here, so a template

@@ -100,6 +100,10 @@ struct LauncherView: View {
             tile(title: "Studio",
                  subtitle: advanced ? "Scenes in 2D and 3D, zones, POV and the ball" : "Draw plays on a 2D or 3D court",
                  symbol: "cube.transparent", enabled: true, action: model.openStudio)
+            tile(title: "Video to 3D",
+                 subtitle: advanced ? "Rebuild a rally from video, on device; eye view in the clip's hall"
+                                    : "Turn a rally video into 3D",
+                 symbol: "video.badge.waveform", enabled: true, action: model.openVideoImport)
             tile(title: "Players",
                  subtitle: hasRoster ? "\(players.count) players" : (advanced ? "Jersey-only quick add" : "Add your players by number"),
                  symbol: "person.3", enabled: true, action: model.openRoster)

@@ -759,6 +759,9 @@ final class SceneVideoTests: XCTestCase {
         let sf = VideoScene(title: "T", duration: 1, camera: Synth.stands, players: [track]).sceneFrame(at: 0.5)
         XCTAssertEqual(sf.tokens.count, 1)
         XCTAssertTrue(sf.zones.isEmpty)
+        XCTAssertEqual(try XCTUnwrap(sf.tokens[0].yaw),
+                       try XCTUnwrap(VideoScene(title: "T", duration: 1, camera: Synth.stands, players: [track]).frame(at: 0.5).yaw[sf.tokens[0].id]),
+                       accuracy: 1e-12)
         // Posed with the reconstructed facing and jump.
         let posed = VideoScene(title: "T", duration: 1, camera: Synth.stands, players: [track]).frame(at: 1).posedPlayers()[0]
         let s = SkeletonModel(BodyMetrics(stature: track.effectiveStature))

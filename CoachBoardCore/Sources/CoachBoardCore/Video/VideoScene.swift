@@ -130,11 +130,13 @@ public struct VideoScene: Codable, Hashable, Sendable, Identifiable {
         return nil
     }
 
-    /// The same moment for code that consumes SceneFrame (tokens and posture blends; no zones). Tokens there face
-    /// the net; `frame(at:)` carries the reconstructed facing.
+    /// The same moment for code that consumes SceneFrame (tokens and posture blends; no zones), each token facing
+    /// the reconstructed way.
     public func sceneFrame(at t: Double) -> SceneFrame {
         let f = frame(at: t)
-        return SceneFrame(tokens: f.tokens, postureBlends: f.postureBlends, zones: [], intensities: [:], morphs: [:])
+        var tokens = f.tokens
+        for i in tokens.indices { tokens[i].yaw = f.yaw[tokens[i].id] }
+        return SceneFrame(tokens: tokens, postureBlends: f.postureBlends, zones: [], intensities: [:], morphs: [:])
     }
 }
 

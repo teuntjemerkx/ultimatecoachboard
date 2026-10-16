@@ -70,6 +70,25 @@ final class VideoImportModel {
         }
     }
 
+    /// Demo and CI: the court-marking step on a still, the dots near (not on) the corners.
+    func demo(still image: CGImage, camera: VideoCamera) {
+        still = image
+        imageSize = CGSize(width: image.width, height: image.height)
+        duration = 8
+        func at(_ p: V3, _ dx: Double, _ dy: Double) -> CGPoint {
+            let q = camera.project(p) ?? ImagePoint(x: 0, y: 0)
+            return CGPoint(x: q.x + dx, y: q.y + dy)
+        }
+        corners = [
+            Corner(label: "THEM", ours: false, point: at(V3(4.5, 0, -9), 3, -2)),
+            Corner(label: "THEM", ours: false, point: at(V3(-4.5, 0, -9), -2, 2)),
+            Corner(label: "US", ours: true, point: at(V3(-4.5, 0, 9), 4, -3)),
+            Corner(label: "US", ours: true, point: at(V3(4.5, 0, 9), -3, 3)),
+        ]
+        solve()
+        step = .mark
+    }
+
     /// Starting dots in a typical end-line view: their end line narrow and high, ours wide and low.
     private func placeDefaultCorners() {
         let w = imageSize.width, h = imageSize.height
@@ -154,23 +173,27 @@ final class VideoImportModel {
             let ball = (try? await VideoVision.ball(clip, from: start, to: end, size: size)) ?? []
             stage = "Building the hall"
             progress = 0.68
-            let plateSize = CGSize(width: 960, height: (960 * size.height / max(size.width, 1)).rounded())
-            let (stills, masks) = try await VideoVision.plateFrames(clip, from: start, to: end, size: plateSize)
-            let plate = CleanPlate.median(frames: stills, masks: masks, width: Int(plateSize.width), height: Int(plateSize.height))
-            _ = VideoVision.writePNG(plate, width: Int(plateSize.width), height: Int(plateSize.height),
-                                     to: folder.appendingPathComponent(VideoStore.plateName))
+            let pw = 960, ph = Int((960 * size.height / max(size.width, 1)).rounded())
+            let (stills, masks) = try await VideoVision.plateFrames(clip, from: start, to: end, size: CGSize(width: pw, height: ph))
+            // The temporal median removes the players and the ball: what stays is the hall.
+            let plate = await Task.detached(priority: .userInitiated) {
+                CleanPlate.median(frames: stills, masks: masks, width: pw, height: ph)
+            }.value
+            _ = VideoVision.writePNG(plate, width: pw, height: ph, to: folder.appendingPathComponent(VideoStore.plateName))
             stage = "Reading body positions"
-            progress = 0.78
+            progress = 0.8
             // The camera was calibrated on the still; Vision frames may be a different size.
             let camera = calibration.camera.scaled(toWidth: Double(size.width), height: Double(size.height))
             let observations = VideoPipeline.observations(frames, ball: ball, camera: camera)
-            var scene = VideoReconstructor.reconstruct(frames: observations, camera: camera, netHeight: 2.43) { p, name in
-                Task { @MainActor [weak self] in
-                    self?.progress = 0.78 + 0.2 * p
-                    self?.stage = name
-                }
+            let title = "Video \(Date().formatted(date: .abbreviated, time: .shortened))"
+            var scene = await Task.detached(priority: .userInitiated) {
+                VideoReconstructor.reconstruct(frames: observations, camera: camera, netHeight: 2.43, title: title,
+                                               environment: VideoPipeline.environment(for: camera))
+            }.value
+            guard !scene.players.isEmpty else {
+                step = .failed("No players were found. Try a clip where the whole court is in view.")
+                return
             }
-            scene.title = "Video \(Date().formatted(date: .abbreviated, time: .shortened))"
             let videoName = "clip." + (sourceURL.pathExtension.isEmpty ? "mov" : sourceURL.pathExtension)
             try? FileManager.default.copyItem(at: sourceURL, to: folder.appendingPathComponent(videoName))
             scene.videoFile = videoName
@@ -207,14 +230,20 @@ enum VideoStore {
         try JSONEncoder().encode(scene).write(to: folder.appendingPathComponent("scene.json"), options: .atomic)
     }
 
-    static func list() -> [(scene: VideoScene, folder: URL)] {
+    static func list() -> [SavedVideo] {
         guard let dir = try? directory(),
               let folders = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { return [] }
         return folders.compactMap { f in
             guard let data = try? Data(contentsOf: f.appendingPathComponent("scene.json")),
                   let s = try? JSONDecoder().decode(VideoScene.self, from: data) else { return nil }
-            return (s, f)
+            return SavedVideo(scene: s, folder: f)
         }
         .sorted { $0.scene.createdAt > $1.scene.createdAt }
     }
+}
+
+struct SavedVideo: Identifiable {
+    var scene: VideoScene
+    var folder: URL
+    var id: UUID { scene.id }
 }

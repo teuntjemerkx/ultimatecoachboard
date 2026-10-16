@@ -13,6 +13,7 @@ final class AppModel {
         case live(LiveController)
         case matchLog(MatchSummary)
         case studio(StudioController)
+        case videoImport(VideoImportModel)
     }
 
     var screen: Screen = .launcher
@@ -42,6 +43,12 @@ final class AppModel {
     }
 
     func newMatch() { screen = .setup }
+
+    /// Video to 3D: choose a clip (or a saved one) and mark the court.
+    func openVideoImport() { screen = .videoImport(VideoImportModel()) }
+
+    /// A rebuilt video rally in the Studio, in 3D from where it was filmed.
+    func openVideo(_ scene: VideoScene, folder: URL) { screen = .studio(StudioController(video: scene, folder: folder)) }
 
     func openRoster() { screen = .roster }
 

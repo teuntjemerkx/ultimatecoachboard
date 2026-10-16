@@ -44,24 +44,16 @@ struct StudioView: View {
                         if controller.view3D && (controller.selectedTokenValue != nil || controller.povPlayer != nil) {
                             POVStrip(controller: controller)
                         }
-                        if advanced && controller.view3D && controller.selectedTokenValue != nil {
-                            PostureStrip(controller: controller)
-                        }
-                        if advanced && !controller.scene.timeline.isEmpty {
-                            BallStrip(controller: controller)
-                        }
-                        if !controller.scene.timeline.isEmpty || advanced {
-                            TimelineStrip(controller: controller)
-                        }
-                        if controller.povPlayer == nil {
-                            LineupBar(controller: controller)
+                        if controller.video != nil {
+                            VideoStrip(controller: controller)
+                        } else {
+                            editingStrips
                         }
                     }
                     .padding(.horizontal, 12)
                     .padding(.bottom, 14)
                     .frame(maxWidth: .infinity)
-                    if controller.scene.timeline.isEmpty && controller.scene.zones.isEmpty && controller.scene.ink.isEmpty
-                        && controller.selectedToken == nil {
+                    if showHint {
                         Text(hint)
                             .font(.themed(15, .medium))
                             .foregroundStyle(Tokens.textSecondary.color)
@@ -84,7 +76,30 @@ struct StudioView: View {
         .onDisappear { controller.save() }
     }
 
+    /// The bottom strips of a hand-made scene: postures, ball, timeline and the lineup bar.
+    @ViewBuilder private var editingStrips: some View {
+        if advanced && controller.view3D && controller.selectedTokenValue != nil {
+            PostureStrip(controller: controller)
+        }
+        if advanced && !controller.scene.timeline.isEmpty {
+            BallStrip(controller: controller)
+        }
+        if !controller.scene.timeline.isEmpty || advanced {
+            TimelineStrip(controller: controller)
+        }
+        if controller.povPlayer == nil {
+            LineupBar(controller: controller)
+        }
+    }
+
+    private var showHint: Bool {
+        if controller.video != nil { return controller.selectedToken == nil && controller.povPlayer == nil }
+        return controller.scene.timeline.isEmpty && controller.scene.zones.isEmpty && controller.scene.ink.isEmpty
+            && controller.selectedToken == nil
+    }
+
     private var hint: String {
+        if controller.video != nil { return "Tap a player, then see what they see" }
         switch controller.tool {
         case .select: return "Drag a player to move them, or play a rally below"
         case .pen: return "Draw with one finger"
@@ -107,7 +122,7 @@ struct StudioView: View {
                     .font(.themed(13, .medium)).foregroundStyle(Tokens.textSecondary.color)
             }
             Spacer()
-            if advanced {
+            if advanced && controller.video == nil {
                 StudioChip("Snap", symbol: "scope", on: controller.snapping) { controller.snapping.toggle() }
                 StudioChip("Swap ends", symbol: "arrow.left.arrow.right") { controller.homeOnLeft.toggle() }
             }
@@ -115,7 +130,9 @@ struct StudioView: View {
                 StudioChip("Reset view", symbol: "camera.metering.center.weighted") { controller.resetCamera() }
             }
             viewSwitch
-            StudioChip("Boards", symbol: "square.stack") { showScenes = true }
+            if controller.video == nil {
+                StudioChip("Boards", symbol: "square.stack") { showScenes = true }
+            }
         }
         .foregroundStyle(Tokens.text.color)
         .padding(.horizontal, 16)
@@ -149,18 +166,7 @@ struct StudioView: View {
 
     private var toolRail: some View {
         VStack(spacing: 6) {
-            toolButton(.select, "Move", "hand.point.up.left")
-            toolButton(.pen, "Draw", "pencil.tip")
-            toolButton(.zone, "Zone", "square.dashed")
-            Divider().overlay(Tokens.hairline.color).padding(.horizontal, 10).padding(.vertical, 4)
-            railButton("Undo", "arrow.uturn.backward", enabled: controller.editor.canUndo) { controller.undo() }
-            railButton("Redo", "arrow.uturn.forward", enabled: controller.editor.canRedo) { controller.redo() }
-            if controller.selectedZone != nil {
-                railButton("Delete", "trash", enabled: true) { controller.deleteSelection() }
-            }
-            if !controller.scene.ink.isEmpty {
-                railButton("Erase", "eraser", enabled: true) { controller.clearInk() }
-            }
+            if controller.video == nil { editingTools }
             Spacer()
             railButton("Home", "house", enabled: true) { controller.save(); onExit() }
         }
@@ -168,6 +174,21 @@ struct StudioView: View {
         .frame(width: Tokens.railWidth)
         .background(Tokens.canvasRaised.color)
         .overlay(alignment: .trailing) { Rectangle().fill(Tokens.hairline.color).frame(width: 1) }
+    }
+
+    @ViewBuilder private var editingTools: some View {
+        toolButton(.select, "Move", "hand.point.up.left")
+        toolButton(.pen, "Draw", "pencil.tip")
+        toolButton(.zone, "Zone", "square.dashed")
+        Divider().overlay(Tokens.hairline.color).padding(.horizontal, 10).padding(.vertical, 4)
+        railButton("Undo", "arrow.uturn.backward", enabled: controller.editor.canUndo) { controller.undo() }
+        railButton("Redo", "arrow.uturn.forward", enabled: controller.editor.canRedo) { controller.redo() }
+        if controller.selectedZone != nil {
+            railButton("Delete", "trash", enabled: true) { controller.deleteSelection() }
+        }
+        if !controller.scene.ink.isEmpty {
+            railButton("Erase", "eraser", enabled: true) { controller.clearInk() }
+        }
     }
 
     private func toolButton(_ tool: StudioController.Tool, _ title: String, _ symbol: String) -> some View {
@@ -480,7 +501,7 @@ struct Studio3DBoardView: UIViewRepresentable {
                     r.flyToPOV()
                 } else {
                     r.setCamera(.topDown(aspect: aspect, homeOnLeft: c.homeOnLeft, vertical: Self.upright(aspect)))
-                    r.animateCamera(to: .bench(aspect: aspect, homeOnLeft: c.homeOnLeft, vertical: Self.upright(aspect)))
+                    r.animateCamera(to: c.videoBoardCamera ?? .bench(aspect: aspect, homeOnLeft: c.homeOnLeft, vertical: Self.upright(aspect)))
                 }
             }
         }
@@ -511,7 +532,8 @@ struct Studio3DBoardView: UIViewRepresentable {
         } else if coordinator.homeOnLeft != controller.homeOnLeft || coordinator.resetCount != controller.cameraResetCount {
             coordinator.homeOnLeft = controller.homeOnLeft
             coordinator.resetCount = controller.cameraResetCount
-            renderer.animateCamera(to: .bench(aspect: aspect, homeOnLeft: controller.homeOnLeft, vertical: Self.upright(aspect)))
+            renderer.animateCamera(to: controller.videoBoardCamera
+                                   ?? .bench(aspect: aspect, homeOnLeft: controller.homeOnLeft, vertical: Self.upright(aspect)))
         }
         if coordinator.povPlayer != controller.povPlayer {
             coordinator.povPlayer = controller.povPlayer
@@ -752,4 +774,32 @@ extension ContactKind {
 extension String {
     /// "LOW DEFENCE" reads "Low defence".
     var sentenceCased: String { self.prefix(1).uppercased() + self.dropFirst().lowercased() }
+}
+
+/// Playback of a video scene: play and pause, the scrubber, slow motion.
+struct VideoStrip: View {
+    let controller: StudioController
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Button { controller.toggleVideoPlay() } label: {
+                Image(systemName: controller.playing ? "pause.fill" : "play.fill")
+                    .font(.themed(18, .bold))
+                    .frame(width: 56, height: 44)
+                    .background(Tokens.accentActive.color, in: RoundedRectangle(cornerRadius: Tokens.radiusSmall))
+                    .foregroundStyle(Tokens.onAccent.color)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(controller.playing ? "Pause" : "Play")
+            Slider(value: Binding(get: { controller.time }, set: { controller.scrubVideo(to: $0) }),
+                   in: 0...max(controller.videoDuration, 0.1))
+                .frame(minWidth: 260, maxWidth: 520)
+                .accessibilityLabel("Time in the rally")
+            Text(String(format: "%.1f / %.1f s", controller.time, controller.videoDuration))
+                .font(.dataMono).foregroundStyle(Tokens.text.color)
+                .frame(width: 120, alignment: .leading)
+            StudioChip("Slow", symbol: "tortoise", on: controller.slowMotion) { controller.slowMotion.toggle() }
+        }
+        .studioPanel()
+    }
 }
