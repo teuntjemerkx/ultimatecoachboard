@@ -5,6 +5,7 @@ import { Icon } from "../ui/Icon";
 import { useSettings } from "../store/settings";
 import { applyTheme, themes, themeById } from "../theme";
 import { makeBackup, restoreBackup, persist, type Backup } from "../store/db";
+import { ScheduleSettings } from "../schedule/ScheduleSettings";
 
 /** Coach level, players, template, and the backup that keeps a season safe. */
 export function Settings() {
@@ -72,6 +73,8 @@ export function Settings() {
               <input id="team-name" value={s.teamName} placeholder="Your team" onChange={(e) => s.set({ teamName: e.target.value })} />
             </label>
           </section>
+
+          <ScheduleSettings />
 
           <section className="stack" style={{ gap: 10 }}>
             <h2 className="group-title">Look</h2>

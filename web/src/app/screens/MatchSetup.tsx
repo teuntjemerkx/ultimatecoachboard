@@ -8,6 +8,11 @@ import { netHeight, useSettings } from "../store/settings";
 import { TeamSystem, type Side } from "../../core/match";
 import { MatchSession, useMatch, type PlayerRef } from "../match/session";
 import type { Player } from "./Players";
+import { useSchedule } from "../schedule/useSchedule";
+import { fixture, ourTeam, upcoming, when, type ScheduledMatch } from "../schedule/schedule";
+
+/** A scheduled match counts as today's from 12 hours before the start (the coach sets up at the hall). */
+const scheduleWindow = 12 * 3600 * 1000;
 
 const SETUP_KEY = "coachboard.lastSetup";
 
@@ -17,11 +22,19 @@ const layout = [[4, 3, 2], [5, 6, 1]];
 /** Screen 2: six players on their positions, who serves, and go. Remembers the last lineup. */
 export function MatchSetup() {
   const go = useNav((s) => s.go);
+  const route = useNav((s) => s.route);
   const open = useMatch((s) => s.open);
   const settings = useSettings();
+  const schedule = useSchedule((s) => s.schedule);
+  const team = schedule ? ourTeam(schedule) : undefined;
+  const coming = upcoming(schedule).filter((m) => !m.cancelled).slice(0, 3);
+  const opponentOf = (m: ScheduledMatch) => fixture(m, team).opponent ?? m.title;
   const [roster, setRoster] = useState<Player[]>([]);
   const last = (() => { try { return JSON.parse(localStorage.getItem(SETUP_KEY) ?? "null"); } catch { return null; } })();
-  const [opponent, setOpponent] = useState<string>(last?.opponentName ?? "");
+  // The match tapped on the start screen, else a scheduled match about to start, else the last opponent.
+  const scheduled = (route.name === "setup" && route.scheduled ? schedule?.matches.find((m) => m.id === route.scheduled) : undefined)
+    ?? coming.find((m) => Date.parse(m.start) - Date.now() < scheduleWindow);
+  const [opponent, setOpponent] = useState<string>(scheduled ? opponentOf(scheduled) : last?.opponentName ?? "");
   const [system, setSystem] = useState<TeamSystem>(last?.system ?? TeamSystem.fiveOneOutside);
   const [slots, setSlots] = useState<(PlayerRef | null)[]>(last?.slots ?? [null, null, null, null, null, null]);
   const [libero, setLibero] = useState<PlayerRef | undefined>(last?.libero);
@@ -133,6 +146,24 @@ export function MatchSetup() {
               <span className="label">Opponent</span>
               <input id="opponent-name" value={opponent} placeholder="Dynamo" onChange={(e) => setOpponent(e.target.value)} />
             </label>
+            {coming.length > 0 && (
+              <div className="stack" style={{ gap: 8 }}>
+                <span className="label">From the schedule</span>
+                <div className="row" style={{ gap: 8 }}>
+                  {coming.map((m) => {
+                    const name = opponentOf(m);
+                    return (
+                      <button key={m.id} type="button" className={`btn small ${opponent === name ? "on" : "secondary"}`}
+                              style={{ flexDirection: "column", alignItems: "flex-start", gap: 0, minHeight: 52, padding: "6px 12px" }}
+                              aria-pressed={opponent === name} onClick={() => setOpponent(name)}>
+                        <span>{name}</span>
+                        <span style={{ fontSize: 13, fontWeight: 500, opacity: 0.8 }}>{when(m)}{fixture(m, team).home === undefined ? "" : fixture(m, team).home ? " · home" : " · away"}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div className="stack" style={{ gap: 8 }}>
               <span className="label">Team system</span>
               <select id="team-system" value={system} onChange={(e) => setSystem(e.target.value as TeamSystem)}

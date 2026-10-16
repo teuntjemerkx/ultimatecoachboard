@@ -3,6 +3,7 @@ import { Icon } from "../ui/Icon";
 import { useNav } from "../store/nav";
 import { useSettings } from "../store/settings";
 import { all } from "../store/db";
+import { NextMatches, NextMatchLine } from "../schedule/NextMatches";
 
 interface MatchRow { id: string; createdAt: string; opponent: string; finished: boolean; score?: string; sets?: string }
 
@@ -37,6 +38,7 @@ export function Home() {
                   <span className="nameplate">{teamName || "Your team"}</span>
                   <span className="stars" aria-hidden="true">★★★</span>
                 </div>
+                <NextMatchLine />
               </div>
               <button className="btn secondary" onClick={() => go({ name: "settings" })}>
                 <Icon name="settings" /> Settings
@@ -78,6 +80,8 @@ export function Home() {
             <Locker icon="players" title="Players" note={players ? `${players} on the team` : ""} text="Add your players by number" onClick={() => go({ name: "players" })} />
             <Locker icon="season" title="Season" note={matches.length ? `${matches.length} matches` : ""} text="How your team did, match by match" onClick={() => go({ name: "season" })} />
           </div>
+
+          <NextMatches />
 
           {matches.length > 0 && (
             <section>

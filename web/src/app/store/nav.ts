@@ -5,7 +5,7 @@ export type Route =
   | { name: "home" }
   | { name: "settings" }
   | { name: "players" }
-  | { name: "setup" }
+  | { name: "setup"; /** A match from the linked schedule. */ scheduled?: string }
   | { name: "live"; matchId: string }
   | { name: "log"; matchId: string }
   | { name: "season" }
