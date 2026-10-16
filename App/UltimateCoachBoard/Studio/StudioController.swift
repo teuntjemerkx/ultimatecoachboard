@@ -177,8 +177,9 @@ final class StudioController {
         let yaw = povPlayer == id ? povYaw : 0, pitch = povPlayer == id ? povPitch : 0
         let pov = viewer.skeleton.povPose(viewer.joints, aspect: 1, yaw: yaw, pitch: pitch)
         let headForward = viewer.skeleton.povPose(viewer.joints, aspect: 1).forward
+        let ball = scene.timeline.isEmpty ? nil : ballPlan.position(at: time)
         let readouts = Gaze.readouts(viewer: viewer, pov: pov, targets: currentGazeTargets(players), players: players,
-                                     netHeight: netHeight)
+                                     netHeight: netHeight, ball: ball)
         return (pov.eye, headForward, viewer.token.side, readouts)
     }
 
@@ -186,6 +187,55 @@ final class StudioController {
 
     /// Net height for POV and line of sight: 2.43 m (men); 2.24 m (women) is a setting to come.
     var netHeight = 2.43
+
+    // MARK: - Ball (Section 5.4)
+
+    /// Solving the flights is RK4 shooting, so the plan is cached per scene value.
+    @ObservationIgnored private var planCache: (scene: TacticalScene, net: Double, plan: BallPlan)?
+
+    var ballPlan: BallPlan {
+        if let c = planCache, c.scene == scene, c.net == netHeight { return c.plan }
+        let plan = scene.ballPlan(netHeight: netHeight)
+        planCache = (scene, netHeight, plan)
+        return plan
+    }
+
+    /// The next floor tap sets where the last flight lands.
+    private(set) var aimingLanding = false
+
+    /// The contact at the current marker, if any.
+    var currentContact: BallContact? {
+        guard let phase = currentPhase else { return nil }
+        return scene.contacts?.first { $0.phase == phase }
+    }
+
+    /// The selected player plays the ball at the current marker (default kind for the marker), or changes its kind.
+    func setContact(_ kind: ContactKind? = nil) {
+        guard let phase = currentPhase, let id = selectedToken else { return }
+        let k = kind ?? ContactKind.choices(at: phase)[0]
+        editor.setContact(BallContact(phase: phase, player: id, kind: k), at: phase)
+        scheduleSave()
+    }
+
+    func removeContact() {
+        guard let phase = currentPhase else { return }
+        editor.setContact(nil, at: phase)
+        scheduleSave()
+    }
+
+    func aimLanding() { aimingLanding.toggle() }
+
+    /// Whether the current marker's contact is the last one (its flight lands on the floor).
+    var currentContactIsLast: Bool {
+        guard let c = currentContact, let i = scene.timeline.firstIndex(of: c.phase) else { return false }
+        return !(scene.contacts ?? []).contains { scene.timeline.firstIndex(of: $0.phase).map { $0 > i } ?? false }
+    }
+
+    var ballSummary: String? {
+        let plan = ballPlan
+        guard let seg = plan.segment(at: time) else { return nil }
+        return seg.summary(netHeight: netHeight)
+    }
 
     var selectedTokenValue: SceneToken? { selectedToken.flatMap { id in scene.tokens.first { $0.id == id } } }
 
@@ -348,6 +398,12 @@ final class StudioController {
     /// A tap on the floor at `w`, or on a player (2D: the token under the finger; 3D: the avatar's body).
     func tap(world w: FloorPoint, token: UUID?) {
         alternative = nil
+        if aimingLanding {
+            aimingLanding = false
+            editor.setBallLanding(w)
+            scheduleSave()
+            return
+        }
         if let token {
             selectedToken = token
             selectedZone = nil
@@ -589,6 +645,14 @@ final class StudioController {
         s.selectedZone = selectedZone
         s.ink = scene.ink.map(\.points) + (liveStroke.count > 1 ? [liveStroke] : [])
         s.highlights = highlights
+        if !scene.timeline.isEmpty {
+            let plan = ballPlan
+            s.ballPaths = plan.segments.compactMap { $0.trajectory?.samples.map { $0.p.floor } }
+            if let b = plan.position(at: time) {
+                s.ball = b.floor
+                s.ballHeight = b.y
+            }
+        }
         return s
     }
 
@@ -608,6 +672,11 @@ final class StudioController {
         s.zoneIntensities = flat.zoneIntensities
         s.selectedZone = flat.selectedZone
         s.netHeight = netHeight
+        if !scene.timeline.isEmpty {
+            let plan = ballPlan
+            s.ballPaths = plan.segments.compactMap { seg in seg.trajectory.map { t in stride(from: 0, to: t.samples.count, by: 3).map { t.samples[$0].p } + [t.end] } }
+            s.ball = plan.position(at: time)
+        }
         s.pov = povPlayer.map { Scene3D.POV(player: $0, yaw: povYaw, pitch: povPitch) }
         if let g = gazeAnalysis(f) {
             s.gaze = g.readouts.map { r in

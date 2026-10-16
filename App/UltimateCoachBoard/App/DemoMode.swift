@@ -152,6 +152,22 @@ enum DemoMode {
         drag("OH1", to: CourtFrame.world(LocalPoint(l: 1.0, d: 0.6), of: .home), at: .attack)
         c.selectToken(c.scene.tokens.first { $0.side == .home && $0.role == "OH1" }?.id)
         c.setPosture(.attack)
+        // The ball: the opposing server floats it, the libero passes, the setter sets high, OH1 attacks cross-court.
+        func contact(_ side: Side, _ role: String, at phase: RallyPhase, _ kind: ContactKind) {
+            guard let t = c.scene.time(of: phase) else { return }
+            c.scrub(to: t)
+            c.selectToken(c.scene.tokens.first { $0.side == side && $0.role == role }?.id)
+            c.setContact(kind)
+        }
+        let server = c.scene.tokens.filter { $0.side == .opponent }.max { abs($0.point.z) < abs($1.point.z) }
+        if let server { contact(.opponent, server.role, at: .serve, .floatServe) }
+        contact(.home, "L", at: .receive, .pass)
+        contact(.home, "S", at: .set, .highSet)
+        contact(.home, "OH1", at: .attack, .attack)
+        c.scrub(to: 3)
+        c.aimLanding()
+        c.tap(world: CourtFrame.world(LocalPoint(l: 7.5, d: 6.5), of: .opponent), token: nil)
+        note("ball: " + c.ballPlan.segments.map { $0.summary(netHeight: c.netHeight) }.joined(separator: " | "))
         if let tip = c.scene.zones.first(where: { $0.semantic.tag == .tipAlert }) {
             c.scrub(to: 2)
             c.tap(world: tip.centroid, token: nil)

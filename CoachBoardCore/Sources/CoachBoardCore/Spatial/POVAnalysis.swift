@@ -46,7 +46,7 @@ extension SceneFrame {
 
 /// One gaze ray of a POV player (Section 5.6) with its visual-field band (5.7).
 public struct GazeReadout: Hashable, Sendable {
-    public enum Aim: String, Sendable { case head, hittingShoulder }
+    public enum Aim: String, Sendable { case head, hittingShoulder, ball }
 
     public var targetID: UUID
     public var targetLabel: String
@@ -58,7 +58,13 @@ public struct GazeReadout: Hashable, Sendable {
 
     /// "MB1 hitting shoulder · central 12° · 100% visible"
     public var text: String {
-        "\(targetLabel) \(aim == .head ? "head" : "hitting shoulder") \u{00B7} \(band.title) \(Int(angle.rounded()))\u{00B0} \u{00B7} \(visibility.readout)"
+        let what: String
+        switch aim {
+        case .head: what = "\(targetLabel) head"
+        case .hittingShoulder: what = "\(targetLabel) hitting shoulder"
+        case .ball: what = "Ball"
+        }
+        return "\(what) \u{00B7} \(band.title) \(Int(angle.rounded()))\u{00B0} \u{00B7} \(visibility.readout)"
     }
 }
 
@@ -75,16 +81,28 @@ public enum Gaze {
         return out
     }
 
+    /// The ball's identity as a gaze target.
+    public static let ballID = UUID(uuidString: "BA11BA11-0000-4000-8000-000000000000")!
+
     /// Visibility and band of each target from the viewer's eye; the occluders are every body and the net.
+    /// With a ball position, the ball (radius 0.105 m) is the first target.
     public static func readouts(viewer: PosedPlayer, pov: CameraPose, targets: [(UUID, GazeReadout.Aim)], players: [PosedPlayer],
-                                netHeight: Double, field: VisualField = VisualField()) -> [GazeReadout] {
+                                netHeight: Double, ball: V3? = nil, field: VisualField = VisualField()) -> [GazeReadout] {
         let occluders = players.flatMap { OccluderModel.body($0.skeleton, posed: $0.joints, owner: $0.id, label: $0.label) }
             + OccluderModel.net(height: netHeight)
-        return targets.compactMap { id, aim in
+        var out: [GazeReadout] = []
+        if let ball {
+            let vis = LineOfSight.visibility(eye: pov.eye, target: ball, radius: BallFlight.radius, occluders: occluders,
+                                             netHeight: netHeight, viewer: viewer.id)
+            let (band, angle) = field.classify(ball - pov.eye, forward: pov.forward, up: .up)
+            out.append(GazeReadout(targetID: ballID, targetLabel: "Ball", aim: .ball, point: ball, visibility: vis, band: band, angle: angle))
+        }
+        return out + targets.compactMap { id, aim in
             guard let t = players.first(where: { $0.id == id }), id != viewer.id else { return nil }
             let k = t.skeleton.metrics.stature / 1.90
             let point = aim == .head ? t.headCentre : t.hittingShoulder
             let radius = (aim == .head ? 0.10 : 0.08) * k
+            guard aim != .ball else { return nil }
             let vis = LineOfSight.visibility(eye: pov.eye, target: point, radius: radius, occluders: occluders,
                                              netHeight: netHeight, viewer: viewer.id, targetOwner: id)
             let (band, angle) = field.classify(point - pov.eye, forward: pov.forward, up: .up)

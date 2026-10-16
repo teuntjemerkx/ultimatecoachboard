@@ -43,6 +43,10 @@ public struct TacticalScene: Codable, Hashable, Sendable, Identifiable {
     public var ink: [InkStroke]
     /// Phase markers of the scene's timeline in order (Section 3.5.7); nil for a static scene.
     public var phases: [RallyPhase]?
+    /// Ball contacts at markers (Section 5.4); the physics flies the ball between them.
+    public var contacts: [BallContact]?
+    /// Where the last flight lands; nil uses the deep middle of the far half.
+    public var ballLanding: FloorPoint?
 
     public init(id: UUID = UUID(), title: String, tokens: [SceneToken] = [], zones: [Zone] = [], ink: [InkStroke] = []) {
         self.id = id
@@ -220,6 +224,17 @@ public struct SceneEditor: Sendable {
             s.zones[i].keys = keys
         }
     }
+
+    /// Sets (or with nil removes) the ball contact at a marker; one contact per marker.
+    public mutating func setContact(_ contact: BallContact?, at phase: RallyPhase) {
+        edit { s in
+            var list = (s.contacts ?? []).filter { $0.phase != phase }
+            if let contact { list.append(contact) }
+            s.contacts = list.isEmpty ? nil : list
+        }
+    }
+
+    public mutating func setBallLanding(_ p: FloorPoint?) { edit { $0.ballLanding = p } }
 
     /// Removes a token's or zone's keyframe at a marker, so it interpolates through that marker again.
     public mutating func clearKey(_ id: UUID, phase: RallyPhase) {

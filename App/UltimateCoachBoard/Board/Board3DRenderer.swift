@@ -92,6 +92,10 @@ struct Scene3D: Equatable {
         var field: VisualField
     }
     var field: FieldCones?
+
+    /// The ball and its solved flights (Section 5.4).
+    var ball: V3?
+    var ballPaths: [[V3]] = []
 }
 
 extension simd_float4x4 {
@@ -121,6 +125,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
     private let atlas: GlyphAtlas?
     private var meshes: [Int: (vertices: MTLBuffer, indices: MTLBuffer, count: Int)] = [:]
     private var skeletons: [Int: SkeletonModel] = [:]
+    private var ballMesh: (vertices: MTLBuffer, indices: MTLBuffer, count: Int)?
     private var loggedFrame = false
     weak var view: MTKView?
 
@@ -370,11 +375,12 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         enc.setFragmentBuffer(vertBuffer, offset: 0, index: 2)
         enc.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
 
-        // 2. Avatars (opaque, write depth).
+        // 2. Avatars and the ball (opaque, write depth).
         let avatarCount = encodeAvatars(enc, uniforms: &u)
+        encodeBall(enc, uniforms: &u)
 
         // 3. Floor ribbons, player rings and the net (blended, depth-tested).
-        let quads = floorQuads() + netQuads() + gazeQuads(eye: eye)
+        let quads = floorQuads() + netQuads() + gazeQuads(eye: eye) + ballQuads(eye: eye)
         if let qb = buffer(quads) {
             enc.setDepthStencilState(depthTestOnly)
             enc.setRenderPipelineState(quadPipeline)
@@ -540,6 +546,70 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
             let px = s * 5.5
             q.append(quad(origin: V3(px - 0.05, 0, 0), u: V3(0.1, 0, 0), v: up * (nh + 0.12), color: RGBA(hex: 0x8A93B8)))
             q.append(quad(origin: V3(px, 0, -0.05), u: V3(0, 0, 0.1), v: up * (nh + 0.12), color: RGBA(hex: 0x6A7398)))
+        }
+        return q
+    }
+
+    // MARK: - Ball
+
+    /// A 10.5 cm sphere drawn with the avatar pipeline: every vertex bound to one joint whose transform is the
+    /// ball's translation.
+    private func makeBallMesh() -> (vertices: MTLBuffer, indices: MTLBuffer, count: Int)? {
+        let rings = 12, segments = 18, r = Float(BallFlight.radius)
+        var verts: [AvatarVertexGPU] = []
+        var idx: [UInt32] = []
+        for i in 0...rings {
+            let theta = -Float.pi / 2 + Float.pi * Float(i) / Float(rings)
+            for k in 0..<segments {
+                let phi = 2 * Float.pi * Float(k) / Float(segments)
+                let n = SIMD3<Float>(cos(theta) * cos(phi), sin(theta), cos(theta) * sin(phi))
+                verts.append(AvatarVertexGPU(position: SIMD4(n * r, 1), normal: SIMD4(n, 0), skin: SIMD4(1, 0, 0, 0)))
+            }
+        }
+        for i in 0..<rings {
+            for k in 0..<segments {
+                let a0 = UInt32(i * segments + k), a1 = UInt32(i * segments + (k + 1) % segments)
+                let b0 = a0 + UInt32(segments), b1 = a1 + UInt32(segments)
+                idx += [a0, a1, b0, a1, b1, b0]
+            }
+        }
+        guard let vb = verts.withUnsafeBytes({ device.makeBuffer(bytes: $0.baseAddress!, length: $0.count, options: .storageModeShared) }),
+              let ib = idx.withUnsafeBytes({ device.makeBuffer(bytes: $0.baseAddress!, length: $0.count, options: .storageModeShared) })
+        else { return nil }
+        return (vb, ib, idx.count)
+    }
+
+    private func encodeBall(_ enc: MTLRenderCommandEncoder, uniforms u: inout Scene3DUniforms) {
+        guard let b = scene.ball else { return }
+        if ballMesh == nil { ballMesh = makeBallMesh() }
+        guard let m = ballMesh else { return }
+        let dq = DualQuat(Rigid(translation: b))
+        var dqs: [SIMD4<Float>] = [SIMD4(Float(dq.real.x), Float(dq.real.y), Float(dq.real.z), Float(dq.real.w)),
+                                   SIMD4(Float(dq.dual.x), Float(dq.dual.y), Float(dq.dual.z), Float(dq.dual.w))]
+        var instance = AvatarInstanceGPU(color: RGBA(hex: 0xFFE14D).simd, dqOffset: 0, selected: 1)
+        enc.setDepthStencilState(depthWrite)
+        enc.setRenderPipelineState(avatarPipeline)
+        enc.setVertexBuffer(m.vertices, offset: 0, index: 0)
+        enc.setVertexBytes(&u, length: MemoryLayout<Scene3DUniforms>.stride, index: 1)
+        enc.setFragmentBytes(&u, length: MemoryLayout<Scene3DUniforms>.stride, index: 1)
+        enc.setVertexBytes(&instance, length: MemoryLayout<AvatarInstanceGPU>.stride, index: 2)
+        enc.setVertexBytes(&dqs, length: MemoryLayout<SIMD4<Float>>.stride * 2, index: 3)
+        enc.drawIndexedPrimitives(type: .triangle, indexCount: m.count, indexType: .uint32, indexBuffer: m.indices,
+                                  indexBufferOffset: 0, instanceCount: 1)
+    }
+
+    /// The flight paths as thin dashed ribbons, and the ball's shadow ring on the floor.
+    private func ballQuads(eye: V3) -> [Quad3D] {
+        var q: [Quad3D] = []
+        for path in scene.ballPaths where path.count > 1 {
+            for i in 1..<path.count {
+                if let r = billboard(path[i - 1], path[i], width: 0.025, eye: eye, color: Tokens.white.withAlpha(0.5), pattern: 4) { q.append(r) }
+            }
+        }
+        if let b = scene.ball {
+            let r = 0.16
+            q.append(quad(origin: V3(b.x - r, 0.013, b.z - r), u: V3(2 * r, 0, 0), v: V3(0, 0, 2 * r),
+                          color: RGBA(hex: 0xFFE14D).withAlpha(0.7), pattern: 3))
         }
         return q
     }

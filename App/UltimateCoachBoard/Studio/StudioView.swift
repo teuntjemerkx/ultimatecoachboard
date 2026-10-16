@@ -41,6 +41,9 @@ struct StudioView: View {
                         if controller.view3D && controller.selectedTokenValue != nil {
                             PostureStrip(controller: controller)
                         }
+                        if !controller.scene.timeline.isEmpty {
+                            BallStrip(controller: controller)
+                        }
                         TimelineStrip(controller: controller)
                     }
                     .padding(.bottom, 16)
@@ -649,5 +652,53 @@ struct FieldRings: View {
             }
             .position(x: g.size.width / 2, y: g.size.height / 2)
         }
+    }
+}
+
+/// Ball contacts at the current marker (Section 5.4): who plays the ball and how; the physics flies it to the
+/// next contact. The readout describes the flight in the air at the current moment.
+struct BallStrip: View {
+    let controller: StudioController
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text("BALL").font(.system(size: 10, weight: .semibold).width(.expanded))
+                .foregroundStyle(Tokens.textSecondary.color)
+            if let phase = controller.currentPhase, let selected = controller.selectedTokenValue {
+                let contact = controller.currentContact
+                if contact?.player == selected.id, let kind = contact?.kind {
+                    ForEach(ContactKind.choices(at: phase), id: \.self) { k in
+                        chip(k.title, on: k == kind) { controller.setContact(k) }
+                    }
+                    chip("NO BALL", on: false) { controller.removeContact() }
+                    if controller.currentContactIsLast {
+                        chip(controller.aimingLanding ? "TAP THE FLOOR" : "AIM", on: controller.aimingLanding) { controller.aimLanding() }
+                    }
+                } else {
+                    chip(contact == nil ? "\(selected.label) PLAYS IT" : "\(selected.label) PLAYS IT INSTEAD", on: false) {
+                        controller.setContact()
+                    }
+                }
+            } else if controller.scene.contacts == nil {
+                Text("Select a player on a marker to place the first contact")
+                    .font(.system(size: 12)).foregroundStyle(Tokens.textSecondary.color)
+            }
+            if let summary = controller.ballSummary {
+                Text(summary).font(.dataMono).foregroundStyle(Tokens.white.color).lineLimit(1)
+            }
+        }
+        .padding(10)
+        .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.hairline.color))
+    }
+
+    private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).font(.system(size: 11, weight: .bold).width(.expanded))
+                .padding(.horizontal, 8).frame(minHeight: 36)
+                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 4))
+                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.white.color)
+        }
+        .buttonStyle(.plain)
     }
 }

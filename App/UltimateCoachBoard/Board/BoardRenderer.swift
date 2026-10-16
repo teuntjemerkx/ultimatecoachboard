@@ -183,6 +183,10 @@ struct BoardScene: Equatable {
     var tethers: [Tether] = []
     var ink: [[FloorPoint]] = []
     var envelope: (FloorPoint, FloorPoint)?                      // two opposite corners in world metres
+    /// The ball (Section 5.4): its flights projected on the floor, and where it is now (with its height).
+    var ballPaths: [[FloorPoint]] = []
+    var ball: FloorPoint?
+    var ballHeight = 0.0
 
     static func == (l: BoardScene, r: BoardScene) -> Bool {
         l.tokens == r.tokens && l.routes == r.routes && l.tethers == r.tethers && l.ink == r.ink
@@ -191,6 +195,7 @@ struct BoardScene: Equatable {
             && l.scoutLines.count == r.scoutLines.count
             && zip(l.scoutLines, r.scoutLines).allSatisfy { $0.0 == $1.0 && $0.1 == $1.1 && $0.2 == $1.2 }
             && l.envelope?.0 == r.envelope?.0 && l.envelope?.1 == r.envelope?.1
+            && l.ballPaths == r.ballPaths && l.ball == r.ball && l.ballHeight == r.ballHeight
     }
 }
 
@@ -425,6 +430,12 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
                 overlays.append(segment(tether.a, tether.b, width: 1.5 + 1.5 * CGFloat(alpha), color: Tokens.accent.withAlpha(alpha)))
             }
         }
+        // Ball flights: their floor track, dashed white.
+        for path in scene.ballPaths where path.count > 1 {
+            for i in stride(from: 1, to: path.count, by: 1) {
+                overlays.append(segment(path[i - 1], path[i], width: 1.5, color: Tokens.white.withAlpha(0.45)))
+            }
+        }
         // Ink in #FF1493, 4 pt.
         for stroke in scene.ink where stroke.count > 1 {
             for i in 1..<stroke.count { overlays.append(segment(stroke[i - 1], stroke[i], width: 4, color: Tokens.accentActive)) }
@@ -467,6 +478,13 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
                 glyphs += atlas.layout(t.label, center: CGPoint(x: CGFloat(c.x), y: CGFloat(c.y)),
                                        height: radius * 1.45, color: Tokens.white.simd)
             }
+        }
+        if let b = scene.ball {
+            // The ball over its floor point; it grows a little with height so a high set reads as high.
+            let c = v(b)
+            let r = Float(6 + min(scene.ballHeight, 8) * 0.8)
+            tokens.append(TokenInstance(center: c, radius: r, ring: 2, shape: 0, glow: 1,
+                                        fill: Tokens.white.simd, ringColor: Tokens.accent.simd))
         }
         return (tokens, glyphs)
     }
