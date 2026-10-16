@@ -1,0 +1,140 @@
+/* Video to 3D: the import flow (choose a clip, mark the court, build) and the watch screen (the clip with tappable
+   players, the 3D court in the hall from the video, eye views). */
+.video-steps { display: flex; gap: 6px; align-items: center; flex: none; }
+.video-steps span { width: 8px; height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--c-bandText) 30%, transparent); }
+.video-steps span.done { background: var(--c-led); }
+.video-steps span.now { width: 22px; background: var(--c-led); }
+
+/* Step 1 */
+.video-choose { max-width: 760px; }
+.video-hero { display: flex; flex-direction: column; gap: 12px; }
+.video-hero .title { font-size: 40px; }
+.video-hero .subtitle { color: var(--c-bandSoft); font-size: 18px; margin: 0; }
+.video-hero-icon { width: 44px; height: 44px; color: var(--c-led); }
+.video-saved { display: flex; flex-direction: column; gap: 10px; }
+.video-saved-item {
+  display: flex; align-items: center; gap: 6px; padding-right: 8px;
+  background: var(--c-surface); border: 1px solid var(--c-hairline); border-radius: var(--radius-card);
+}
+.video-saved-open {
+  flex: 1; min-width: 0; min-height: 72px; display: flex; align-items: center; gap: 14px; padding: 8px 10px 8px 8px;
+  border: 0; background: transparent; cursor: pointer; text-align: left;
+}
+.video-saved-open img, .video-saved-blank {
+  width: 96px; height: 54px; flex: none; object-fit: cover; border-radius: var(--radius-small); background: var(--c-bg);
+  display: grid; place-items: center; color: var(--c-text2);
+}
+.video-saved-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.video-saved-text strong { font: 700 18px/1.2 var(--font-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.video-saved-text .muted { font-size: 15px; }
+.video-tips { display: flex; flex-direction: column; gap: 10px; }
+.video-tips span { display: flex; align-items: center; gap: 12px; }
+.video-tips .icon { color: var(--c-accent); }
+.video-fault { width: 44px; height: 44px; color: var(--c-fault); }
+
+/* Step 2: marking the court */
+.video-mark { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px var(--gutter-r) calc(12px + env(safe-area-inset-bottom, 0px)) var(--gutter-l); }
+.video-mark-head { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
+.video-mark-head strong { font: 800 22px/1.15 var(--font-athletic); text-transform: uppercase; letter-spacing: 0.04em; }
+.video-mark-head .muted { font-size: 15px; }
+.video-mark-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.video-mark-foot .spacer { flex: 1; }
+.video-badge { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.video-badge.good { color: var(--c-home); }
+.video-badge.rough { color: var(--c-fault); }
+.video-start { display: flex; flex-direction: column; gap: 2px; font-size: 15px; font-weight: 600; }
+.video-start input { width: min(260px, 40vw); }
+
+.video-still-box { flex: 1; min-height: 160px; position: relative; touch-action: none; }
+.video-still { position: absolute; border-radius: var(--radius-small); overflow: visible; background: #000; }
+.video-still canvas, .video-still svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: var(--radius-small); }
+.video-still svg { pointer-events: none; }
+.video-still line { stroke: var(--c-led); stroke-width: 2.5; stroke-linecap: round; }
+.video-dot {
+  position: absolute; width: 56px; height: 56px; margin: -28px 0 0 -28px; padding: 0; border: 0; border-radius: 50%; cursor: grab;
+  background: color-mix(in srgb, var(--dot) 25%, transparent); touch-action: none;
+}
+.video-dot::before { content: ""; position: absolute; inset: 13px; border: 3px solid var(--dot); border-radius: 50%; }
+.video-dot::after { content: ""; position: absolute; left: 25px; top: 25px; width: 6px; height: 6px; border-radius: 50%; background: var(--dot); }
+.video-dot.home { --dot: var(--c-home); }
+.video-dot.opponent { --dot: var(--c-opponent); }
+.video-dot.dragging { cursor: grabbing; }
+.video-dot-label {
+  position: absolute; left: 50%; top: -6px; transform: translateX(-50%); padding: 2px 6px; border-radius: 999px;
+  background: var(--dot); color: #fff; font: 800 12px/1.2 var(--font); letter-spacing: 0.04em; white-space: nowrap; pointer-events: none;
+}
+.video-loupe {
+  position: absolute; width: 150px; height: 150px; margin: -75px 0 0 -75px; border-radius: 50%; overflow: hidden; pointer-events: none;
+  border: 3px solid var(--c-text); box-shadow: 0 6px 18px rgba(0,0,0,0.3); z-index: 3;
+}
+.video-loupe canvas { width: 100%; height: 100%; display: block; }
+.video-loupe span {
+  position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font: 300 30px/1 var(--font);
+  text-shadow: 0 0 3px #000;
+}
+
+/* Step 3 */
+.video-building { flex: 1; justify-content: center; }
+.video-progress { width: min(420px, 80vw); height: 8px; border-radius: 4px; background: var(--c-hairline); overflow: hidden; }
+.video-progress span { display: block; height: 100%; background: var(--c-led); transition: width 0.2s; }
+.video-stage-name { font-size: 20px; color: var(--c-text); }
+
+/* Watch */
+.video-bar h1 { font-size: 22px; }
+.video-switch {
+  display: flex; gap: 2px; padding: 3px; flex: none; border-radius: calc(var(--radius-small) + 3px);
+  background: color-mix(in srgb, var(--c-bandText) 14%, transparent);
+}
+.video-switch button {
+  min-width: 72px; min-height: 38px; border: 0; border-radius: var(--radius-small); background: transparent; cursor: pointer;
+  color: var(--c-bandText); font: 800 18px/1 var(--font-athletic); letter-spacing: 0.06em;
+}
+.video-switch button[aria-pressed="true"] { background: var(--c-bandText); color: var(--c-band); }
+
+.video-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; background: #000; }
+.video-board { position: absolute; inset: 0; }
+.video-media { position: absolute; overflow: hidden; }
+.video-media video, .video-media img { width: 100%; height: 100%; display: block; object-fit: contain; background: #000; }
+.video-media.hidden { visibility: hidden; pointer-events: none; }
+.video-media.corner {
+  left: auto; top: 12px; right: 12px; width: min(300px, 38%); z-index: 2; cursor: pointer;
+  border-radius: var(--radius); border: 2px solid color-mix(in srgb, var(--c-text) 60%, transparent); box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+}
+.video-marker {
+  position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  padding: 0; border: 0; background: transparent; cursor: pointer; z-index: 1;
+}
+.video-marker.home { --team: var(--c-home); }
+.video-marker.opponent { --team: var(--c-opponent); }
+.video-marker-label {
+  padding: 2px 7px; border-radius: 999px; background: var(--team); color: #fff; font: 800 13px/1.2 var(--font); white-space: nowrap;
+}
+.video-marker-ring { display: block; border: 3px solid var(--team); border-radius: 50%; }
+.video-hint { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); pointer-events: none; white-space: nowrap; z-index: 1; }
+
+.video-dock {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 0 var(--gutter-r) calc(14px + env(safe-area-inset-bottom, 0px)) var(--gutter-l); pointer-events: none;
+}
+.video-dock .panel { pointer-events: auto; max-width: 100%; }
+.video-emphasis { border-color: color-mix(in srgb, var(--c-accent) 50%, transparent); }
+.video-label { color: var(--c-text2); font-size: 15px; font-weight: 600; white-space: nowrap; }
+.video-chip {
+  min-height: var(--target); padding: 0 12px; border: 0; border-radius: var(--radius-small); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  background: var(--c-bg); color: var(--c-text); font: 700 15px/1 var(--font);
+}
+.video-chip:active { opacity: 0.7; }
+.video-chip.on { background: var(--c-accent); color: var(--c-onAccent); }
+.video-chip.prominent { background: var(--c-accent); color: var(--c-onAccent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-led) 35%, transparent); }
+.video-play { width: 56px; justify-content: center; }
+.video-strip { flex-wrap: nowrap; width: min(820px, 100%); }
+.video-scrub { flex: 1; min-width: 120px; accent-color: var(--c-led); }
+.video-time { min-width: 112px; flex: none; font-size: 15px; white-space: nowrap; text-align: right; }
+
+@media (max-width: 600px) {
+  .video-hero .title { font-size: 32px; }
+  .video-switch button { min-width: 56px; font-size: 16px; }
+  .video-time { min-width: 90px; font-size: 13px; }
+  .video-media.corner { width: 46%; }
+}

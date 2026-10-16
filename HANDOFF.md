@@ -51,32 +51,41 @@ The owner speaks Dutch: always answer in Dutch. App UI text, code, comments and 
     - Each player has a label above the head and a ring on the floor; a numeric label is also printed on the chest and the back.
     - Also drawn: the ball, its shadow and its flights, zones (pattern textures, walls for tagged zones) and ink as floor ribbons, snap highlights, sight lines, and a cylinder pick for taps.
   - `Court3DView.tsx` has an `onDispose` callback, so the Studio frees what it added before the board goes.
-- Core ported from Swift to TypeScript with Vitest tests (126 pass):
+- Video to 3D (task 2), in `web/src/app/video/`, opened from the Video to 3D locker on Home (routes `video` and `watch`):
+  - `VideoImport.tsx` (route `video`), mirroring the native `VideoImportView`: three steps.
+    - Choose: "Choose a video" (a file input, so Photos on the iPad), the saved videos ("Your videos": plate thumbnail, length, players; delete with a second tap) and the filming tips.
+    - Mark: the still at the start + 0.2 s with four dots (THEM on their end line, US on ours) and a 3x loupe above the finger; the court lines and the net are projected back through `CourtCalibration.solveCorners` as the check, with Good fit / Rough fit. A start slider appears for clips over 10.5 s (10 s are used).
+    - Build: a progress bar with the stage, Stop; then the rally opens in the watch screen.
+  - `pipeline.ts` (`buildRally`): frames at 10 per second from `clip.ts` (a hidden `<video>`, at most 1920 px; an all-black frame right after a seek is read again), `detect.ts` on each (the pose model only for people standing near the court, from their box through the camera), the jersey colour of each person as the tracker's appearance cue, one ball pixel per frame (`pickBalls`), about 24 frames with people masked for the clean plate. The plate and the reconstruction run in `rebuild.worker.ts` (a module worker). In dev, `globalThis.__videoDebug` keeps the last observations.
+  - `rallyTracker.ts` (`RallyTracker.forCamera`): the core's tracker with two rules for real footage: tracks seen inside the lines in fewer than 3 frames are dropped before the six-per-side limit (coaches, line judges, officials), and the jump allowance (`maxFootHeight`) is cut to about 2 m along the court for a far, low camera (from 45 to 12 home detections across the net on the broadcast clip). Each player's stature (women/men from Settings) is stored with the scene.
+  - `videoStore.ts`: the IndexedDB `videos` store; a record holds the encoded `VideoScene`, the clip (`clip`, left out by a backup without videos) and the plate (JPEG).
+  - `VideoWatch.tsx` (route `watch`), mirroring the native `VideoWatchView`: Video | Court. The clip is the clock (without a clip, the plate and a clock of its own). Video shows a ring and the label on every player; a tap flies into that player's eyes, with the clip small in the corner (tap it to go back), Look ahead, and one finger to look around. Court shows the 3D board; a tap selects, "See what X sees" goes into the eyes; in eye view a tap on another player switches to them. The strip: play/pause, scrub, time, Slow (half speed); it stops at the end of the rally.
+  - `WatchBoard.tsx` drives `Court3DView`/`Board3D` and `Players3D` (imported, not changed) from `VideoScene.frame(t).posedPlayers()` (the reconstructed facing and jump), draws the ball's flights, and opens where the video was filmed (`videoOrbit`; a broadcast telephoto opens at 40 degrees from closer by, and an upright iPad widens to 60 degrees and stands back).
+  - `Hall3D.ts`: the hall box (walls, ceiling, the hall floor beyond the board) with a projective-texture shader: the clean plate through `VideoCamera.normalizedProjection`, mirror images as in the native shader, the hall colour elsewhere. Faces point inward (a doll's house from outside, closed from a player's eyes). Two checks the native shader lacks: a point counts only when the video camera meets its wall from inside the hall and its ray then lands on the floor outside the hall, and the floor only inside the hall; without them a camera in the stands paints the court or the far stands onto the top of the far wall and the boards onto the floor.
+- Core ported from Swift to TypeScript with Vitest tests (156 pass, with the app's):
   - `web/src/core/match` (match domain)
   - `web/src/core/spatial` (3D math, skeleton, avatar mesh, postures, ball flight, line of sight, POV)
   - `web/src/core/zones` (zones, tactical scene, timeline, ball plan, rally autopilot). `SceneEditor.setLabel` is a web addition (player names and shirt numbers).
-- `web/src/app/video/detect.ts`: two-stage MediaPipe detection, tested on real broadcast frames. The models are downloaded at build time by `web/scripts/fetch-models.mjs`. Not wired to a screen yet.
+  - `web/src/core/video` (calibration, tracking, pose fitting, ball reconstruction, clean plate and hall, video scenes and the reconstructor), with `video.test.ts` (all of `VideoTests.swift`) and `realCalibration.test.ts`. `VideoScene`, `VideoCamera`, `BallSegment` and `HallEnvironment` have `encode`/`decode` in the Swift JSON shape; `VideoCamera.scaled` is the native app's extension. Swift's `height(of:above:)` is `heightAbove`.
+- `web/src/app/video/detect.ts`: two-stage MediaPipe detection (people on an upscaled, tiled frame, then the pose per person crop). The models are downloaded at build time by `web/scripts/fetch-models.mjs`. `detect` takes an optional `wantsPose` filter.
 
 ## Studio: left out on purpose
 
 - The field-of-view cones in 3D (the readouts and the field rings cover it).
 - Two- and three-finger taps for undo and redo (the rail buttons and Cmd-Z do it).
 
-## Web app: next, Video to 3D (task 2)
+## Video to 3D: what is left
 
-1. Port `CoachBoardCore/Sources/CoachBoardCore/Video/*.swift` (about 2,700 lines) and its tests (`VideoTests.swift`, `RealCalibrationTests.swift`) to `web/src/core/video/`. Reuse the spatial, zones and match ports.
-2. Screens, built the same way as the native `VideoImportView` and `VideoWatchView`:
-   - pick a clip (about 8 s, often filmed from behind one end line) and sample frames;
-   - mark the 4 court corners;
-   - run `detect.ts`;
-   - build the clean plate and reconstruct;
-   - store the result in the IndexedDB `videos` store;
-   - watch it in 3D, tap a player to fly into their eyes, with the hall from the video as the environment (projective texture).
+- Checked in the Claude browser pane (desktop Chromium, iPad sizes 1180 x 820 and 820 x 1180) with a real clip: the CI's Tokyo 2020 rally (`rf_backview.gif`, 600 x 338, 14 s at 10 fps, see `.github/workflows/ci.yml`) turned into an MP4 by `web/tools/gif2video.js`; `web/tools/videoflow.js` runs the import with the corners of `RealCalibrationTests`. Result: calibration good (0.02 px RMS), 12 players, 2 ball flights; about 0.6 s per frame (60 s for 10 s of video) plus 3 s of reconstruction. **Not yet tried on the iPad itself**: Safari's seeking and drawing of frames from a .mov out of Photos, the MediaPipe GPU delegate's speed, and memory with 4K clips (the clip is stored whole).
+- Tracking on broadcast footage is imperfect, as in the native app (the same core): near the net some identities still swap across teams and some detections jump to the other half. Ideas: jersey colour to decide a new track's team; a coach's tap to fix a player.
+- The ball comes from the object detector's "sports ball" at 10 frames per second only, so flights are sparse (the native app ran Vision's trajectory detector on every frame). The core takes ball-only frames: sampling extra frames between the pose frames for the ball alone would help.
+- The rings and labels on the video sit at the full stature above the feet (as native), so they float above a crouching player. The home players are labelled 1 to 6 by rotational position, and `Players3D` prints numeric labels on the jerseys; a way to name the players after the build would make that their shirt numbers.
+- Walls the video never saw stay in the plain hall colour (as native).
 
 ## Checks before pushing
 
 ```
 cd web && npx tsc -b && npx vitest run && npm run build
 ```
-On the owner's Mac, Node is in `~/.local/node` (linked from `~/.local/bin`). In the Claude desktop app, the browser pane starts the dev server from the `coach-board-studio` entry in `~/.claude/launch.json` (Vite on port 5174).
+On the owner's Mac, Node is in `~/.local/node` (linked from `~/.local/bin`). In the Claude desktop app, the browser pane starts the dev server from the `coach-board-studio` entry in `~/.claude/launch.json` (Vite on port 5174); `coach-board-video` is the same on port 5176. To try Video to 3D in the pane, put the CI's rally GIF in `web/tools/frames/` (gitignored) with the `curl` line from `ci.yml`, then follow the comment at the top of `web/tools/videoflow.js`.
 Commit trailers used in this repo end with a `Co-Authored-By:` line and a `Claude-Session:` line.

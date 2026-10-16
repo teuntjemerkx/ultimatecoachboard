@@ -58,8 +58,12 @@ export class Detector {
     this.pose.close();
   }
 
-  /** Everyone in a frame and the ball candidates. */
-  detect(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number): FrameDetections {
+  /**
+   * Everyone in a frame and the ball candidates. `wantsPose`, when given, says which people get the pose model (the
+   * others keep their box only), e.g. not the spectators in the stands.
+   */
+  detect(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number,
+    wantsPose?: (box: DetectedPerson["box"]) => boolean): FrameDetections {
     // Upscale so far players are large enough, and cut into two overlapping tiles (the detector's input is square-ish).
     const S = width < 1400 ? 2 : 1;
     const big = canvas(width * S, height * S);
@@ -87,6 +91,7 @@ export class Detector {
     const crop = canvas(256, 256);
     const g = crop.getContext("2d")!;
     for (const p of people) {
+      if (wantsPose && !wantsPose(p.box)) continue;
       const { x, y, w, h } = p.box;
       const side = Math.max(w, h) * 1.5, cx = x + w / 2, cy = y + h / 2;
       g.clearRect(0, 0, 256, 256);
