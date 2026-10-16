@@ -8,8 +8,10 @@ the domain core as a tested Swift package, and an iPad app slice that runs a liv
 - **Everything builds, and the core tests pass.** CI (`.github/workflows/ci.yml`) runs on every push:
   `CoachBoardCore` with Swift 6.1 on Linux and with Xcode 26 on macOS, and the iPad app built for the iOS
   Simulator on a macOS runner, shaders included. Compiler errors and test failures show up as annotations on the run.
-- **The app has not been run on a device yet.** Compiling proves types, SDK APIs and Metal syntax; rendering,
-  gestures and feedback still need a session on a real iPad.
+- **Screenshots.** CI launches the app in the Simulator in demo mode (`-demoScreen launcher|setup|live|setbreak|log`)
+  and publishes the screenshots to the `ci-screenshots` branch on every push to `main`.
+- **The app runs in the Simulator, not yet on a real iPad.** The CI screenshots show the screens rendering; touch
+  gestures, Apple Pencil, the edge pulse in a loud hall and performance still need a session on a device.
 - **The logic is cross-checked.** The rules engine, the rotation templates, the timing model and the shape
   recognizer mirror executable Python references in `Verification/`, and the Swift unit tests assert the numbers
   those references produce (Appendix A and D of the blueprint).
@@ -67,7 +69,7 @@ Verification/              Python references that generated and verified the num
 | Legal Envelope (3.4.5) | `Rules/LegalEnvelope.swift`, drawn while dragging | Implemented, property-tested |
 | Point Swipe rally logic, libero automation, set and match end (2.5) | `Rotation/MatchState.swift`, `Live/LiveView.swift` | Implemented, tested |
 | 5-1 (both lineup orders), 6-2, 4-2, youth W (Appendix A) | `Resources/Templates`, `Templates/TeamSystem.swift` | Verified formations; 6-2 derived from the 5-1 by back-row setter |
-| Route timing validator (2.6) | `Templates/RouteTiming.swift` | Implemented, tested; not yet drawn on the board |
+| Route timing validator (2.6) | `Templates/RouteTiming.swift`, ROUTES on the rail | Tested; drawn live (dashed on time, solid with a LATE chip), re-timed while dragging |
 | Micro-Scouting with aggregation (2.9) | `Scouting/MicroScout.swift`, board taps, Set Break fans | Implemented with attribution and summaries |
 | Panic Time-Out (2.8) | `Live/LiveView.swift` `PanicOverlay` | Countdown, ink, flip for players, attacks toggle, clear |
 | Roster with jersey-only quick add (Screens 18, 19) | `Roster/` | SwiftData teams and players, biometrics with range checks |
@@ -77,9 +79,9 @@ Verification/              Python references that generated and verified the num
 | Match journal and crash recovery (B3) | `Journal/Journal.swift`, `Services/JournalPipe.swift` | Implemented; launcher resumes unfinished matches |
 | Exact undo / redo (2.2) | `Store/LiveStore.swift` | Implemented, tested |
 | Smart Geometry recognizer (3.5.3) | `Geometry/SmartGeometry.swift` | Implemented and tested; the Zone tool UI arrives in Phase 2 |
-| 2D Metal board (3.2) | `Board/` | Court, zone grid, SDF tokens, glyph-atlas numbers, vectors, tethers, ink, hatched envelope |
+| 2D Metal board (3.2) | `Board/` | Court, zone grid, SDF tokens, signed-distance-field numbers, vectors, routes, tethers, ink, hatched envelope |
 | Eyes-free feedback (1.6) | `Services/Haptics.swift`, `EdgePulse` | Edge pulse, optional click, Pencil Pro path-completed haptic |
 
-Not yet in this slice: route timing drawn on the board, MSDF glyphs (numbers use a bitmap SDF atlas), the
-skill-coding pad (Advanced Mode), Desk Link, the `.coachboard` package (the log exports the raw journal), the EDR/P3
-colour pipeline and Sideline Boost. Phase 2 starts with the 3D renderer and the Zone & Hatching engine.
+Not yet in this slice: multi-channel (MSDF) glyphs (numbers use a single-channel distance field), the skill-coding
+pad (Advanced Mode), Desk Link, the `.coachboard` package (the log exports the raw journal), the EDR/P3 colour
+pipeline and Sideline Boost. Phase 2 starts with the 3D renderer and the Zone & Hatching engine.
