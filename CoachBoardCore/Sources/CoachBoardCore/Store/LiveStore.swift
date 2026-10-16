@@ -48,7 +48,7 @@ public enum LiveEvent: Sendable {
     case toggleMode
     case undo
     case redo
-    case startNextSet(firstServer: Side?)
+    case startNextSet(firstServer: Side?, homeStartRotation: Int? = nil)
     case correctRotation(side: Side, setterPosition: CourtPosition?, serving: Side?)
 }
 
@@ -69,7 +69,7 @@ public enum LiveAction: Codable, Hashable, Sendable {
     case substitution(Side, PlayerID, PlayerID)
     case scout(ScoutLine)
     case ink(InkStroke)
-    case nextSet(Side?)
+    case nextSet(Side?, Int?)
     case rotationCorrection(Side, CourtPosition?, Side?)
 }
 
@@ -83,7 +83,9 @@ public struct LoggedAction: Codable, Hashable, Sendable {
 public struct LiveState: Sendable {
     public let setup: MatchStartedPayload
     public let profile: RuleCourtProfile
+    /// The home team's template; the opponent's is `opponentTemplate`.
     public let template: RotationTemplate
+    public let opponentTemplate: RotationTemplate
     public private(set) var mode: CoachMode
     public private(set) var context: LiveContext = .live
     public private(set) var match: MatchState
@@ -94,11 +96,15 @@ public struct LiveState: Sendable {
     public private(set) var redoStack: [UInt64] = []
     public private(set) var overrides: [Side: [CourtPosition: LocalPoint]] = [:]
     public private(set) var nextSeq: UInt64
+    /// Every rally of the active log, in order, with the facts from just before it was played.
+    public private(set) var rallies: [RallyRecord] = []
 
-    public init(setup: MatchStartedPayload, profile: RuleCourtProfile, template: RotationTemplate, nextSeq: UInt64 = 2) {
+    public init(setup: MatchStartedPayload, profile: RuleCourtProfile, template: RotationTemplate,
+                opponentTemplate: RotationTemplate? = nil, nextSeq: UInt64 = 2) {
         self.setup = setup
         self.profile = profile
         self.template = template
+        self.opponentTemplate = opponentTemplate ?? template
         self.mode = setup.mode
         self.match = MatchState(profile: profile, home: setup.home, opponent: setup.opponent, firstServer: setup.firstServer)
         self.nextSeq = nextSeq
@@ -200,9 +206,10 @@ public struct LiveState: Sendable {
             rebuild()
             return effects + [.commitJournal]
 
-        case .startNextSet(let firstServer):
+        case .startNextSet(let firstServer, let homeStartRotation):
             guard match.current.winner != nil, !match.isOver else { return [.haptic(.rejected)] }
-            let effects = record(.nextSet(firstServer), type: .setStarted, payload: SetStartedPayload(firstServer: firstServer))
+            let effects = record(.nextSet(firstServer, homeStartRotation), type: .setStarted,
+                                 payload: SetStartedPayload(firstServer: firstServer, homeStartRotation: homeStartRotation))
             rebuild()
             return effects + [.commitJournal]
 
@@ -234,13 +241,20 @@ public struct LiveState: Sendable {
         var m = MatchState(profile: profile, home: setup.home, opponent: setup.opponent, firstServer: setup.firstServer)
         var lines: [ScoutLine] = []
         var strokes: [InkStroke] = []
+        var played: [RallyRecord] = []
         for entry in log where entry.active {
             switch entry.action {
-            case .rally(let winner): _ = try? m.applyRally(winner: winner)
+            case .rally(let winner):
+                let before = RallyRecord(seq: entry.seq, setNumber: m.current.number, scoreBefore: m.current.score,
+                                         serving: m.current.serving, homeRotation: m.rotationNumber(.home),
+                                         opponentRotation: m.rotationNumber(.opponent), winner: winner,
+                                         server: m.onCourt(m.current.serving)[.p1])
+                if (try? m.applyRally(winner: winner)) != nil { played.append(before) }
             case .substitution(let side, let o, let i): _ = try? m.substitute(side: side, outgoing: o, incoming: i)
             case .scout(let line): lines.append(line)
             case .ink(let stroke): strokes.append(stroke)
-            case .nextSet(let server): _ = try? m.startNextSet(firstServer: server)
+            case .nextSet(let server, let start):
+                _ = try? m.startNextSet(homeLineup: start.flatMap { m.lineup(.home, startingIn: $0) }, firstServer: server)
             case .rotationCorrection(let side, let pos, let serving):
                 m.correctRotation(side: side, setterPosition: pos, rotations: nil, serving: serving)
             }
@@ -248,6 +262,7 @@ public struct LiveState: Sendable {
         match = m
         scoutLines = lines
         ink = strokes
+        rallies = played
         if case .panicTimeOut = context { return }
         context = m.isOver ? .matchOver : (m.current.winner != nil ? .setBreak : .live)
     }
@@ -257,13 +272,15 @@ public struct LiveState: Sendable {
     /// The template phase for a side: the serving team stands in its serve formation.
     public func phase(for side: Side) -> String { match.current.serving == side ? "serve" : "receive" }
 
+    public func template(for side: Side) -> RotationTemplate { side == .home ? template : opponentTemplate }
+
     /// Tokens for both teams: template anchors by position, overridden by any drag in this rally.
     public func tokens() -> [BoardToken] {
         var out: [BoardToken] = []
         for side in Side.allCases {
             let onCourt = match.onCourt(side)
             let sheet = match.sheets[side]
-            let formation = template.formation(rotation: match.rotationNumber(side), phase: phase(for: side))
+            let formation = template(for: side).formation(for: match, side: side, phase: phase(for: side))
             let anchors = formation?.positions ?? Self.genericAnchors(serving: match.current.serving == side)
             for pos in CourtPosition.allCases {
                 guard let id = onCourt[pos] else { continue }
@@ -312,12 +329,34 @@ public struct LiveState: Sendable {
 
     // MARK: - Replay
 
-    /// Rebuilds a Live state from journal records (crash recovery, Match Log replay).
-    public static func replay(records: [JournalRecord], profile: RuleCourtProfile,
-                              template: RotationTemplate) throws -> LiveState? {
+    /// The state as it was just before the action with sequence number `seq` (Match Log, read-only board):
+    /// everything logged from `seq` on is set aside, so later undos are respected exactly.
+    public func rewound(before seq: UInt64) -> LiveState {
+        var s = self
+        for i in s.log.indices where s.log[i].seq >= seq { s.log[i].active = false }
+        s.redoStack = []
+        s.overrides = [:]
+        s.context = .live
+        s.rebuild()
+        return s
+    }
+
+    /// Rebuilds a Live state from journal records, taking both teams' templates from the MatchStarted record.
+    public static func replay(records: [JournalRecord], profile: RuleCourtProfile) throws -> LiveState? {
         guard let first = records.first, first.knownType == .matchStarted else { return nil }
         let setup = try JournalPayload.decode(MatchStartedPayload.self, from: first.payload)
-        var state = LiveState(setup: setup, profile: profile, template: template, nextSeq: first.seq + 1)
+        let home = try TemplateLibrary.template(id: setup.templateID)
+        let opponent = try TemplateLibrary.template(id: setup.opponentTemplateID ?? MatchStartedPayload.defaultOpponentTemplateID)
+        return try replay(records: records, profile: profile, template: home, opponentTemplate: opponent)
+    }
+
+    /// Rebuilds a Live state from journal records (crash recovery, Match Log replay).
+    public static func replay(records: [JournalRecord], profile: RuleCourtProfile,
+                              template: RotationTemplate, opponentTemplate: RotationTemplate? = nil) throws -> LiveState? {
+        guard let first = records.first, first.knownType == .matchStarted else { return nil }
+        let setup = try JournalPayload.decode(MatchStartedPayload.self, from: first.payload)
+        var state = LiveState(setup: setup, profile: profile, template: template, opponentTemplate: opponentTemplate,
+                              nextSeq: first.seq + 1)
         for r in records.dropFirst() {
             state.nextSeq = r.seq
             // A record whose payload cannot be decoded is skipped, never fatal: recovery must not lose a match.
@@ -340,7 +379,7 @@ public struct LiveState: Sendable {
                 }
             case .setStarted:
                 if let p = try? JournalPayload.decode(SetStartedPayload.self, from: r.payload) {
-                    state.appendReplayed(.nextSet(p.firstServer), seq: r.seq)
+                    state.appendReplayed(.nextSet(p.firstServer, p.homeStartRotation), seq: r.seq)
                 }
             case .rotationCorrection:
                 if let p = try? JournalPayload.decode(RotationCorrectionPayload.self, from: r.payload) {
@@ -375,7 +414,16 @@ public struct LiveState: Sendable {
     }
 }
 
-public struct SetStartedPayload: Codable, Hashable, Sendable { public var firstServer: Side? }
+public struct SetStartedPayload: Codable, Hashable, Sendable {
+    public var firstServer: Side?
+    /// The home team's starting rotation for the new set; nil keeps the match's starting lineup.
+    public var homeStartRotation: Int?
+
+    public init(firstServer: Side?, homeStartRotation: Int? = nil) {
+        self.firstServer = firstServer
+        self.homeStartRotation = homeStartRotation
+    }
+}
 public struct MatchEndedPayload: Codable, Hashable, Sendable {
     public var setsHome: Int
     public var setsOpponent: Int

@@ -260,10 +260,15 @@ public struct MatchStartedPayload: Codable, Hashable, Sendable {
     public var opponentName: String?
     public var jerseys: [PlayerID: Int]?
     public var netHeight: Double?
+    /// The opponent's template; nil means the default 5-1 (outside follows setter).
+    public var opponentTemplateID: String?
+    /// Display names of players, when the roster has them.
+    public var names: [PlayerID: String]?
 
     public init(profileName: String, home: TeamSheet, opponent: TeamSheet, firstServer: Side,
                 mode: CoachMode, templateID: String, homeName: String? = nil, opponentName: String? = nil,
-                jerseys: [PlayerID: Int]? = nil, netHeight: Double? = nil) {
+                jerseys: [PlayerID: Int]? = nil, netHeight: Double? = nil, opponentTemplateID: String? = nil,
+                names: [PlayerID: String]? = nil) {
         self.profileName = profileName
         self.home = home
         self.opponent = opponent
@@ -274,6 +279,22 @@ public struct MatchStartedPayload: Codable, Hashable, Sendable {
         self.opponentName = opponentName
         self.jerseys = jerseys
         self.netHeight = netHeight
+        self.opponentTemplateID = opponentTemplateID
+        self.names = names
+    }
+
+    public static let defaultOpponentTemplateID = TeamSystem.fiveOneOutside.rawValue
+}
+
+/// A coach's note (type 0x000F), typed after play and attached to a rally.
+public struct NotePayload: Codable, Hashable, Sendable {
+    /// Sequence number of the rally record the note belongs to; nil for the match as a whole.
+    public var afterSeq: UInt64?
+    public var text: String
+
+    public init(afterSeq: UInt64?, text: String) {
+        self.afterSeq = afterSeq
+        self.text = text
     }
 }
 

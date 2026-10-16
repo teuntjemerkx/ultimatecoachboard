@@ -2052,5 +2052,1413 @@
    7.8,
    6.3
   ]
- }
+ },
+ "f51m": [
+  {
+   "name": "5-1 MB R1 receive",
+   "players": [
+    {
+     "pos": "P1",
+     "role": "S",
+     "l": 8.4,
+     "d": 5.8,
+     "passer": false,
+     "route": {
+      "dest": "target",
+      "length": 5.64,
+      "arrive": 1.5,
+      "deadline": 2.0,
+      "slack": 0.5
+     }
+    },
+    {
+     "pos": "P2",
+     "role": "MB1",
+     "l": 5.5,
+     "d": 0.6,
+     "passer": false,
+     "route": {
+      "dest": "quick",
+      "length": 2.56,
+      "arrive": 0.76,
+      "deadline": 1.85,
+      "slack": 1.09
+     }
+    },
+    {
+     "pos": "P3",
+     "role": "OH1",
+     "l": 2.0,
+     "d": 4.8,
+     "passer": true,
+     "route": {
+      "dest": "left",
+      "length": 2.51,
+      "arrive": 1.9,
+      "deadline": 2.35,
+      "slack": 0.45
+     }
+    },
+    {
+     "pos": "P4",
+     "role": "OPP",
+     "l": 0.7,
+     "d": 0.6,
+     "passer": false,
+     "route": {
+      "dest": "right",
+      "length": 9.18,
+      "arrive": 2.09,
+      "deadline": 2.35,
+      "slack": 0.26
+     }
+    },
+    {
+     "pos": "P5",
+     "role": "L",
+     "l": 4.5,
+     "d": 5.4,
+     "passer": true,
+     "route": null
+    },
+    {
+     "pos": "P6",
+     "role": "OH2",
+     "l": 7.0,
+     "d": 5.5,
+     "passer": true,
+     "route": {
+      "dest": "pipe",
+      "length": 2.73,
+      "arrive": 1.95,
+      "deadline": 2.25,
+      "slack": 0.3
+     }
+    }
+   ],
+   "constraints": [
+    {
+     "a": "P4",
+     "b": "P5",
+     "kind": "fb",
+     "margin": 4.8
+    },
+    {
+     "a": "P3",
+     "b": "P6",
+     "kind": "fb",
+     "margin": 0.7
+    },
+    {
+     "a": "P2",
+     "b": "P1",
+     "kind": "fb",
+     "margin": 5.2
+    },
+    {
+     "a": "P4",
+     "b": "P3",
+     "kind": "left",
+     "margin": 1.3
+    },
+    {
+     "a": "P5",
+     "b": "P6",
+     "kind": "left",
+     "margin": 2.5
+    },
+    {
+     "a": "P2",
+     "b": "P3",
+     "kind": "right",
+     "margin": 3.5
+    },
+    {
+     "a": "P1",
+     "b": "P6",
+     "kind": "right",
+     "margin": 1.4
+    }
+   ],
+   "legal": true,
+   "min_margin": 0.7
+  },
+  {
+   "name": "5-1 MB R6 receive",
+   "players": [
+    {
+     "pos": "P1",
+     "role": "L",
+     "l": 7.0,
+     "d": 5.3,
+     "passer": true,
+     "route": null
+    },
+    {
+     "pos": "P2",
+     "role": "OH1",
+     "l": 2.4,
+     "d": 4.6,
+     "passer": true,
+     "route": {
+      "dest": "left",
+      "length": 2.82,
+      "arrive": 1.96,
+      "deadline": 2.35,
+      "slack": 0.39
+     }
+    },
+    {
+     "pos": "P3",
+     "role": "OPP",
+     "l": 1.4,
+     "d": 0.6,
+     "passer": false,
+     "route": {
+      "dest": "right",
+      "length": 8.52,
+      "arrive": 1.95,
+      "deadline": 2.35,
+      "slack": 0.4
+     }
+    },
+    {
+     "pos": "P4",
+     "role": "MB2",
+     "l": 0.5,
+     "d": 0.6,
+     "passer": false,
+     "route": {
+      "dest": "quick",
+      "length": 4.75,
+      "arrive": 1.2,
+      "deadline": 1.85,
+      "slack": 0.65
+     }
+    },
+    {
+     "pos": "P5",
+     "role": "OH2",
+     "l": 4.2,
+     "d": 5.4,
+     "passer": true,
+     "route": {
+      "dest": "pipe",
+      "length": 1.24,
+      "arrive": 1.65,
+      "deadline": 2.25,
+      "slack": 0.6
+     }
+    },
+    {
+     "pos": "P6",
+     "role": "S",
+     "l": 5.8,
+     "d": 1.2,
+     "passer": false,
+     "route": {
+      "dest": "target",
+      "length": 0.54,
+      "arrive": 0.37,
+      "deadline": 2.0,
+      "slack": 1.63
+     }
+    }
+   ],
+   "constraints": [
+    {
+     "a": "P4",
+     "b": "P5",
+     "kind": "fb",
+     "margin": 4.8
+    },
+    {
+     "a": "P3",
+     "b": "P6",
+     "kind": "fb",
+     "margin": 0.6
+    },
+    {
+     "a": "P2",
+     "b": "P1",
+     "kind": "fb",
+     "margin": 0.7
+    },
+    {
+     "a": "P4",
+     "b": "P3",
+     "kind": "left",
+     "margin": 0.9
+    },
+    {
+     "a": "P5",
+     "b": "P6",
+     "kind": "left",
+     "margin": 1.6
+    },
+    {
+     "a": "P2",
+     "b": "P3",
+     "kind": "right",
+     "margin": 1.0
+    },
+    {
+     "a": "P1",
+     "b": "P6",
+     "kind": "right",
+     "margin": 1.2
+    }
+   ],
+   "legal": true,
+   "min_margin": 0.6
+  },
+  {
+   "name": "5-1 MB R5 receive",
+   "players": [
+    {
+     "pos": "P1",
+     "role": "OH1",
+     "l": 7.0,
+     "d": 5.2,
+     "passer": true,
+     "route": {
+      "dest": "pipe",
+      "length": 2.87,
+      "arrive": 1.97,
+      "deadline": 2.25,
+      "slack": 0.28
+     }
+    },
+    {
+     "pos": "P2",
+     "role": "OPP",
+     "l": 8.0,
+     "d": 0.6,
+     "passer": false,
+     "route": {
+      "dest": "right",
+      "length": 3.45,
+      "arrive": 0.94,
+      "deadline": 2.35,
+      "slack": 1.41
+     }
+    },
+    {
+     "pos": "P3",
+     "role": "MB2",
+     "l": 4.4,
+     "d": 0.6,
+     "passer": false,
+     "route": {
+      "dest": "quick",
+      "length": 2.41,
+      "arrive": 0.73,
+      "deadline": 1.85,
+      "slack": 1.12
+     }
+    },
+    {
+     "pos": "P4",
+     "role": "OH2",
+     "l": 2.4,
+     "d": 4.8,
+     "passer": true,
+     "route": {
+      "dest": "left",
+      "length": 2.88,
+      "arrive": 1.98,
+      "deadline": 2.35,
+      "slack": 0.37
+     }
+    },
+    {
+     "pos": "P5",
+     "role": "S",
+     "l": 1.4,
+     "d": 5.6,
+     "passer": false,
+     "route": {
+      "dest": "target",
+      "length": 6.72,
+      "arrive": 1.74,
+      "deadline": 2.0,
+      "slack": 0.26
+     }
+    },
+    {
+     "pos": "P6",
+     "role": "L",
+     "l": 4.5,
+     "d": 5.4,
+     "passer": true,
+     "route": null
+    }
+   ],
+   "constraints": [
+    {
+     "a": "P4",
+     "b": "P5",
+     "kind": "fb",
+     "margin": 0.8
+    },
+    {
+     "a": "P3",
+     "b": "P6",
+     "kind": "fb",
+     "margin": 4.8
+    },
+    {
+     "a": "P2",
+     "b": "P1",
+     "kind": "fb",
+     "margin": 4.6
+    },
+    {
+     "a": "P4",
+     "b": "P3",
+     "kind": "left",
+     "margin": 2.0
+    },
+    {
+     "a": "P5",
+     "b": "P6",
+     "kind": "left",
+     "margin": 3.1
+    },
+    {
+     "a": "P2",
+     "b": "P3",
+     "kind": "right",
+     "margin": 3.6
+    },
+    {
+     "a": "P1",
+     "b": "P6",
+     "kind": "right",
+     "margin": 2.5
+    }
+   ],
+   "legal": true,
+   "min_margin": 0.8
+  },
+  {
+   "name": "5-1 MB R4 receive",
+   "players": [
+    {
+     "pos": "P1",
+     "role": "OPP",
+     "l": 8.3,
+     "d": 7.6,
+     "passer": false,
+     "route": {
+      "dest": "dball",
+      "length": 1.12,
+      "arrive": 0.47,
+      "deadline": 2.25,
+      "slack": 1.78
+     }
+    },
+    {
+     "pos": "P2",
+     "role": "MB2",
+     "l": 5.0,
+     "d": 0.6,
+     "passer": false,
+     "route": {
+      "dest": "quick",
+      "length": 2.43,
+      "arrive": 0.74,
+      "deadline": 1.85,
+      "slack": 1.11
+     }
+    },
+    {
+     "pos": "P3",
+     "role": "OH2",
+     "l": 2.2,
+     "d": 4.6,
+     "passer": true,
+     "route": {
+      "dest": "left",
+      "length": 2.62,
+      "arrive": 1.92,
+      "deadline": 2.35,
+      "slack": 0.43
+     }
+    },
+    {
+     "pos": "P4",
+     "role": "S",
+     "l": 0.9,
+     "d": 0.5,
+     "passer": false,
+     "route": {
+      "dest": "target",
+      "length": 5.1,
+      "arrive": 1.38,
+      "deadline": 2.0,
+      "slack": 0.62
+     }
+    },
+    {
+     "pos": "P5",
+     "role": "L",
+     "l": 4.2,
+     "d": 5.3,
+     "passer": true,
+     "route": null
+    },
+    {
+     "pos": "P6",
+     "role": "OH1",
+     "l": 7.0,
+     "d": 5.4,
+     "passer": true,
+     "route": {
+      "dest": "pipe",
+      "length": 2.77,
+      "arrive": 1.95,
+      "deadline": 2.25,
+      "slack": 0.3
+     }
+    }
+   ],
+   "constraints": [
+    {
+     "a": "P4",
+     "b": "P5",
+     "kind": "fb",
+     "margin": 4.8
+    },
+    {
+     "a": "P3",
+     "b": "P6",
+     "kind": "fb",
+     "margin": 0.8
+    },
+    {
+     "a": "P2",
+     "b": "P1",
+     "kind": "fb",
+     "margin": 7.0
+    },
+    {
+     "a": "P4",
+     "b": "P3",
+     "kind": "left",
+     "margin": 1.3
+    },
+    {
+     "a": "P5",
+     "b": "P6",
+     "kind": "left",
+     "margin": 2.8
+    },
+    {
+     "a": "P2",
+     "b": "P3",
+     "kind": "right",
+     "margin": 2.8
+    },
+    {
+     "a": "P1",
+     "b": "P6",
+     "kind": "right",
+     "margin": 1.3
+    }
+   ],
+   "legal": true,
+   "min_margin": 0.8
+  },
+  {
+   "name": "5-1 MB R3 receive",
+   "players": [
+    {
+     "pos": "P1",
+     "role": "L",
+     "l": 7.0,
+     "d": 5.2,
+     "passer": true,
+     "route": null
+    },
+    {
+     "pos": "P2",
+     "role": "OH2",
+     "l": 2.2,
+     "d": 4.6,
+     "passer": true,
+     "route": {
+      "dest": "left",
+      "length": 2.62,
+      "arrive": 1.92,
+      "deadline": 2.35,
+      "slack": 0.43
+     }
+    },
+    {
+     "pos": "P3",
+     "role": "S",
+     "l": 1.4,
+     "d": 0.5,
+     "passer": false,
+     "route": {
+      "dest": "target",
+      "length": 4.6,
+      "arrive": 1.27,
+      "deadline": 2.0,
+      "slack": 0.73
+     }
+    },
+    {
+     "pos": "P4",
+     "role": "MB1",
+     "l": 0.5,
+     "d": 0.6,
+     "passer": false,
+     "route": {
+      "dest": "quick",
+      "length": 4.75,
+      "arrive": 1.2,
+      "deadline": 1.85,
+      "slack": 0.65
+     }
+    },
+    {
+     "pos": "P5",
+     "role": "OH1",
+     "l": 4.0,
+     "d": 5.4,
+     "passer": true,
+     "route": {
+      "dest": "pipe",
+      "length": 1.3,
+      "arrive": 1.66,
+      "deadline": 2.25,
+      "slack": 0.59
+     }
+    },
+    {
+     "pos": "P6",
+     "role": "OPP",
+     "l": 5.6,
+     "d": 7.8,
+     "passer": false,
+     "route": {
+      "dest": "dball",
+      "length": 2.51,
+      "arrive": 0.75,
+      "deadline": 2.25,
+      "slack": 1.5
+     }
+    }
+   ],
+   "constraints": [
+    {
+     "a": "P4",
+     "b": "P5",
+     "kind": "fb",
+     "margin": 4.8
+    },
+    {
+     "a": "P3",
+     "b": "P6",
+     "kind": "fb",
+     "margin": 7.3
+    },
+    {
+     "a": "P2",
+     "b": "P1",
+     "kind": "fb",
+     "margin": 0.6
+    },
+    {
+     "a": "P4",
+     "b": "P3",
+     "kind": "left",
+     "margin": 0.9
+    },
+    {
+     "a": "P5",
+     "b": "P6",
+     "kind": "left",
+     "margin": 1.6
+    },
+    {
+     "a": "P2",
+     "b": "P3",
+     "kind": "right",
+     "margin": 0.8
+    },
+    {
+     "a": "P1",
+     "b": "P6",
+     "kind": "right",
+     "margin": 1.4
+    }
+   ],
+   "legal": true,
+   "min_margin": 0.6
+  },
+  {
+   "name": "5-1 MB R2 receive",
+   "players": [
+    {
+     "pos": "P1",
+     "role": "OH2",
+     "l": 7.0,
+     "d": 5.2,
+     "passer": true,
+     "route": {
+      "dest": "pipe",
+      "length": 2.87,
+      "arrive": 1.97,
+      "deadline": 2.25,
+      "slack": 0.28
+     }
+    },
+    {
+     "pos": "P2",
+     "role": "S",
+     "l": 7.0,
+     "d": 0.5,
+     "passer": false,
+     "route": {
+      "dest": "target",
+      "length": 1.02,
+      "arrive": 0.48,
+      "deadline": 2.0,
+      "slack": 1.52
+     }
+    },
+    {
+     "pos": "P3",
+     "role": "MB1",
+     "l": 4.4,
+     "d": 0.6,
+     "passer": false,
+     "route": {
+      "dest": "quick",
+      "length": 2.41,
+      "arrive": 0.73,
+      "deadline": 1.85,
+      "slack": 1.12
+     }
+    },
+    {
+     "pos": "P4",
+     "role": "OH1",
+     "l": 2.0,
+     "d": 4.8,
+     "passer": true,
+     "route": {
+      "dest": "left",
+      "length": 2.51,
+      "arrive": 1.9,
+      "deadline": 2.35,
+      "slack": 0.45
+     }
+    },
+    {
+     "pos": "P5",
+     "role": "OPP",
+     "l": 1.0,
+     "d": 8.0,
+     "passer": false,
+     "route": {
+      "dest": "dball",
+      "length": 6.94,
+      "arrive": 1.64,
+      "deadline": 2.25,
+      "slack": 0.61
+     }
+    },
+    {
+     "pos": "P6",
+     "role": "L",
+     "l": 4.5,
+     "d": 5.5,
+     "passer": true,
+     "route": null
+    }
+   ],
+   "constraints": [
+    {
+     "a": "P4",
+     "b": "P5",
+     "kind": "fb",
+     "margin": 3.2
+    },
+    {
+     "a": "P3",
+     "b": "P6",
+     "kind": "fb",
+     "margin": 4.9
+    },
+    {
+     "a": "P2",
+     "b": "P1",
+     "kind": "fb",
+     "margin": 4.7
+    },
+    {
+     "a": "P4",
+     "b": "P3",
+     "kind": "left",
+     "margin": 2.4
+    },
+    {
+     "a": "P5",
+     "b": "P6",
+     "kind": "left",
+     "margin": 3.5
+    },
+    {
+     "a": "P2",
+     "b": "P3",
+     "kind": "right",
+     "margin": 2.6
+    },
+    {
+     "a": "P1",
+     "b": "P6",
+     "kind": "right",
+     "margin": 2.5
+    }
+   ],
+   "legal": true,
+   "min_margin": 2.4
+  }
+ ],
+ "serve_mb": [
+  {
+   "name": "5-1 MB R1 serve",
+   "players": [
+    {
+     "pos": "P4",
+     "role": "OPP",
+     "l": 3.7,
+     "d": 0.8,
+     "switch_to": [
+      8.0,
+      0.7
+     ],
+     "switch_len": 4.3
+    },
+    {
+     "pos": "P3",
+     "role": "OH1",
+     "l": 4.5,
+     "d": 0.8,
+     "switch_to": [
+      1.0,
+      0.7
+     ],
+     "switch_len": 3.5
+    },
+    {
+     "pos": "P2",
+     "role": "MB1",
+     "l": 5.3,
+     "d": 0.8,
+     "switch_to": [
+      4.5,
+      0.7
+     ],
+     "switch_len": 0.81
+    },
+    {
+     "pos": "P5",
+     "role": "L",
+     "l": 1.2,
+     "d": 6.3,
+     "switch_to": [
+      1.2,
+      6.3
+     ],
+     "switch_len": 0.0
+    },
+    {
+     "pos": "P6",
+     "role": "OH2",
+     "l": 4.5,
+     "d": 8.0,
+     "switch_to": [
+      4.5,
+      8.0
+     ],
+     "switch_len": 0.0
+    },
+    {
+     "pos": "P1",
+     "role": "S (serves)",
+     "l": 7.8,
+     "d": 10.0,
+     "switch_to": [
+      7.8,
+      6.3
+     ],
+     "switch_len": 3.7
+    }
+   ],
+   "legal": true,
+   "min_margin": 0.8,
+   "constraints": [
+    {
+     "a": "P4",
+     "b": "P5",
+     "kind": "fb",
+     "margin": 5.5
+    },
+    {
+     "a": "P3",
+     "b": "P6",
+     "kind": "fb",
+     "margin": 7.2
+    },
+    {
+     "a": "P4",
+     "b": "P3",
+     "kind": "left",
+     "margin": 0.8
+    },
+    {
+     "a": "P5",
+     "b": "P6",
+     "kind": "left",
+     "margin": 3.3
+    },
+    {
+     "a": "P2",
+     "b": "P3",
+     "kind": "right",
+     "margin": 0.8
+    }
+   ]
+  },
+  {
+   "name": "5-1 MB R6 serve",
+   "players": [
+    {
+     "pos": "P4",
+     "role": "MB2",
+     "l": 3.7,
+     "d": 0.8,
+     "switch_to": [
+      4.5,
+      0.7
+     ],
+     "switch_len": 0.81
+    },
+    {
+     "pos": "P3",
+     "role": "OPP",
+     "l": 4.5,
+     "d": 0.8,
+     "switch_to": [
+      8.0,
+      0.7
+     ],
+     "switch_len": 3.5
+    },
+    {
+     "pos": "P2",
+     "role": "OH1",
+     "l": 5.3,
+     "d": 0.8,
+     "switch_to": [
+      1.0,
+      0.7
+     ],
+     "switch_len": 4.3
+    },
+    {
+     "pos": "P5",
+     "role": "OH2",
+     "l": 4.5,
+     "d": 8.0,
+     "switch_to": [
+      4.5,
+      8.0
+     ],
+     "switch_len": 0.0
+    },
+    {
+     "pos": "P6",
+     "role": "S",
+     "l": 7.8,
+     "d": 6.3,
+     "switch_to": [
+      7.8,
+      6.3
+     ],
+     "switch_len": 0.0
+    },
+    {
+     "pos": "P1",
+     "role": "MB1 (serves)",
+     "l": 1.2,
+     "d": 10.0,
+     "switch_to": [
+      1.2,
+      6.3
+     ],
+     "switch_len": 3.7
+    }
+   ],
+   "legal": true,
+   "min_margin": 0.8,
+   "constraints": [
+    {
+     "a": "P4",
+     "b": "P5",
+     "kind": "fb",
+     "margin": 7.2
+    },
+    {
+     "a": "P3",
+     "b": "P6",
+     "kind": "fb",
+     "margin": 5.5
+    },
+    {
+     "a": "P4",
+     "b": "P3",
+     "kind": "left",
+     "margin": 0.8
+    },
+    {
+     "a": "P5",
+     "b": "P6",
+     "kind": "left",
+     "margin": 3.3
+    },
+    {
+     "a": "P2",
+     "b": "P3",
+     "kind": "right",
+     "margin": 0.8
+    }
+   ]
+  },
+  {
+   "name": "5-1 MB R5 serve",
+   "players": [
+    {
+     "pos": "P4",
+     "role": "OH2",
+     "l": 1.0,
+     "d": 0.8,
+     "switch_to": [
+      1.0,
+      0.7
+     ],
+     "switch_len": 0.1
+    },
+    {
+     "pos": "P3",
+     "role": "MB2",
+     "l": 4.5,
+     "d": 0.8,
+     "switch_to": [
+      4.5,
+      0.7
+     ],
+     "switch_len": 0.1
+    },
+    {
+     "pos": "P2",
+     "role": "OPP",
+     "l": 8.0,
+     "d": 0.8,
+     "switch_to": [
+      8.0,
+      0.7
+     ],
+     "switch_len": 0.1
+    },
+    {
+     "pos": "P5",
+     "role": "S",
+     "l": 4.1,
+     "d": 6.3,
+     "switch_to": [
+      7.8,
+      6.3
+     ],
+     "switch_len": 3.7
+    },
+    {
+     "pos": "P6",
+     "role": "L",
+     "l": 4.9,
+     "d": 6.3,
+     "switch_to": [
+      1.2,
+      6.3
+     ],
+     "switch_len": 3.7
+    },
+    {
+     "pos": "P1",
+     "role": "OH1 (serves)",
+     "l": 4.5,
+     "d": 10.0,
+     "switch_to": [
+      4.5,
+      8.0
+     ],
+     "switch_len": 2.0
+    }
+   ],
+   "legal": true,
+   "min_margin": 0.8,
+   "constraints": [
+    {
+     "a": "P4",
+     "b": "P5",
+     "kind": "fb",
+     "margin": 5.5
+    },
+    {
+     "a": "P3",
+     "b": "P6",
+     "kind": "fb",
+     "margin": 5.5
+    },
+    {
+     "a": "P4",
+     "b": "P3",
+     "kind": "left",
+     "margin": 3.5
+    },
+    {
+     "a": "P5",
+     "b": "P6",
+     "kind": "left",
+     "margin": 0.8
+    },
+    {
+     "a": "P2",
+     "b": "P3",
+     "kind": "right",
+     "margin": 3.5
+    }
+   ]
+  },
+  {
+   "name": "5-1 MB R4 serve",
+   "players": [
+    {
+     "pos": "P4",
+     "role": "S",
+     "l": 3.7,
+     "d": 0.8,
+     "switch_to": [
+      8.0,
+      0.7
+     ],
+     "switch_len": 4.3
+    },
+    {
+     "pos": "P3",
+     "role": "OH2",
+     "l": 4.5,
+     "d": 0.8,
+     "switch_to": [
+      1.0,
+      0.7
+     ],
+     "switch_len": 3.5
+    },
+    {
+     "pos": "P2",
+     "role": "MB2",
+     "l": 5.3,
+     "d": 0.8,
+     "switch_to": [
+      4.5,
+      0.7
+     ],
+     "switch_len": 0.81
+    },
+    {
+     "pos": "P5",
+     "role": "L",
+     "l": 1.2,
+     "d": 6.3,
+     "switch_to": [
+      1.2,
+      6.3
+     ],
+     "switch_len": 0.0
+    },
+    {
+     "pos": "P6",
+     "role": "OH1",
+     "l": 4.5,
+     "d": 8.0,
+     "switch_to": [
+      4.5,
+      8.0
+     ],
+     "switch_len": 0.0
+    },
+    {
+     "pos": "P1",
+     "role": "OPP (serves)",
+     "l": 7.8,
+     "d": 10.0,
+     "switch_to": [
+      7.8,
+      6.3
+     ],
+     "switch_len": 3.7
+    }
+   ],
+   "legal": true,
+   "min_margin": 0.8,
+   "constraints": [
+    {
+     "a": "P4",
+     "b": "P5",
+     "kind": "fb",
+     "margin": 5.5
+    },
+    {
+     "a": "P3",
+     "b": "P6",
+     "kind": "fb",
+     "margin": 7.2
+    },
+    {
+     "a": "P4",
+     "b": "P3",
+     "kind": "left",
+     "margin": 0.8
+    },
+    {
+     "a": "P5",
+     "b": "P6",
+     "kind": "left",
+     "margin": 3.3
+    },
+    {
+     "a": "P2",
+     "b": "P3",
+     "kind": "right",
+     "margin": 0.8
+    }
+   ]
+  },
+  {
+   "name": "5-1 MB R3 serve",
+   "players": [
+    {
+     "pos": "P4",
+     "role": "MB1",
+     "l": 3.7,
+     "d": 0.8,
+     "switch_to": [
+      4.5,
+      0.7
+     ],
+     "switch_len": 0.81
+    },
+    {
+     "pos": "P3",
+     "role": "S",
+     "l": 4.5,
+     "d": 0.8,
+     "switch_to": [
+      8.0,
+      0.7
+     ],
+     "switch_len": 3.5
+    },
+    {
+     "pos": "P2",
+     "role": "OH2",
+     "l": 5.3,
+     "d": 0.8,
+     "switch_to": [
+      1.0,
+      0.7
+     ],
+     "switch_len": 4.3
+    },
+    {
+     "pos": "P5",
+     "role": "OH1",
+     "l": 4.5,
+     "d": 8.0,
+     "switch_to": [
+      4.5,
+      8.0
+     ],
+     "switch_len": 0.0
+    },
+    {
+     "pos": "P6",
+     "role": "OPP",
+     "l": 7.8,
+     "d": 6.3,
+     "switch_to": [
+      7.8,
+      6.3
+     ],
+     "switch_len": 0.0
+    },
+    {
+     "pos": "P1",
+     "role": "MB2 (serves)",
+     "l": 1.2,
+     "d": 10.0,
+     "switch_to": [
+      1.2,
+      6.3
+     ],
+     "switch_len": 3.7
+    }
+   ],
+   "legal": true,
+   "min_margin": 0.8,
+   "constraints": [
+    {
+     "a": "P4",
+     "b": "P5",
+     "kind": "fb",
+     "margin": 7.2
+    },
+    {
+     "a": "P3",
+     "b": "P6",
+     "kind": "fb",
+     "margin": 5.5
+    },
+    {
+     "a": "P4",
+     "b": "P3",
+     "kind": "left",
+     "margin": 0.8
+    },
+    {
+     "a": "P5",
+     "b": "P6",
+     "kind": "left",
+     "margin": 3.3
+    },
+    {
+     "a": "P2",
+     "b": "P3",
+     "kind": "right",
+     "margin": 0.8
+    }
+   ]
+  },
+  {
+   "name": "5-1 MB R2 serve",
+   "players": [
+    {
+     "pos": "P4",
+     "role": "OH1",
+     "l": 1.0,
+     "d": 0.8,
+     "switch_to": [
+      1.0,
+      0.7
+     ],
+     "switch_len": 0.1
+    },
+    {
+     "pos": "P3",
+     "role": "MB1",
+     "l": 4.5,
+     "d": 0.8,
+     "switch_to": [
+      4.5,
+      0.7
+     ],
+     "switch_len": 0.1
+    },
+    {
+     "pos": "P2",
+     "role": "S",
+     "l": 8.0,
+     "d": 0.8,
+     "switch_to": [
+      8.0,
+      0.7
+     ],
+     "switch_len": 0.1
+    },
+    {
+     "pos": "P5",
+     "role": "OPP",
+     "l": 4.1,
+     "d": 6.3,
+     "switch_to": [
+      7.8,
+      6.3
+     ],
+     "switch_len": 3.7
+    },
+    {
+     "pos": "P6",
+     "role": "L",
+     "l": 4.9,
+     "d": 6.3,
+     "switch_to": [
+      1.2,
+      6.3
+     ],
+     "switch_len": 3.7
+    },
+    {
+     "pos": "P1",
+     "role": "OH2 (serves)",
+     "l": 4.5,
+     "d": 10.0,
+     "switch_to": [
+      4.5,
+      8.0
+     ],
+     "switch_len": 2.0
+    }
+   ],
+   "legal": true,
+   "min_margin": 0.8,
+   "constraints": [
+    {
+     "a": "P4",
+     "b": "P5",
+     "kind": "fb",
+     "margin": 5.5
+    },
+    {
+     "a": "P3",
+     "b": "P6",
+     "kind": "fb",
+     "margin": 5.5
+    },
+    {
+     "a": "P4",
+     "b": "P3",
+     "kind": "left",
+     "margin": 3.5
+    },
+    {
+     "a": "P5",
+     "b": "P6",
+     "kind": "left",
+     "margin": 0.8
+    },
+    {
+     "a": "P2",
+     "b": "P3",
+     "kind": "right",
+     "margin": 3.5
+    }
+   ]
+  }
+ ]
 }

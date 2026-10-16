@@ -217,10 +217,36 @@ public struct MatchState: Codable, Hashable, Sendable {
         return (6 - team.rotations % 6) % 6 + 1
     }
 
-    /// The rotational slot of the team's setter in this set's lineup order.
+    /// The rotational slot of the team's setter in this set's lineup order ("S" in a 5-1, "S1" in a 4-2 or 6-2).
     func setterSlot(_ side: Side) -> Int? {
-        guard let sheet = sheets[side], let setter = sheet.roles.first(where: { $0.value == "S" })?.key else { return nil }
-        return current[side].lineup.firstIndex(of: setter) ?? sheet.startingLineup.firstIndex(of: setter)
+        slot(ofRole: "S", side: side) ?? slot(ofRole: "S1", side: side)
+    }
+
+    /// The rotational slot of the player who started the set with `role`; substitutes keep the slot.
+    public func slot(ofRole role: String, side: Side) -> Int? {
+        guard let sheet = sheets[side], let id = sheet.roles.first(where: { $0.value == role })?.key else { return nil }
+        return current[side].lineup.firstIndex(of: id) ?? sheet.startingLineup.firstIndex(of: id)
+    }
+
+    /// Court positions currently held by the rotational slots of the given roles.
+    public func positions(ofRoles roles: [String], side: Side) -> [CourtPosition] {
+        let n = current[side].rotations
+        return roles.compactMap { slot(ofRole: $0, side: side) }
+            .compactMap { CourtPosition(rawValue: (($0 - n) % 6 + 6) % 6 + 1) }
+    }
+
+    /// The team's starting lineup rotated so that the next set starts in `rotation`
+    /// (named by the setter's position; by side-out sequence when no setter is known).
+    public func lineup(_ side: Side, startingIn rotation: Int) -> [PlayerID]? {
+        guard let base = sheets[side]?.startingLineup, (1...6).contains(rotation) else { return nil }
+        let setter = sheets[side].flatMap { s in s.roles.first { $0.value == "S" }?.key ?? s.roles.first { $0.value == "S1" }?.key }
+        let k: Int
+        if let setter, let s = base.firstIndex(of: setter) {
+            k = ((s - (rotation - 1)) % 6 + 6) % 6        // player(at: P_rotation) is then the setter
+        } else {
+            k = (7 - rotation) % 6                          // inverse of the sequence numbering above
+        }
+        return (0..<6).map { base[($0 + k) % 6] }
     }
 
     /// The server and the next servers of a team, in order.

@@ -71,7 +71,7 @@ public struct FormationValidation: Hashable, Sendable {
 }
 
 public enum TemplateLibrary {
-    public static let shippedIDs = ["5-1-outside-follows-setter", "4-2", "youth-w"]
+    public static let shippedIDs = ["5-1-outside-follows-setter", "5-1-middle-follows-setter", "4-2", "youth-w"]
 
     public static func decode(_ data: Data) throws -> RotationTemplate {
         let t = try JSONDecoder().decode(RotationTemplate.self, from: data)

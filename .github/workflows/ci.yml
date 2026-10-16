@@ -21,19 +21,29 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v5
-      - name: Xcode version
-        run: xcodebuild -version
+      - name: Tools
+        run: |
+          xcodebuild -version
+          brew install xcodegen xcbeautify
+      # xcbeautify's GitHub renderer turns compiler errors and test failures into annotations on the run.
       - name: swift test
         working-directory: CoachBoardCore
-        run: swift test
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee ../core-test.log | xcbeautify --renderer github-actions
       - name: Generate the Xcode project
         working-directory: App
-        run: |
-          brew install xcodegen
-          xcodegen
+        run: xcodegen
       - name: Build for the iOS Simulator
         working-directory: App
         run: |
+          set -o pipefail
           xcodebuild -project UltimateCoachBoard.xcodeproj -scheme UltimateCoachBoard \
             -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO build
+            CODE_SIGNING_ALLOWED=NO build 2>&1 | tee ../app-build.log | xcbeautify --renderer github-actions
+      - name: Report raw errors
+        if: failure()
+        run: |
+          cat core-test.log app-build.log 2>/dev/null \
+            | grep -E 'error:|error: |ld: |Undefined symbol|failed' | sort -u | head -40 \
+            | while IFS= read -r line; do echo "::error::${line:0:900}"; done

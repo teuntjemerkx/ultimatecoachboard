@@ -18,6 +18,17 @@ t51 = {"format": "cb.rotation-template/1", "id": "5-1-outside-follows-setter", "
        "lineupOrder": ["S", "OH1", "MB1", "OPP", "OH2", "MB2"], "libero": {"replaces": ["MB1", "MB2"], "whenServing": False},
        "setterTarget": [6.0, 0.7], "routeTargets": ROUTES, "baseSlots": a["base"], "formations": f51}
 json.dump(t51, open(OUT + "5-1-outside-follows-setter.json", "w"), indent=1)
+f51m = []
+for f in a["f51m"]:
+    f51m.append(dict(rotation=rotnum[f["name"].split()[2]], phase="receive", players=players(f), expectedMinMargin=f["min_margin"]))
+for s in a["serve_mb"]:
+    ps = [dict(role=p["role"].replace(" (serves)", ""), position=int(p["pos"][1]), anchor=[p["l"], p["d"]], passes=False,
+               route=None, switchTo=list(p["switch_to"])) for p in s["players"]]
+    f51m.append(dict(rotation=rotnum[s["name"].split()[2]], phase="serve", players=ps, expectedMinMargin=s["min_margin"]))
+t51m = {"format": "cb.rotation-template/1", "id": "5-1-middle-follows-setter", "system": "5-1",
+        "lineupOrder": ["S", "MB1", "OH1", "OPP", "MB2", "OH2"], "libero": {"replaces": ["MB1", "MB2"], "whenServing": False},
+        "setterTarget": [6.0, 0.7], "routeTargets": ROUTES, "baseSlots": a["base"], "formations": f51m}
+json.dump(t51m, open(OUT + "5-1-middle-follows-setter.json", "w"), indent=1)
 pat = {"4-2 pattern A (front setter in P4)": 4, "4-2 pattern B (front setter in P3)": 3, "4-2 pattern C (front setter in P2)": 2}
 f42 = [dict(rotation=pat[f["name"]], phase="receive", frontSetterPosition=pat[f["name"]], players=players(f), expectedMinMargin=f["min_margin"]) for f in a["f42"]]
 t42 = {"format": "cb.rotation-template/1", "id": "4-2", "system": "4-2", "lineupOrder": ["S1", "OH1", "MB1", "S2", "OH2", "MB2"],
@@ -42,4 +53,4 @@ prof = {"format": "cb.rule-court-profile/1", "name": "FIVB senior indoor",
         "scoring": {"pointsPerSet": 25, "decidingSetPoints": 15, "winBy": 2, "setsToWin": 3},
         "timeOuts": {"perSet": 2, "seconds": 30}}
 json.dump(prof, open(os.path.join(OUT, "..", "Profiles", "fivb-senior.json"), "w"), indent=1)
-print("ok", len(f51), len(f42))
+print("ok", len(f51), len(f51m), len(f42))
