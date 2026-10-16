@@ -14,6 +14,15 @@ export interface CourtToken {
   facing?: number;
 }
 
+/** World (x, z) to the SVG's view (u, v) and back, for a layout; overlays drawn as children use the same mapping. */
+export function courtView(vertical: boolean, flipped = false) {
+  const s = flipped ? -1 : 1;
+  return {
+    view: (x: number, z: number) => (vertical ? { u: s * x, v: s * z } : { u: -s * z, v: s * x }),
+    world: (u: number, v: number) => (vertical ? { x: s * u, z: s * v } : { x: s * v, z: -s * u }),
+  };
+}
+
 /**
  * The court from above (Section 1.4) as SVG in metres. Landscape: the net runs top to bottom, home on the left as
  * seen from the bench. Portrait: the court stands upright, home at the bottom.
@@ -28,10 +37,7 @@ export function Court2D({ tokens, vertical, flipped = false, onPointer, children
 }) {
   const m = 2.4;
   const [w, h] = vertical ? [9 + 2 * m, 18 + 2 * m] : [18 + 2 * m, 9 + 2 * m];
-  const s = flipped ? -1 : 1;
-  // World (x, z) to view (u, v), and back.
-  const view = (x: number, z: number) => (vertical ? { u: s * x, v: s * z } : { u: -s * z, v: s * x });
-  const world = (u: number, v: number) => (vertical ? { x: s * u, z: s * v } : { x: s * v, z: -s * u });
+  const { view, world } = courtView(vertical, flipped);
   const line = (x1: number, z1: number, x2: number, z2: number, key: string, dash?: string) => {
     const a = view(x1, z1), b = view(x2, z2);
     return <line key={key} x1={a.u} y1={a.v} x2={b.u} y2={b.v} stroke="var(--c-courtLine)" strokeWidth={0.05} strokeDasharray={dash} />;
