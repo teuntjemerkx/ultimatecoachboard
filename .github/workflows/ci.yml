@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches-ignore: [ci-screenshots]
+    paths-ignore: ['web/**', '.github/workflows/web.yml']
   pull_request:
   workflow_dispatch:
 
