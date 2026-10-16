@@ -89,15 +89,25 @@ public struct SkeletonModel: Hashable, Sendable {
     /// World transforms of every joint for a posture, standing at `position` on the floor facing `facing`
     /// (radians from world +Z toward +X), lifted by `jump` metres. Feet are put on the floor unless airborne.
     public func pose(_ posture: Posture, position: FloorPoint, facing: Double, jump: Double = 0) -> [Rigid] {
+        pose(PostureBlend(from: posture, to: posture, t: 0), position: position, facing: facing, jump: jump)
+    }
+
+    /// A pose between two postures: every joint rotation slerps, the shoulder elevation interpolates (Section 3.3).
+    public func pose(_ blend: PostureBlend, position: FloorPoint, facing: Double, jump: Double = 0) -> [Rigid] {
         var world = [Rigid](repeating: .identity, count: Joint.allCases.count)
-        let rot = posture.rotations
+        let a = blend.from.rotations, b = blend.to.rotations
+        let t = max(0, min(1, blend.t))
         for j in Joint.allCases {
             var offset = restOffsets[j.rawValue]
             // Raising an arm overhead lifts the shoulder (clavicle elevation), which the reach measurement includes.
             if j == .lShoulder || j == .rShoulder {
-                offset.y += Self.shoulderElevation * metrics.stature * posture.shoulderLift(left: j == .lShoulder)
+                let left = j == .lShoulder
+                let lift = blend.from.shoulderLift(left: left) * (1 - t) + blend.to.shoulderLift(left: left) * t
+                offset.y += Self.shoulderElevation * metrics.stature * lift
             }
-            let local = Rigid(rotation: rot[j] ?? .identity, translation: offset)
+            let ra = a[j] ?? .identity, rb = b[j] ?? .identity
+            let rotation = t == 0 ? ra : (t == 1 ? rb : ra.slerp(to: rb, t))
+            let local = Rigid(rotation: rotation, translation: offset)
             if let p = j.parent {
                 world[j.rawValue] = world[p.rawValue] * local
             } else {

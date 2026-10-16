@@ -118,3 +118,19 @@ final class SkeletonTests: XCTestCase {
         XCTAssertEqual(top, 1.9, accuracy: 0.04)                                     // the head reaches the stature
     }
 }
+
+final class BenchViewTests: XCTestCase {
+    func testBenchViewSitsBesideTheHomeHalfWithHomeOnTheChosenSide() throws {
+        for homeOnLeft in [true, false] {
+            let cam = BoardCamera.bench(aspect: 1.43, homeOnLeft: homeOnLeft)
+            XCTAssertGreaterThan(cam.eye.z, 0, "the bench is beside the home half")
+            let home = try XCTUnwrap(cam.project(V3(0, 0, 6), aspect: 1.43))
+            let away = try XCTUnwrap(cam.project(V3(0, 0, -6), aspect: 1.43))
+            XCTAssertEqual(home.x < away.x, homeOnLeft)
+            // The net is no longer edge-on: its two antennas project apart horizontally.
+            let a = try XCTUnwrap(cam.project(V3(-4.5, 2.43, 0), aspect: 1.43))
+            let b = try XCTUnwrap(cam.project(V3(4.5, 2.43, 0), aspect: 1.43))
+            XCTAssertGreaterThan(abs(a.x - b.x), 0.1)
+        }
+    }
+}

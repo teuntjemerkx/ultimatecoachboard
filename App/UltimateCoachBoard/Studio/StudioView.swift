@@ -25,19 +25,21 @@ struct StudioView: View {
                     if controller.tool == .zone || controller.selectedZone != nil {
                         ZoneStrip(controller: controller).padding(12)
                     }
-                    if controller.view3D && controller.selectedTokenValue != nil {
-                        VStack {
-                            Spacer()
-                            PostureStrip(controller: controller).padding(.bottom, 16)
+                    VStack(spacing: 8) {
+                        Spacer()
+                        if controller.view3D && controller.selectedTokenValue != nil {
+                            PostureStrip(controller: controller)
                         }
-                        .frame(maxWidth: .infinity)
+                        TimelineStrip(controller: controller)
                     }
+                    .padding(.bottom, 16)
+                    .frame(maxWidth: .infinity)
                     if controller.scene.zones.isEmpty && controller.scene.ink.isEmpty {
                         VStack {
                             Spacer()
                             Text("Draw a zone or drag a player").font(.system(size: 15))
                                 .foregroundStyle(Tokens.textSecondary.color)
-                                .padding(.bottom, 24)
+                                .padding(.bottom, 84)
                         }
                         .frame(maxWidth: .infinity)
                         .allowsHitTesting(false)
@@ -439,15 +441,83 @@ struct PostureStrip: View {
             HStack(spacing: 6) {
                 Text("#\(token.label) POSTURE").font(.system(size: 10, weight: .semibold).width(.expanded))
                     .foregroundStyle(Tokens.textSecondary.color)
-                chip("AUTO", on: token.posture == nil) { controller.setPosture(nil) }
+                let explicit = controller.selectedExplicitPosture
+                chip("AUTO", on: explicit == nil) { controller.setPosture(nil) }
                 ForEach(Posture.allCases, id: \.self) { p in
-                    chip(p.rawValue.uppercased(), on: token.posture == p) { controller.setPosture(p) }
+                    chip(p.rawValue.uppercased(), on: explicit == p) { controller.setPosture(p) }
                 }
             }
             .padding(10)
             .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.accent.withAlpha(0.5).color))
         }
+    }
+
+    private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).font(.system(size: 11, weight: .bold).width(.expanded))
+                .padding(.horizontal, 8).frame(minHeight: 36)
+                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 4))
+                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.white.color)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// The rally timeline (Section 3.5.7): phase markers, play, and the selected item's keyframe at the marker.
+/// Edits made while resting on a later marker become keyframes there; the first marker holds the base scene.
+struct TimelineStrip: View {
+    let controller: StudioController
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if controller.scene.timeline.isEmpty {
+                chip("ANIMATE BY PHASE", on: false) { controller.enableTimeline() }
+                    .accessibilityHint("Adds the markers serve to defence; players and zones can then change per phase")
+            } else {
+                Button { controller.togglePlay() } label: {
+                    Image(systemName: controller.playing ? "stop.fill" : "play.fill")
+                        .font(.system(size: 16, weight: .bold))
+                        .frame(width: 44, height: 36)
+                        .background(Tokens.accent.color, in: RoundedRectangle(cornerRadius: 4))
+                        .foregroundStyle(Tokens.canvasBase.color)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(controller.playing ? "Stop" : "Play the rally")
+                ForEach(controller.scene.timeline, id: \.self) { phase in
+                    let on = controller.currentPhase == phase
+                    Button { controller.go(to: phase) } label: {
+                        VStack(spacing: 2) {
+                            Text(phase.title).font(.system(size: 11, weight: .bold).width(.expanded))
+                            Circle().frame(width: 5, height: 5)
+                                .opacity(controller.selectionHasKey(at: phase) ? 1 : 0)
+                        }
+                        .padding(.horizontal, 8).frame(minHeight: 36)
+                        .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 4))
+                        .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.white.color)
+                    }
+                    .buttonStyle(.plain)
+                }
+                if controller.selectedToken != nil || controller.selectedZone != nil, let phase = controller.currentPhase,
+                   controller.scene.timeline.first != phase {
+                    Divider().frame(height: 28).overlay(Tokens.hairline.color)
+                    if controller.selectionHasKey(at: phase) {
+                        chip("CLEAR KEY", on: false) { controller.clearSelectionKey() }
+                    } else {
+                        chip("HOLD HERE", on: false) { controller.pinSelection() }
+                    }
+                    if controller.selectedZone != nil {
+                        let hidden = (controller.frame.intensities[controller.selectedZone!] ?? 1) < 0.5
+                        chip(hidden ? "SHOW" : "HIDE", on: hidden) { controller.toggleSelectedZoneVisibility() }
+                    }
+                }
+                Divider().frame(height: 28).overlay(Tokens.hairline.color)
+                chip("STATIC", on: false) { controller.disableTimeline() }
+            }
+        }
+        .padding(10)
+        .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.hairline.color))
     }
 
     private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {

@@ -85,9 +85,10 @@ Verification/              Python references that generated and verified the num
 | Smart Geometry recognizer (3.5.3) | `Geometry/SmartGeometry.swift` | Implemented and tested; the Zone tool UI arrives in Phase 2 |
 | Zone & Hatching engine, 2D (3.5) | `Zones/`, `Board/Shaders.metal` `zoneFragment`, `Studio/` | Exact SDFs, Smart Geometry with court-aware snapping, tags with default styles, cross-hatch/diagonal/dots/glow/outline with anti-moiré; Studio (Screen 8, 2D) with the W3 strip, alternative chip, undo, scenes saved as JSON |
 | 3D board (3.2, 5.2) | `Spatial/` (camera, skeleton, postures, skinning), `Board/Board3DRenderer.swift`, `Board/Shaders3D.metal` | One orbit camera for 2D and 3D with a dolly-zoom between them; 4x MSAA with depth; the floor pass shares the zone shader with 2D; net with mesh, tape, antennas and posts; 17-joint avatars sized by stature with dual-quaternion skinning and eight postures; zone walls and cylinders fading with height; labels above the heads. In the Studio: the 3D toggle, two-finger orbit and pinch, drawing and dragging on the floor through the touch ray, posture chips |
+| Zones and players through a rally (3.3, 3.5.7) | `Zones/SceneTimeline.swift`, `Studio/` timeline strip | Phase markers serve to defence; edits on a later marker become keyframes; centripetal Catmull-Rom paths by arc length with critically damped easing; zones interpolate per type (angles the short way), polygons resample to 64 points and align, type changes blend signed distances in the shader; posture slerp per joint; keyframed zone intensity; play, hold and clear |
 | 2D Metal board (3.2) | `Board/` | Court, zone grid, SDF tokens, signed-distance-field numbers, vectors, routes, tethers, ink, hatched envelope |
 | Eyes-free feedback (1.6) | `Services/Haptics.swift`, `EdgePulse` | Edge pulse, optional click, Pencil Pro path-completed haptic |
 
 Not yet in this slice: multi-channel (MSDF) glyphs (numbers use a single-channel distance field), Desk Link, the `.coachboard` package (the log exports the raw journal), the EDR/P3 colour
-pipeline and Sideline Boost. Phase 2 so far: the Zone & Hatching engine and the 3D board in the Studio; next are POV
-with gaze and field-of-view bands, zone keyframes per phase, ball flight and the Drill Architect.
+pipeline and Sideline Boost. Phase 2 so far: the Zone & Hatching engine, the 3D board in the Studio and the rally timeline;
+next are POV with gaze and field-of-view bands, ball flight and the Drill Architect.

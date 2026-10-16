@@ -99,12 +99,16 @@ public struct Zone: Codable, Hashable, Sendable, Identifiable {
     public var geometry: ZoneGeometry
     public var style: ZoneStyle
     public var semantic: ZoneSemantic
+    /// Keyframes at later phase markers (Section 3.5.7); `geometry` is the first marker's.
+    public var keys: [ZoneKey]?
 
-    public init(id: UUID = UUID(), geometry: ZoneGeometry, style: ZoneStyle? = nil, semantic: ZoneSemantic = ZoneSemantic(tag: .custom)) {
+    public init(id: UUID = UUID(), geometry: ZoneGeometry, style: ZoneStyle? = nil, semantic: ZoneSemantic = ZoneSemantic(tag: .custom),
+                keys: [ZoneKey]? = nil) {
         self.id = id
         self.geometry = geometry
         self.style = style ?? semantic.tag.defaultStyle
         self.semantic = semantic
+        self.keys = keys
     }
 
     /// The court side of the zone's centroid.

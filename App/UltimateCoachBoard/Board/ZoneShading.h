@@ -22,7 +22,15 @@ struct ZoneGPU {
     uint dashed;
     uint selected;
     uint tint;          // 0 pink, 1 cyan
-    uint pad;
+    float intensity;    // keyframed style intensity (Section 3.5.7), scales the whole zone
+    // Type-change morph: a second shape whose signed distance blends in, d = mix(d0, d1, blend).
+    uint kind2;
+    uint vertexOffset2;
+    uint vertexCount2;
+    float blend;
+    float4 toLocal2_0;
+    float4 toLocal2_1;
+    float4 params2;
 };
 
 static inline float sdBox(float2 p, float2 b) {
@@ -98,17 +106,26 @@ static inline float zoneDots(float2 p, float spacing, float radius) {
     return mix(disc, mean, saturate((fwidth(p.x / spacing) - 0.25) * 4.0));
 }
 
+static inline float zoneShapeDistance(float2 w, uint kind, float4 l0, float4 l1, float4 params,
+                                      const device float2 *verts, uint offset, uint count) {
+    float2 p = float2(dot(l0.xy, w) + l0.z, dot(l1.xy, w) + l1.z);
+    if (kind == 0) return sdBox(p, params.xy);
+    if (kind == 1) return length(p) - params.x;
+    if (kind == 2) return sdEllipse(p, params.xy);
+    return sdPolygon(w, verts, offset, count);
+}
+
 // Coverage of every zone at world floor point w: x = pink, y = cyan (maximum per tint).
 static inline float2 evaluateZones(float2 w, const device ZoneGPU *zones, uint count, const device float2 *verts) {
     float pink = 0.0, cyan = 0.0;
     for (uint i = 0; i < count; i++) {
         ZoneGPU z = zones[i];
-        float2 p = float2(dot(z.toLocal0.xy, w) + z.toLocal0.z, dot(z.toLocal1.xy, w) + z.toLocal1.z);
-        float d;
-        if (z.kind == 0) d = sdBox(p, z.params.xy);
-        else if (z.kind == 1) d = length(p) - z.params.x;
-        else if (z.kind == 2) d = sdEllipse(p, z.params.xy);
-        else d = sdPolygon(w, verts, z.vertexOffset, z.vertexCount);
+        if (z.intensity <= 0.001) continue;
+        float d = zoneShapeDistance(w, z.kind, z.toLocal0, z.toLocal1, z.params, verts, z.vertexOffset, z.vertexCount);
+        if (z.blend > 0.0) {
+            float d2 = zoneShapeDistance(w, z.kind2, z.toLocal2_0, z.toLocal2_1, z.params2, verts, z.vertexOffset2, z.vertexCount2);
+            d = mix(d, d2, z.blend);
+        }
         float aa = max(fwidth(d), 1e-5);
         float inside = 1.0 - smoothstep(-aa, aa, d);
         float pattern;
@@ -126,6 +143,7 @@ static inline float2 evaluateZones(float2 w, const device ZoneGPU *zones, uint c
         float halo = d > 0.0 ? z.glow * 0.35 * exp(-d * 9.0) : 0.0;
         float a = max(max(fill, edge), halo);
         if (z.selected != 0) a = max(a, inside * 0.14);
+        a *= z.intensity;
         if (z.tint == 0) pink = max(pink, a); else cyan = max(cyan, a);
     }
     return float2(pink, cyan);

@@ -31,7 +31,7 @@ struct GlyphInstance {
     var color: SIMD4<Float>
 }
 
-/// One zone for the floor pass; must match `ZoneGPU` in Shaders.metal byte for byte (112 bytes).
+/// One zone for the floor pass; must match `ZoneGPU` in ZoneShading.h byte for byte (176 bytes).
 struct ZoneGPU {
     var kind: UInt32
     var pattern: UInt32
@@ -48,22 +48,56 @@ struct ZoneGPU {
     var dashed: UInt32
     var selected: UInt32
     var tint: UInt32
-    var pad: UInt32 = 0
+    var intensity: Float = 1
+    var kind2: UInt32 = 0
+    var vertexOffset2: UInt32 = 0
+    var vertexCount2: UInt32 = 0
+    var blend: Float = 0
+    var toLocal2_0: SIMD4<Float> = .zero
+    var toLocal2_1: SIMD4<Float> = .zero
+    var params2: SIMD4<Float> = .zero
 }
 
 extension ZoneGPU {
     /// Packs zones for the floor pass (shared by the 2D and 3D boards): one record per zone, polygon outlines
     /// in a separate vertex buffer. Outlines outside 3...256 vertices are skipped.
-    static func pack(_ zones: [Zone], selected: UUID?) -> ([ZoneGPU], [SIMD2<Float>]) {
+    static func pack(_ zones: [Zone], selected: UUID?, morphs: [UUID: ZoneMorph] = [:],
+                     intensities: [UUID: Double] = [:]) -> ([ZoneGPU], [SIMD2<Float>]) {
         var gpu: [ZoneGPU] = []
         var verts: [SIMD2<Float>] = []
+        /// Shape fields of one geometry: kind, frame rows, parameters and polygon vertices; nil when unusable.
+        func shape(_ g: ZoneGeometry) -> (UInt32, SIMD4<Float>, SIMD4<Float>, SIMD4<Float>, UInt32, UInt32)? {
+            func frame(_ c: FloorPoint, _ a: Double) -> (SIMD4<Float>, SIMD4<Float>) {
+                let co = cos(a), si = sin(a)
+                return (SIMD4(Float(co), Float(si), Float(-(co * c.x + si * c.z)), 0),
+                        SIMD4(Float(-si), Float(co), Float(si * c.x - co * c.z), 0))
+            }
+            switch g {
+            case let .rect(c, hw, hd, a):
+                let f = frame(c, a); return (0, f.0, f.1, SIMD4(Float(hw), Float(hd), 0, 0), 0, 0)
+            case let .circle(c, r):
+                let f = frame(c, 0); return (1, f.0, f.1, SIMD4(Float(r), 0, 0, 0), 0, 0)
+            case let .ellipse(c, a, b, ang):
+                let f = frame(c, ang); return (2, f.0, f.1, SIMD4(Float(a), Float(b), 0, 0), 0, 0)
+            case .polygon, .freeform:
+                let outline = ZoneSDF.outline(g)
+                guard (3...256).contains(outline.count) else { return nil }
+                let offset = UInt32(verts.count)
+                verts += outline.map { SIMD2(Float($0.x), Float($0.z)) }
+                return (3, .zero, .zero, .zero, offset, UInt32(outline.count))
+            }
+        }
         for zone in zones {
-            var z = ZoneGPU(kind: 0, pattern: 0, vertexOffset: 0, vertexCount: 0, toLocal0: .zero, toLocal1: .zero,
-                            params: .zero, color: SIMD4(1, 1, 1, Float(zone.style.opacity)),
+            let intensity = intensities[zone.id] ?? 1
+            // Frames scale the style opacity by the intensity; the shader applies the intensity to the whole zone.
+            let opacity = intensity > 1e-6 ? zone.style.opacity / intensity : zone.style.opacity
+            guard let s = shape(zone.geometry) else { continue }
+            var z = ZoneGPU(kind: s.0, pattern: 0, vertexOffset: s.4, vertexCount: s.5, toLocal0: s.1, toLocal1: s.2,
+                            params: s.3, color: SIMD4(1, 1, 1, Float(opacity)),
                             spacing: Float(zone.style.spacing), lineWidth: Float(zone.style.lineWidth),
                             angle: Float(zone.style.angle), glow: Float(zone.style.glow),
                             dashed: zone.style.edge == .dashed ? 1 : 0, selected: zone.id == selected ? 1 : 0,
-                            tint: zone.style.tint == .pink ? 0 : 1)
+                            tint: zone.style.tint == .pink ? 0 : 1, intensity: Float(intensity))
             switch zone.style.pattern {
             case .crossHatch: z.pattern = 0
             case .diagonal: z.pattern = 1
@@ -71,25 +105,14 @@ extension ZoneGPU {
             case .glowFill: z.pattern = 3
             case .outline: z.pattern = 4
             }
-            func frame(_ c: FloorPoint, _ a: Double) {
-                let co = cos(a), si = sin(a)
-                z.toLocal0 = SIMD4(Float(co), Float(si), Float(-(co * c.x + si * c.z)), 0)
-                z.toLocal1 = SIMD4(Float(-si), Float(co), Float(si * c.x - co * c.z), 0)
-            }
-            switch zone.geometry {
-            case let .rect(c, hw, hd, a):
-                z.kind = 0; frame(c, a); z.params = SIMD4(Float(hw), Float(hd), 0, 0)
-            case let .circle(c, r):
-                z.kind = 1; frame(c, 0); z.params = SIMD4(Float(r), 0, 0, 0)
-            case let .ellipse(c, a, b, ang):
-                z.kind = 2; frame(c, ang); z.params = SIMD4(Float(a), Float(b), 0, 0)
-            case .polygon, .freeform:
-                let outline = zone.outline
-                guard (3...256).contains(outline.count) else { continue }
-                z.kind = 3
-                z.vertexOffset = UInt32(verts.count)
-                z.vertexCount = UInt32(outline.count)
-                verts += outline.map { SIMD2(Float($0.x), Float($0.z)) }
+            if let m = morphs[zone.id], let s2 = shape(m.to) {
+                z.kind2 = s2.0
+                z.toLocal2_0 = s2.1
+                z.toLocal2_1 = s2.2
+                z.params2 = s2.3
+                z.vertexOffset2 = s2.4
+                z.vertexCount2 = s2.5
+                z.blend = Float(m.t)
             }
             gpu.append(z)
         }
@@ -151,6 +174,8 @@ struct BoardScene: Equatable {
     var routes: [Route] = []
     /// Tactical zones (Section 3.5), drawn in the floor pass under the tokens.
     var zones: [Zone] = []
+    var zoneMorphs: [UUID: ZoneMorph] = [:]
+    var zoneIntensities: [UUID: Double] = [:]
     var selectedZone: UUID?
     /// Brief highlights of what a zone snapped to.
     var highlights: [Route] = []
@@ -162,6 +187,7 @@ struct BoardScene: Equatable {
     static func == (l: BoardScene, r: BoardScene) -> Bool {
         l.tokens == r.tokens && l.routes == r.routes && l.tethers == r.tethers && l.ink == r.ink
             && l.zones == r.zones && l.selectedZone == r.selectedZone && l.highlights == r.highlights
+            && l.zoneMorphs == r.zoneMorphs && l.zoneIntensities == r.zoneIntensities
             && l.scoutLines.count == r.scoutLines.count
             && zip(l.scoutLines, r.scoutLines).allSatisfy { $0.0 == $1.0 && $0.1 == $1.1 && $0.2 == $1.2 }
             && l.envelope?.0 == r.envelope?.0 && l.envelope?.1 == r.envelope?.1
@@ -193,7 +219,7 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
     weak var view: MTKView?
 
     init?(view: MTKView) {
-        assert(MemoryLayout<ZoneGPU>.stride == 112 && MemoryLayout<FloorUniforms>.stride == 32, "must match Shaders.metal")
+        assert(MemoryLayout<ZoneGPU>.stride == 176 && MemoryLayout<FloorUniforms>.stride == 32, "must match Shaders.metal")
         guard let device = view.device ?? MTLCreateSystemDefaultDevice(), let queue = device.makeCommandQueue() else { return nil }
         self.device = device
         self.queue = queue
@@ -314,7 +340,8 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
     /// The zone floor pass: one full-view quad whose fragments evaluate every zone (Section 3.5.4).
     private func encodeZones(_ enc: MTLRenderCommandEncoder) {
         guard !scene.zones.isEmpty else { return }
-        var (gpu, verts) = ZoneGPU.pack(scene.zones, selected: scene.selectedZone)
+        var (gpu, verts) = ZoneGPU.pack(scene.zones, selected: scene.selectedZone, morphs: scene.zoneMorphs,
+                                        intensities: scene.zoneIntensities)
         guard !gpu.isEmpty else { return }
         if verts.isEmpty { verts = [.zero] }
         if !loggedZonePass {

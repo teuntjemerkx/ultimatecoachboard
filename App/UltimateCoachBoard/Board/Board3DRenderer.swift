@@ -46,6 +46,8 @@ struct Scene3D: Equatable {
         var point: FloorPoint
         var label: String
         var posture: Posture
+        /// Between keyframes: the posture blend (joints slerp), which overrides `posture`.
+        var blend: PostureBlend?
         var facing: Double
         var stature: Double
         var isLibero: Bool
@@ -54,6 +56,8 @@ struct Scene3D: Equatable {
 
     var players: [Player] = []
     var zones: [Zone] = []
+    var zoneMorphs: [UUID: ZoneMorph] = [:]
+    var zoneIntensities: [UUID: Double] = [:]
     var selectedZone: UUID?
     var ink: [[FloorPoint]] = []
     var highlights: [BoardScene.Route] = []
@@ -254,7 +258,8 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         let eye = camera.eye
         let light = SIMD3<Float>(0.3, 1, 0.45)
         let l = simd_normalize(light)
-        let (zones, zoneVerts) = ZoneGPU.pack(scene.zones, selected: scene.selectedZone)
+        let (zones, zoneVerts) = ZoneGPU.pack(scene.zones, selected: scene.selectedZone, morphs: scene.zoneMorphs,
+                                              intensities: scene.zoneIntensities)
         var u = Scene3DUniforms(viewProjection: simd_float4x4(camera.viewProjection(aspect: aspect)),
                                 eye: SIMD4(Float(eye.x), Float(eye.y), Float(eye.z), 1),
                                 light: SIMD4(l.x, l.y, l.z, 0.35), zoneCount: UInt32(zones.count))
@@ -357,7 +362,9 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
             let key = Int((p.stature * 100).rounded())
             guard let m = mesh(stature: p.stature) else { continue }
             let offset = UInt32(dqs.count / 2)
-            for dq in m.skeleton.skin(m.skeleton.pose(p.posture, position: p.point, facing: p.facing)) {
+            let posed = p.blend.map { m.skeleton.pose($0, position: p.point, facing: p.facing) }
+                ?? m.skeleton.pose(p.posture, position: p.point, facing: p.facing)
+            for dq in m.skeleton.skin(posed) {
                 dqs.append(SIMD4(Float(dq.real.x), Float(dq.real.y), Float(dq.real.z), Float(dq.real.w)))
                 dqs.append(SIMD4(Float(dq.dual.x), Float(dq.dual.y), Float(dq.dual.z), Float(dq.dual.w)))
             }
@@ -457,10 +464,17 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
             case .flat: continue
             case .wall(let h), .cylinder(let h): height = h
             }
-            let outline = zone.outline
+            // A type-changing zone raises its wall along the morphing outline (both resampled and blended).
+            var outline = zone.outline
+            if let m = scene.zoneMorphs[zone.id],
+               case let .polygon(blended) = ZoneInterpolation.interpolate(.polygon(outline), .polygon(ZoneSDF.outline(m.to)), m.t).0 {
+                outline = blended
+            }
             guard outline.count >= 2 else { continue }
+            let intensity = scene.zoneIntensities[zone.id] ?? 1
+            guard intensity > 0.001 else { continue }
             let tint = zone.style.tint == .pink ? Tokens.accent : Tokens.opponent
-            let alpha = zone.id == scene.selectedZone ? 0.55 : 0.38
+            let alpha = (zone.id == scene.selectedZone ? 0.55 : 0.38) * intensity
             let color = tint.withAlpha(alpha).simd
             func v(_ p: FloorPoint, _ f: Double) -> WallVertexGPU {
                 WallVertexGPU(position: SIMD4(Float(p.x), Float(height * f + 0.005), Float(p.z), Float(f)), color: color)

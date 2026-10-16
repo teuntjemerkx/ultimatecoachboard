@@ -108,11 +108,133 @@ final class StudioController {
 
     var selectedTokenValue: SceneToken? { selectedToken.flatMap { id in scene.tokens.first { $0.id == id } } }
 
-    /// Sets the selected player's 3D posture; nil returns to the automatic one.
+    /// The posture set explicitly for the selected player at the current marker (nil = automatic or inherited).
+    var selectedExplicitPosture: Posture? {
+        guard let t = selectedTokenValue else { return nil }
+        if let phase = editPhase, scene.timeline.firstIndex(of: phase) ?? 0 > 0 {
+            return t.keys?.first { $0.phase == phase }?.posture
+        }
+        return t.posture
+    }
+
+    /// Sets the selected player's 3D posture at the current marker; nil returns to the automatic one.
     func setPosture(_ posture: Posture?) {
         guard let id = selectedToken else { return }
-        editor.setPosture(posture, token: id)
+        editor.setPosture(posture, token: id, phase: editPhase)
         scheduleSave()
+    }
+
+    // MARK: - Timeline (Section 3.5.7)
+
+    /// Timeline position in phase-index units; markers sit at whole numbers.
+    private(set) var time: Double = 0
+    private(set) var playing = false
+    private var timeTask: Task<Void, Never>?
+    /// Seconds per phase interval during playback.
+    static let secondsPerPhase = 1.1
+
+    /// The scene as shown at the current timeline position.
+    var frame: SceneFrame { scene.frame(at: time) }
+
+    /// The marker the board rests on, or nil between markers and in a static scene.
+    var currentPhase: RallyPhase? {
+        let line = scene.timeline
+        let i = time.rounded()
+        guard !line.isEmpty, abs(time - i) < 1e-6, Int(i) < line.count else { return nil }
+        return line[Int(i)]
+    }
+
+    /// Edits go to the current marker (the base at the first marker or in a static scene).
+    var editPhase: RallyPhase? { currentPhase }
+
+    var shownSelectedZone: Zone? { selectedZone.flatMap { id in frame.zones.first { $0.id == id } } }
+
+    func enableTimeline() {
+        editor.setPhases(RallyPhase.allCases)
+        stopTimeline()
+        time = 0
+        scheduleSave()
+    }
+
+    func disableTimeline() {
+        stopTimeline()
+        editor.setPhases(nil)
+        time = 0
+        scheduleSave()
+    }
+
+    /// Flies the board to a marker (critically damped within the interval, linear time over 0.45 s).
+    func go(to phase: RallyPhase) {
+        guard let target = scene.time(of: phase) else { return }
+        tween(to: target, duration: 0.45 * max(1, abs(target - time)).squareRoot())
+    }
+
+    /// Jumps straight to a timeline position (demo and tests).
+    func scrub(to t: Double) {
+        stopTimeline()
+        time = max(0, min(Double(max(scene.timeline.count - 1, 0)), t))
+    }
+
+    func togglePlay() {
+        if playing { stopTimeline(); time = time.rounded(); return }
+        let end = Double(max(scene.timeline.count - 1, 0))
+        if time >= end - 1e-6 { time = 0 }
+        playing = true
+        tween(to: end, duration: (end - time) * Self.secondsPerPhase, playback: true)
+    }
+
+    private func stopTimeline() {
+        timeTask?.cancel()
+        timeTask = nil
+        playing = false
+    }
+
+    private func tween(to target: Double, duration: Double, playback: Bool = false) {
+        timeTask?.cancel()
+        let start = time
+        let begin = Date()
+        timeTask = Task { [weak self] in
+            while !Task.isCancelled {
+                let f = duration > 0 ? min(1, Date().timeIntervalSince(begin) / duration) : 1
+                self?.time = start + (target - start) * f
+                if f >= 1 { break }
+                try? await Task.sleep(nanoseconds: 8_000_000)
+            }
+            if !Task.isCancelled, playback { self?.playing = false }
+        }
+    }
+
+    /// Pins the selected player or zone at the current marker as shown, so later edits start from here.
+    func pinSelection() {
+        guard let phase = editPhase else { return }
+        if let id = selectedToken, let t = frame.tokens.first(where: { $0.id == id }) {
+            editor.move(token: id, to: t.point, phase: phase)
+        } else if let z = shownSelectedZone {
+            editor.setGeometry(z.geometry, zone: z.id, phase: phase)
+        }
+        scheduleSave()
+    }
+
+    /// Removes the selected item's keyframe at the current marker.
+    func clearSelectionKey() {
+        guard let phase = editPhase, let id = selectedToken ?? selectedZone else { return }
+        editor.clearKey(id, phase: phase)
+        scheduleSave()
+    }
+
+    /// Hides or shows the selected zone at the current marker (keyframed intensity).
+    func toggleSelectedZoneVisibility() {
+        guard let phase = editPhase, let id = selectedZone, scene.timeline.firstIndex(of: phase) ?? 0 > 0 else { return }
+        let shown = frame.intensities[id] ?? 1
+        editor.setIntensity(shown > 0.5 ? 0 : 1, zone: id, phase: phase)
+        scheduleSave()
+    }
+
+    /// Whether the selected item has a keyframe at the marker (for the strip's dots).
+    func selectionHasKey(at phase: RallyPhase) -> Bool {
+        if let id = selectedToken { return scene.tokens.first { $0.id == id }?.keys?.contains { $0.phase == phase } == true }
+        if let id = selectedZone { return scene.zones.first { $0.id == id }?.keys?.contains { $0.phase == phase } == true }
+        return false
     }
 
     func selectToken(_ id: UUID?) {
@@ -132,7 +254,7 @@ final class StudioController {
 
     private func tokenHit(_ p: CGPoint) -> SceneToken? {
         var best: (SceneToken, CGFloat)?
-        for t in scene.tokens {
+        for t in frame.tokens {
             let v = geometry.toView(t.point)
             let d = hypot(v.x - p.x, v.y - p.y)
             if d <= 40, d < (best?.1 ?? .infinity) { best = (t, d) }
@@ -148,7 +270,7 @@ final class StudioController {
         if let token {
             selectedToken = token
             selectedZone = nil
-        } else if let z = editor.zone(at: w) {
+        } else if let z = frame.zone(at: w) {
             selectedZone = z.id
             selectedToken = nil
         } else {
@@ -163,11 +285,13 @@ final class StudioController {
 
     /// Whether a one-finger pan starting here would move something (in 3D an empty select pan orbits instead).
     func panWouldEdit(world w: FloorPoint, token: UUID?) -> Bool {
-        tool != .select || token != nil || editor.zone(at: w) != nil
+        tool != .select || token != nil || frame.zone(at: w) != nil
     }
 
     /// One step of a one-finger pan on the floor; `token` is the player under the finger when it began.
     func pan(_ phase: BoardMTKView.PanPhase, world w: FloorPoint, token: UUID?) {
+        // Edits land on a phase marker; while the timeline plays, the board is read-only.
+        if playing { return }
         switch phase {
         case .began:
             alternative = nil
@@ -176,7 +300,7 @@ final class StudioController {
                     dragTarget = .token(token)
                     selectedToken = token
                     selectedZone = nil
-                } else if let z = editor.zone(at: w) {
+                } else if let z = frame.zone(at: w) {
                     dragTarget = .zone(z.id)
                     selectedZone = z.id
                     selectedToken = nil
@@ -216,11 +340,11 @@ final class StudioController {
         guard let target = dragTarget, abs(dragOffset.dx) + abs(dragOffset.dz) > 0.01 else { return }
         switch target {
         case .token(let id):
-            if let t = scene.tokens.first(where: { $0.id == id }) {
-                editor.move(token: id, to: FloorPoint(x: t.point.x + dragOffset.dx, z: t.point.z + dragOffset.dz))
+            if let t = frame.tokens.first(where: { $0.id == id }) {
+                editor.move(token: id, to: FloorPoint(x: t.point.x + dragOffset.dx, z: t.point.z + dragOffset.dz), phase: editPhase)
             }
         case .zone(let id):
-            editor.move(zone: id, by: dragOffset.dx, dragOffset.dz)
+            editor.move(zone: id, by: dragOffset.dx, dragOffset.dz, phase: editPhase)
         }
         scheduleSave()
     }
@@ -228,7 +352,7 @@ final class StudioController {
     private func finishZoneStroke(_ stroke: [FloorPoint]) {
         guard stroke.count >= 6,
               let result = ZoneBuilder.build(stroke: stroke, forced: forcedShape, tag: defaultTag, style: defaultStyle,
-                                             snapping: snapping, tokens: scene.tokens.map(\.point), otherZones: scene.zones)
+                                             snapping: snapping, tokens: frame.tokens.map(\.point), otherZones: frame.zones)
         else { return }
         editor.addZone(result.zone)
         selectedZone = result.zone.id
@@ -249,7 +373,7 @@ final class StudioController {
     func acceptAlternative() {
         guard let alt = alternative, let old = scene.zones.first(where: { $0.id == alt.zoneID }),
               let result = ZoneBuilder.build(stroke: alt.stroke, forced: alt.kind, tag: old.semantic.tag, style: old.style,
-                                             snapping: snapping, tokens: scene.tokens.map(\.point),
+                                             snapping: snapping, tokens: frame.tokens.map(\.point),
                                              otherZones: scene.zones.filter { $0.id != old.id })
         else { return }
         var zone = result.zone
@@ -284,15 +408,15 @@ final class StudioController {
 
     func setShape(_ kind: ShapeKind?) {
         forcedShape = kind
-        guard let kind, let zone = selectedZoneValue else { return }
+        guard let kind, let zone = shownSelectedZone else { return }
         // Re-fit the selected zone's outline as the chosen shape.
         let outline = zone.outline
         let pts = outline.map { P2($0.x, $0.z) }
         guard let g = ZoneBuilder.geometry(kind, stroke: pts, recognized: SmartGeometry.recognize(pts)) else { return }
         var z = zone
         z.geometry = g
-        if snapping { z = ZoneSnapping.snap(z, tokens: scene.tokens.map(\.point), otherZones: scene.zones.filter { $0.id != zone.id }).0 }
-        editor.replaceZone(z)
+        if snapping { z = ZoneSnapping.snap(z, tokens: frame.tokens.map(\.point), otherZones: frame.zones.filter { $0.id != zone.id }).0 }
+        editor.setGeometry(z.geometry, zone: z.id, phase: editPhase)
         scheduleSave()
     }
 
@@ -365,18 +489,22 @@ final class StudioController {
 
     // MARK: - Board scene
 
-    var boardScene: BoardScene {
+    var boardScene: BoardScene { boardScene(frame) }
+
+    private func boardScene(_ f: SceneFrame) -> BoardScene {
         var s = BoardScene()
-        for t in scene.tokens {
+        for t in f.tokens {
             var p = t.point
             if case .token(let id) = dragTarget, id == t.id { p = FloorPoint(x: p.x + dragOffset.dx, z: p.z + dragOffset.dz) }
             s.tokens.append(.init(id: t.id, side: t.side, point: p, label: t.label, isLibero: t.role == "L",
                                   isServer: false, selected: t.id == selectedToken))
         }
-        s.zones = scene.zones.map { z in
+        s.zones = f.zones.map { z in
             if case .zone(let id) = dragTarget, id == z.id { return z.translated(by: dragOffset.dx, dragOffset.dz) }
             return z
         }
+        s.zoneMorphs = f.morphs
+        s.zoneIntensities = f.intensities
         s.selectedZone = selectedZone
         s.ink = scene.ink.map(\.points) + (liveStroke.count > 1 ? [liveStroke] : [])
         s.highlights = highlights
@@ -394,16 +522,19 @@ final class StudioController {
     }
 
     var scene3D: Scene3D {
-        let flat = boardScene
+        let f = frame
+        let flat = boardScene(f)
         var s = Scene3D()
-        s.players = scene.tokens.map { t in
-            var moved = t
-            if let shown = flat.tokens.first(where: { $0.id == t.id }) { moved.point = shown.point }
-            return Scene3D.Player(id: t.id, side: t.side, point: moved.point, label: t.label, posture: moved.effectivePosture,
+        s.players = f.tokens.map { t in
+            let point = flat.tokens.first { $0.id == t.id }?.point ?? t.point
+            return Scene3D.Player(id: t.id, side: t.side, point: point, label: t.label,
+                                  posture: t.posture ?? SceneToken.automaticPosture(at: point), blend: f.postureBlends[t.id],
                                   facing: t.facing, stature: t.stature ?? Self.defaultStature(role: t.role),
                                   isLibero: t.role == "L", selected: t.id == selectedToken)
         }
         s.zones = flat.zones
+        s.zoneMorphs = flat.zoneMorphs
+        s.zoneIntensities = flat.zoneIntensities
         s.selectedZone = flat.selectedZone
         s.ink = flat.ink
         s.highlights = flat.highlights

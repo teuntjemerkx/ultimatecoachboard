@@ -79,14 +79,19 @@ public struct BoardCamera: Hashable, Sendable {
         return BoardCamera(heading: homeOnLeft ? 0 : .pi, pitch: .pi / 2, distance: neededHeight / (2 * tan(fov / 2)), fovY: fov)
     }
 
-    /// The default 3D view from the home bench: 32 degrees above the floor, 45 degree field of view.
+    /// Heading offset of the bench view toward the home half: benches sit beside their own half, and from
+    /// exactly level with the centre line the net would be seen edge-on.
+    public static let benchOffset = 0.2
+
+    /// The default 3D view from the home bench: 32 degrees above the floor, 45 degree field of view, the eye
+    /// turned `benchOffset` toward the home half (world +Z).
     public static func bench(aspect: Double, homeOnLeft: Bool = true) -> BoardCamera {
         let fov = 45.0 * Double.pi / 180
         let pitch = 32.0 * Double.pi / 180
         // Frame the court length across the screen width.
-        let width = 21.0, height = width / aspect
+        let width = 20.0, height = width / aspect
         let distance = max(height, 9 / 0.9) / (2 * tan(fov / 2)) * 1.05
-        return BoardCamera(heading: homeOnLeft ? 0 : .pi, pitch: pitch, distance: distance, fovY: fov)
+        return BoardCamera(heading: homeOnLeft ? benchOffset : .pi - benchOffset, pitch: pitch, distance: distance, fovY: fov)
     }
 
     /// The 2D <-> 3D dolly-zoom (Section 3.2): the field of view and the pose interpolate while the distance

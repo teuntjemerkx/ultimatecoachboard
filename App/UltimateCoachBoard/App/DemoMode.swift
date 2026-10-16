@@ -60,7 +60,7 @@ enum DemoMode {
             note("studio: \(c.scene.zones.count) zones: " + c.scene.zones.map { "\($0.semantic.tag.rawValue) \($0.geometry)" }.joined(separator: " | "))
             c.tool = .zone
             if screen == "studio3d" {
-                // Opponent front row up at the net, home passers low, one player selected to show the posture strip.
+                // Opponent front row up at the net, home passers low.
                 for t in c.scene.tokens {
                     if t.side == .opponent && abs(t.point.z) < 3.5 {
                         c.selectToken(t.id)
@@ -72,9 +72,19 @@ enum DemoMode {
                 }
                 c.selectToken(c.scene.tokens.first { $0.side == .home && $0.role == "S" }?.id)
                 c.setPosture(.set)
+            }
+            demoTimeline(c)
+            // Between SET and ATTACK: players on their way, the tip zone half-way from circle to rectangle.
+            c.scrub(to: 2.2)
+            note("timeline at 2.2: morphs \(c.frame.morphs.count), posture blends \(c.frame.postureBlends.count), "
+                 + "keys " + c.scene.tokens.filter { $0.keys != nil }.map { "\($0.role):\($0.keys!.map(\.phase.rawValue))" }.joined(separator: " "))
+            if screen == "studio3d" {
                 c.tool = .select
+                c.selectToken(c.scene.tokens.first { $0.side == .home && $0.role == "OH1" }?.id)
                 c.toggle3D()
-                note("studio3d: postures " + c.scene.tokens.map { "\($0.label):\($0.effectivePosture.rawValue)" }.joined(separator: " "))
+                note("studio3d: postures " + c.frame.tokens.map { "\($0.label):\($0.posture?.rawValue ?? "-")" }.joined(separator: " "))
+            } else {
+                c.tool = .zone
             }
             model.screen = .studio(c)
         case "setbreak":
@@ -111,6 +121,42 @@ enum DemoMode {
             c.swipe(winner: i % 3 == 2 ? .opponent : .home)
             i += 1
         }
+    }
+
+    /// A rally through the real editing paths: the setter runs to the target at RECEIVE, the left-side hitter
+    /// opens at SET and attacks at ATTACK, and the tip zone holds through SET, then turns into a deeper rectangle.
+    @MainActor
+    private static func demoTimeline(_ c: StudioController) {
+        c.enableTimeline()
+        c.tool = .select
+        func drag(_ role: String, to p: FloorPoint, at phase: RallyPhase) {
+            guard let t = c.scene.time(of: phase) else { return }
+            c.scrub(to: t)
+            guard let token = c.frame.tokens.first(where: { $0.side == .home && $0.role == role }) else { return }
+            c.pan(.began, world: token.point, token: token.id)
+            c.pan(.changed, world: p, token: nil)
+            c.pan(.ended, world: p, token: nil)
+        }
+        drag("S", to: CourtFrame.world(LocalPoint(l: 6.0, d: 0.7), of: .home), at: .receive)
+        drag("OH1", to: CourtFrame.world(LocalPoint(l: -0.3, d: 3.8), of: .home), at: .set)
+        drag("OH1", to: CourtFrame.world(LocalPoint(l: 1.0, d: 0.6), of: .home), at: .attack)
+        c.selectToken(c.scene.tokens.first { $0.side == .home && $0.role == "OH1" }?.id)
+        c.setPosture(.attack)
+        if let tip = c.scene.zones.first(where: { $0.semantic.tag == .tipAlert }) {
+            c.scrub(to: 2)
+            c.tap(world: tip.centroid, token: nil)
+            c.pinSelection()
+            c.scrub(to: 3)
+            c.setShape(.rect)
+            c.setShape(nil)
+            if let shown = c.shownSelectedZone?.centroid {
+                c.pan(.began, world: shown, token: nil)
+                c.pan(.changed, world: FloorPoint(x: shown.x - 0.5, z: shown.z - 1.5), token: nil)
+                c.pan(.ended, world: FloorPoint(x: shown.x - 0.5, z: shown.z - 1.5), token: nil)
+            }
+            note("tip zone keys: " + (c.scene.zones.first { $0.id == tip.id }?.keys ?? []).map { "\($0.phase.rawValue) \($0.geometry)" }.joined(separator: " | "))
+        }
+        c.selectToken(nil)
     }
 
     @MainActor
