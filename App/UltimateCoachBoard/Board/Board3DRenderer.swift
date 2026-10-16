@@ -65,6 +65,15 @@ struct WallVertexGPU {
     var color: SIMD4<Float>
 }
 
+/// The hall from a video: walls and ceiling around the court, painted from the clip's clean background plate.
+struct EnvUniformsGPU {
+    var worldToImage: simd_float4x4
+    /// rgb: the fill where the video never saw; a: brightness of the plate.
+    var fallback: SIMD4<Float>
+    /// Half width, half length and height of the hall box.
+    var box: SIMD4<Float>
+}
+
 /// What the 3D board shows: players as avatars, zones on the floor and as walls, ink and routes as floor ribbons.
 struct Scene3D: Equatable {
     struct Player: Equatable {
@@ -123,6 +132,17 @@ struct Scene3D: Equatable {
     /// The ball and its solved flights (Section 5.4).
     var ball: V3?
     var ballPaths: [[V3]] = []
+
+    /// A video scene's hall: the background plate projected through the video camera onto walls around the court.
+    struct Backdrop: Equatable {
+        var plate: URL
+        /// World point to normalized image coordinates (u right, v down): q = M (p, 1), uv = q.xy / q.w, seen when q.w > 0.
+        var worldToImage: simd_float4x4
+        var halfWidth: Double = 10
+        var halfLength: Double = 17
+        var height: Double = 9
+    }
+    var backdrop: Backdrop?
 }
 
 extension simd_float4x4 {
@@ -147,6 +167,8 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
     private var wallPipeline: MTLRenderPipelineState!
     private var glyphPipeline: MTLRenderPipelineState!
     private var decalPipeline: MTLRenderPipelineState!
+    private var envPipeline: MTLRenderPipelineState!
+    private var plateTexture: (url: URL, texture: MTLTexture)?
     /// Posed players of the last frame, for the jersey-number decals.
     private var posedPlayers: [(player: Scene3D.Player, joints: [Rigid], stature: Double)] = []
     private var depthWrite: MTLDepthStencilState!
@@ -177,6 +199,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
 
     init?(view: MTKView) {
         assert(MemoryLayout<Scene3DUniforms>.stride == 288 && MemoryLayout<Quad3D>.stride == 80 && MemoryLayout<AvatarVertexGPU>.stride == 48
+               && MemoryLayout<EnvUniformsGPU>.stride == 96
                && MemoryLayout<AvatarInstanceGPU>.stride == 48 && MemoryLayout<WallVertexGPU>.stride == 32
                && MemoryLayout<Decal3D>.stride == 80, "must match Shaders3D.metal")
         guard let device = view.device ?? MTLCreateSystemDefaultDevice(), let queue = device.makeCommandQueue() else { return nil }
@@ -235,6 +258,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         wallPipeline = make("wallVertex", "wallFragment", .additive)
         glyphPipeline = make("glyphVertex", "glyphFragment", .premultiplied)
         decalPipeline = make("decalVertex", "decalFragment", .premultiplied)
+        envPipeline = make("envVertex", "envFragment", .none)
 
         func depth(_ compare: MTLCompareFunction, write: Bool) -> MTLDepthStencilState? {
             let d = MTLDepthStencilDescriptor()
@@ -245,7 +269,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         depthWrite = depth(.greater, write: true)
         depthTestOnly = depth(.greaterEqual, write: false)
         depthOff = depth(.always, write: false)
-        return [floorPipeline, quadPipeline, avatarPipeline, wallPipeline, glyphPipeline, decalPipeline].allSatisfy { $0 != nil }
+        return [floorPipeline, quadPipeline, avatarPipeline, wallPipeline, glyphPipeline, decalPipeline, envPipeline].allSatisfy { $0 != nil }
             && depthWrite != nil && depthTestOnly != nil && depthOff != nil
     }
 
@@ -397,6 +421,23 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         func buffer<T>(_ items: [T]) -> MTLBuffer? {
             guard !items.isEmpty else { return nil }
             return items.withUnsafeBytes { device.makeBuffer(bytes: $0.baseAddress!, length: $0.count, options: .storageModeShared) }
+        }
+
+        // 0. A video scene's hall: walls and ceiling painted from the clip (opaque, writes depth).
+        if let backdrop = scene.backdrop, let texture = plate(backdrop.plate) {
+            let box = envBox(backdrop, eye: eye)
+            if let vb = buffer(box) {
+                var e = EnvUniformsGPU(worldToImage: backdrop.worldToImage,
+                                       fallback: SIMD4(Float(Tokens.hall.r), Float(Tokens.hall.g), Float(Tokens.hall.b), 0.92),
+                                       box: SIMD4(Float(backdrop.halfWidth), Float(backdrop.halfLength), Float(backdrop.height), 0))
+                enc.setDepthStencilState(depthWrite)
+                enc.setRenderPipelineState(envPipeline)
+                enc.setVertexBuffer(vb, offset: 0, index: 0)
+                enc.setVertexBytes(&u, length: MemoryLayout<Scene3DUniforms>.stride, index: 1)
+                enc.setFragmentBytes(&e, length: MemoryLayout<EnvUniformsGPU>.stride, index: 0)
+                enc.setFragmentTexture(texture, index: 0)
+                enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: box.count)
+            }
         }
 
         // 1. Floor with court lines and zones (writes depth).
@@ -774,6 +815,32 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
             return ((fw * cos(th) + right * sin(th)) * cos(tv) + up * sin(tv)).normalized
         }
         return fan(peripheral, length: 2.2, alpha: 0.08) + fan(central, length: 3.5, alpha: 0.20)
+    }
+
+    // MARK: - Hall from video
+
+    /// The clean plate as a texture, loaded once per file.
+    private func plate(_ url: URL) -> MTLTexture? {
+        if let p = plateTexture, p.url == url { return p.texture }
+        guard let t = try? MTKTextureLoader(device: device).newTexture(URL: url, options: [.SRGB: false]) else { return nil }
+        plateTexture = (url, t)
+        return t
+    }
+
+    /// The hall box's walls and ceiling as triangles. A wall the eye is outside of is left out, so from the orbit
+    /// camera the hall opens like a doll's house and from a player's eyes it closes all round.
+    private func envBox(_ b: Scene3D.Backdrop, eye: V3) -> [SIMD4<Float>] {
+        let w = b.halfWidth, l = b.halfLength, h = b.height
+        func quad(_ a: V3, _ bb: V3, _ c: V3, _ d: V3) -> [SIMD4<Float>] {
+            [a, bb, c, a, c, d].map { SIMD4(Float($0.x), Float($0.y), Float($0.z), 1) }
+        }
+        var out: [SIMD4<Float>] = []
+        if eye.x < w { out += quad(V3(w, 0, -l), V3(w, 0, l), V3(w, h, l), V3(w, h, -l)) }
+        if eye.x > -w { out += quad(V3(-w, 0, -l), V3(-w, 0, l), V3(-w, h, l), V3(-w, h, -l)) }
+        if eye.z < l { out += quad(V3(-w, 0, l), V3(w, 0, l), V3(w, h, l), V3(-w, h, l)) }
+        if eye.z > -l { out += quad(V3(-w, 0, -l), V3(w, 0, -l), V3(w, h, -l), V3(-w, h, -l)) }
+        if eye.y < h { out += quad(V3(-w, h, -l), V3(w, h, -l), V3(w, h, l), V3(-w, h, l)) }
+        return out
     }
 
     // MARK: - Walls

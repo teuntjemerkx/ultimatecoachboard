@@ -284,3 +284,50 @@ fragment float4 wallFragment(WallOut in [[stage_in]]) {
     a = max(a, top * 0.9);
     return float4(in.color.rgb * a, a);
 }
+
+// MARK: - Hall from a video: the clean background plate projected through the video camera (Section 4.10).
+
+struct EnvUniforms {
+    float4x4 worldToImage;
+    float4 fallback;     // rgb: never seen; a: plate brightness
+    float4 box;          // half width, half length, height
+};
+
+struct EnvOut {
+    float4 position [[position]];
+    float3 world;
+};
+
+vertex EnvOut envVertex(uint vid [[vertex_id]], const device float4 *verts [[buffer(0)]],
+                        constant Scene3DUniforms &u [[buffer(1)]]) {
+    EnvOut o;
+    float3 p = verts[vid].xyz;
+    o.world = p;
+    o.position = u.viewProjection * float4(p, 1.0);
+    return o;
+}
+
+static inline bool plateUV(float3 p, float4x4 m, thread float2 &uv) {
+    float4 q = m * float4(p, 1.0);
+    if (q.w <= 1e-4) return false;
+    uv = q.xy / q.w;
+    return uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0;
+}
+
+// Where the video saw the wall, its pixels; where it did not, the mirror image across the court's middle
+// (halls are close to symmetric), slightly darker; otherwise the hall colour, darkening toward the ceiling.
+fragment float4 envFragment(EnvOut in [[stage_in]], constant EnvUniforms &e [[buffer(0)]],
+                            texture2d<float> plate [[texture(0)]]) {
+    constexpr sampler s(filter::linear, address::clamp_to_edge);
+    float3 p = in.world;
+    float3 tries[4] = { p, float3(-p.x, p.y, p.z), float3(p.x, p.y, -p.z), float3(-p.x, p.y, -p.z) };
+    for (int i = 0; i < 4; i++) {
+        float2 uv;
+        if (plateUV(tries[i], e.worldToImage, uv)) {
+            float3 c = plate.sample(s, uv).rgb * e.fallback.a * (i == 0 ? 1.0 : 0.82);
+            return float4(c, 1.0);
+        }
+    }
+    float h = saturate(p.y / max(e.box.z, 1.0));
+    return float4(e.fallback.rgb * (1.0 - 0.35 * h), 1.0);
+}
