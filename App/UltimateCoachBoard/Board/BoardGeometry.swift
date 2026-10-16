@@ -7,7 +7,7 @@ import CoachBoardCore
 /// Player-Facing Flip).
 struct BoardGeometry: Equatable {
     var size: CGSize
-    var margin: Double = 2.0          // visible free zone in metres (keeps a server behind the end line in view)
+    var margin: Double = 2.4          // visible free zone in metres (keeps a server behind the end line in view)
     var homeOnLeft: Bool = true
     var playerFacingFlip: Bool = false
 

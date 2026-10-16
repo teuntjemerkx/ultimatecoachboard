@@ -87,18 +87,6 @@ enum DemoMode {
         c.tap(at: landing)
     }
 
-    /// Turns the window to landscape once the scene is active (the Simulator boots in portrait).
-    @MainActor
-    static func prepareWindow() async {
-        guard screen != nil else { return }
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        for case let scene as UIWindowScene in UIApplication.shared.connectedScenes {
-            scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) { error in
-                note("rotation refused: \(error.localizedDescription)")
-            }
-        }
-    }
-
     /// Appends a line to Documents/demo-diagnostics.txt, which CI publishes next to the screenshots.
     static func note(_ line: String) {
         guard screen != nil,
