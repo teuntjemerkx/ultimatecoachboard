@@ -82,7 +82,7 @@ struct SetBreakPanel: View {
                     .accessibilityLabel("Rotation \(r.rotation): \(r.receiveWon) of \(r.receiveTotal) side-outs")
                 }
             }
-            Text("Pink: rallies won while receiving. Tap a bar for its rallies.")
+            Text("Filled: rallies won while receiving. Tap a bar for its rallies.")
                 .font(.system(size: 12)).foregroundStyle(Tokens.textSecondary.color)
         }
     }

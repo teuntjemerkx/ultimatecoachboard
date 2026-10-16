@@ -183,8 +183,8 @@ struct ZoneStrip: View {
                 chip("SOLID", on: style.edge == .solid) { controller.updateStyle { $0.edge = .solid } }
                 chip("DASHED", on: style.edge == .dashed) { controller.updateStyle { $0.edge = .dashed } }
                 Spacer().frame(width: 16)
-                chip("PINK", on: style.tint == .pink) { controller.updateStyle { $0.tint = .pink } }
-                chip("CYAN", on: style.tint == .cyan) { controller.updateStyle { $0.tint = .cyan } }
+                chip("US COLOUR", on: style.tint == .pink) { controller.updateStyle { $0.tint = .pink } }
+                chip("THEM COLOUR", on: style.tint == .cyan) { controller.updateStyle { $0.tint = .cyan } }
             }
             row("TAG") {
                 ForEach(tags.indices, id: \.self) { i in
