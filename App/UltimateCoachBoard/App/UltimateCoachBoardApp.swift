@@ -33,6 +33,8 @@ struct RootView: View {
                 MatchLogView(summary: summary, onClose: { model.backToLauncher() }, onResume: { model.resume($0) })
             case .studio(let controller):
                 StudioView(controller: controller, onExit: { model.backToLauncher() })
+            case .videoWatch(let watcher):
+                VideoWatchView(controller: watcher, onExit: { model.backToLauncher() })
             case .videoImport(let importer):
                 VideoImportView(model: importer, onDone: { model.openVideo($0, folder: $1) }, onCancel: { model.backToLauncher() })
             }

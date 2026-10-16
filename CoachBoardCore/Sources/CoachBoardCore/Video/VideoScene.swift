@@ -67,6 +67,8 @@ public struct VideoScene: Codable, Hashable, Sendable, Identifiable {
     /// File names the app stores next to the scene (the video, the clean plate image).
     public var videoFile: String?
     public var plateFile: String?
+    /// Where time 0 of the scene sits in the video file, seconds (nil: at its start).
+    public var clipStart: Double?
     public var players: [VideoPlayerTrack]
     public var ball: [BallSegment]
     public var netHeight: Double
@@ -128,6 +130,23 @@ public struct VideoScene: Codable, Hashable, Sendable, Identifiable {
             return p + (q - p) * u
         }
         return nil
+    }
+
+    /// Every player in view at time t as tap targets on the video: feet and top of the head in normalised frame
+    /// coordinates (0...1, v down), nearest the camera first.
+    public func markers(at t: Double) -> [VideoMarker] {
+        let f = frame(at: t)
+        var out: [(VideoMarker, Double)] = []
+        for token in f.tokens {
+            let lift = f.jump[token.id] ?? 0
+            let feet = V3(token.point, y: lift), top = V3(token.point, y: lift + token.effectiveStature)
+            guard let a = camera.project(feet), let b = camera.project(top), camera.contains(a, margin: -40) || camera.contains(b) else { continue }
+            let marker = VideoMarker(id: token.id, label: token.label, side: token.side,
+                                     foot: ImagePoint(x: a.x / camera.width, y: a.y / camera.height),
+                                     head: ImagePoint(x: b.x / camera.width, y: b.y / camera.height))
+            out.append((marker, (feet - camera.center).length))
+        }
+        return out.sorted { $0.1 < $1.1 }.map(\.0)
     }
 
     /// The same moment for code that consumes SceneFrame (tokens and posture blends; no zones), each token facing
@@ -296,4 +315,14 @@ public enum VideoReconstructor {
         case .p6: return LocalPoint(l: 4.5, d: 7)
         }
     }
+}
+
+/// A player as a tap target on the video frame.
+public struct VideoMarker: Hashable, Sendable {
+    public var id: UUID
+    public var label: String
+    public var side: Side
+    /// Normalised frame coordinates (0...1, v down) of the feet and the top of the head.
+    public var foot: ImagePoint
+    public var head: ImagePoint
 }

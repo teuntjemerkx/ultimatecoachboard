@@ -496,8 +496,9 @@ struct Studio3DBoardView: UIViewRepresentable {
             if !coordinator.introduced {
                 coordinator.introduced = true
                 if c.povPlayer != nil {
-                    // Opened straight into a POV: the orbit rests at the bench, the camera flies into the player's eyes.
-                    r.setCamera(.bench(aspect: aspect, homeOnLeft: c.homeOnLeft, vertical: Self.upright(aspect)))
+                    // Opened straight into a POV: the orbit rests at the bench (or where the video was filmed), the camera
+                    // flies into the player's eyes.
+                    r.setCamera(c.videoBoardCamera ?? .bench(aspect: aspect, homeOnLeft: c.homeOnLeft, vertical: Self.upright(aspect)))
                     r.flyToPOV()
                 } else {
                     r.setCamera(.topDown(aspect: aspect, homeOnLeft: c.homeOnLeft, vertical: Self.upright(aspect)))

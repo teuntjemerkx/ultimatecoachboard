@@ -1,7 +1,7 @@
 import UIKit
 import CoachBoardCore
 
-/// Launch-argument demo states (`-demoScreen launcher|setup|live|advanced|setbreak|log|studio|studio3d|pov|rally|rallyeye|videomark|video3d|videoeye|gallery`) so CI can capture screenshots of
+/// Launch-argument demo states (`-demoScreen launcher|setup|live|advanced|setbreak|log|studio|studio3d|pov|rally|rallyeye|videomark|videowatch|video3d|videoeye|gallery`) so CI can capture screenshots of
 /// real screens in the Simulator. Only reachable through launch arguments; never shown to a coach.
 enum DemoMode {
     static var screen: String? {
@@ -127,21 +127,22 @@ enum DemoMode {
             if let still = VideoDemo.still() { importer.demo(still: still, camera: VideoDemo.camera) }
             note("videomark: fit \(importer.fit) lines \(importer.courtLines.count)")
             model.screen = .videoImport(importer)
-        case "video3d", "videoeye":
-            // A rally filmed by a synthetic camera, rebuilt by the real pipeline, in the hall from its plate.
+        case "videowatch", "video3d", "videoeye":
+            // A rally filmed by a synthetic camera, rebuilt by the real pipeline: the clip with tappable players, the
+            // 3D court in the hall from its plate, and a player's eye view with the clip in the corner.
             let start = Date()
             guard let saved = VideoDemo.saved() else { note("video: demo failed"); return }
             let (scene, folder) = saved
-            note(String(format: "video: %d players, %d ball flights, %.1f s, built in %.1f s", scene.players.count, scene.ball.count,
-                        scene.duration, Date().timeIntervalSince(start)))
-            let c = StudioController(video: scene, folder: folder)
-            c.scrubVideo(to: screen == "video3d" ? 2.4 : 3.2)
-            if screen == "videoeye" {
-                // The home libero's eyes: the attack across the net, the hall from the video behind it.
-                c.selectToken(c.frame.tokens.first { $0.side == .home && $0.label == "2" }?.id ?? c.frame.tokens.first { $0.side == .home }?.id)
-                c.enterPOV()
+            note(String(format: "video: %d players, %d ball flights, %.1f s, clip %@, built in %.1f s", scene.players.count, scene.ball.count,
+                        scene.duration, scene.videoFile ?? "none", Date().timeIntervalSince(start)))
+            let w = VideoWatchController(scene: scene, folder: folder)
+            w.seek(to: screen == "videoeye" ? 3.2 : 2.4)
+            note("videowatch markers: " + w.markers.map { "\($0.label)" }.joined(separator: " "))
+            if screen == "video3d" { w.mode = .court }
+            if screen == "videoeye", let m = w.markers.first(where: { $0.side == .home && $0.label == "2" }) ?? w.markers.first {
+                w.watch(m.id)
             }
-            model.screen = .studio(c)
+            model.screen = .videoWatch(w)
         case "gallery":
             // Every technique of the posture library side by side, each in the variant of the position that uses it
             // most, seen side-on from the bench. Jersey numbers index the legend in the diagnostics.

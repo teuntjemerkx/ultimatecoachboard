@@ -198,6 +198,7 @@ final class VideoImportModel {
             try? FileManager.default.copyItem(at: sourceURL, to: folder.appendingPathComponent(videoName))
             scene.videoFile = videoName
             scene.plateFile = VideoStore.plateName
+            scene.clipStart = start
             try VideoStore.save(scene, in: folder)
             progress = 1
             self.folder = folder

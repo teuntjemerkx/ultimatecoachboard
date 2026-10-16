@@ -121,6 +121,14 @@ final class StudioController {
         time = max(0, min(videoDuration, t))
     }
 
+    /// The video player is the clock while the clip plays underneath (watch screen).
+    func followVideo(at t: Double) {
+        timeTask?.cancel()
+        timeTask = nil
+        playing = false
+        time = max(0, min(videoDuration, t))
+    }
+
     /// The orbit camera placed where the video was filmed, so the 3D view opens on the picture the coach knows.
     var videoBoardCamera: BoardCamera? {
         guard let cam = video?.camera else { return nil }

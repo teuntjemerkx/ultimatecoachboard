@@ -1,4 +1,5 @@
 import Foundation
+import AVFoundation
 import CoreGraphics
 import Vision
 import CoachBoardCore
@@ -146,7 +147,7 @@ enum VideoDemo {
                                               title: "Sample rally", environment: VideoPipeline.environment(for: cam))
     }
 
-    /// The sample rally saved like an imported one (scene, plate), for the demo screens.
+    /// The sample rally saved like an imported one (scene, plate and a clip of it), for the demo screens.
     static func saved() -> (VideoScene, URL)? {
         guard let folder = try? VideoStore.newFolder() else { return nil }
         var scene = scene()
@@ -154,8 +155,93 @@ enum VideoDemo {
         guard VideoVision.writePNG(plate, width: Int(scene.camera.width), height: Int(scene.camera.height),
                                    to: folder.appendingPathComponent(VideoStore.plateName)) else { return nil }
         scene.plateFile = VideoStore.plateName
+        if writeClip(scene, plate: plate, to: folder.appendingPathComponent("clip.mp4")) { scene.videoFile = "clip.mp4" }
+        scene.clipStart = 0
         try? VideoStore.save(scene, in: folder)
         return (scene, folder)
+    }
+
+    /// A clip of the sample rally: the hall plate with the players drawn as figures (limbs and head in team colours)
+    /// and the ball, 24 frames per second, H.264.
+    static func writeClip(_ scene: VideoScene, plate: [UInt8], to url: URL) -> Bool {
+        let w = Int(scene.camera.width), h = Int(scene.camera.height), fps: Int32 = 24
+        try? FileManager.default.removeItem(at: url)
+        guard let writer = try? AVAssetWriter(outputURL: url, fileType: .mp4) else { return false }
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
+            AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: w, AVVideoHeightKey: h,
+        ])
+        input.expectsMediaDataInRealTime = false
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+            kCVPixelBufferWidthKey as String: w, kCVPixelBufferHeightKey as String: h,
+        ])
+        guard writer.canAdd(input) else { return false }
+        writer.add(input)
+        guard writer.startWriting() else { return false }
+        writer.startSession(atSourceTime: .zero)
+        var plateCopy = plate
+        guard let plateImage = plateCopy.withUnsafeMutableBytes({ buf -> CGImage? in
+            CGContext(data: buf.baseAddress, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)?.makeImage()
+        }) else { return false }
+        let cam = scene.camera
+        let bones: [(BodyKeypoint, BodyKeypoint)] = [(.leftAnkle, .leftKnee), (.leftKnee, .leftHip), (.rightAnkle, .rightKnee),
+                                                     (.rightKnee, .rightHip), (.leftHip, .rightHip), (.leftHip, .leftShoulder),
+                                                     (.rightHip, .rightShoulder), (.leftShoulder, .rightShoulder),
+                                                     (.leftShoulder, .leftElbow), (.leftElbow, .leftWrist),
+                                                     (.rightShoulder, .rightElbow), (.rightElbow, .rightWrist), (.neck, .nose)]
+        let frames = Int(scene.duration * Double(fps))
+        for k in 0...frames {
+            let t = Double(k) / Double(fps)
+            var buffer: CVPixelBuffer?
+            guard let pool = adaptor.pixelBufferPool, CVPixelBufferPoolCreatePixelBuffer(nil, pool, &buffer) == kCVReturnSuccess,
+                  let pb = buffer else { return false }
+            CVPixelBufferLockBaseAddress(pb, [])
+            if let ctx = CGContext(data: CVPixelBufferGetBaseAddress(pb), width: w, height: h, bitsPerComponent: 8,
+                                   bytesPerRow: CVPixelBufferGetBytesPerRow(pb), space: CGColorSpaceCreateDeviceRGB(),
+                                   bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue) {
+                ctx.draw(plateImage, in: CGRect(x: 0, y: 0, width: w, height: h))
+                // Image coordinates are y down; the context's are y up.
+                ctx.translateBy(x: 0, y: CGFloat(h))
+                ctx.scaleBy(x: 1, y: -1)
+                ctx.setLineCap(.round)
+                let frame = scene.frame(at: t)
+                // Far players first so near ones overlap them.
+                let posed = frame.posedPlayers().sorted { ($0.token.point.z) < ($1.token.point.z) }
+                for p in posed {
+                    let kp = p.skeleton.keypoints(p.joints).compactMapValues { cam.project($0) }
+                    let team = p.token.side == .home ? Tokens.home : Tokens.opponent
+                    let colour = CGColor(red: CGFloat(team.r), green: CGFloat(team.g), blue: CGFloat(team.b), alpha: 1)
+                    let depth = max(4, (V3(p.token.point) - cam.center).length)
+                    ctx.setStrokeColor(colour)
+                    ctx.setLineWidth(CGFloat(cam.focalLength * 0.11 / depth))
+                    for (a, b) in bones {
+                        guard let pa = kp[a], let pb = kp[b] else { continue }
+                        ctx.move(to: CGPoint(x: pa.x, y: pa.y))
+                        ctx.addLine(to: CGPoint(x: pb.x, y: pb.y))
+                    }
+                    ctx.strokePath()
+                    if let nose = kp[.nose] {
+                        let r = CGFloat(cam.focalLength * 0.11 / depth)
+                        ctx.setFillColor(CGColor(red: 0.85, green: 0.68, blue: 0.55, alpha: 1))
+                        ctx.fillEllipse(in: CGRect(x: nose.x - r, y: nose.y - r, width: 2 * r, height: 2 * r))
+                    }
+                }
+                if let b = frame.ball, let px = cam.project(b) {
+                    let r = CGFloat(cam.focalLength * 0.105 / max(2, (b - cam.center).length))
+                    ctx.setFillColor(CGColor(red: 0.98, green: 0.85, blue: 0.2, alpha: 1))
+                    ctx.fillEllipse(in: CGRect(x: px.x - r, y: px.y - r, width: 2 * r, height: 2 * r))
+                }
+            }
+            CVPixelBufferUnlockBaseAddress(pb, [])
+            while !input.isReadyForMoreMediaData { Thread.sleep(forTimeInterval: 0.002) }
+            guard adaptor.append(pb, withPresentationTime: CMTime(value: CMTimeValue(k), timescale: fps)) else { return false }
+        }
+        input.markAsFinished()
+        let done = DispatchSemaphore(value: 0)
+        writer.finishWriting { done.signal() }
+        done.wait()
+        return writer.status == .completed
     }
 
     /// The empty hall as a still, for the court-marking screen.

@@ -759,6 +759,11 @@ final class SceneVideoTests: XCTestCase {
         let sf = VideoScene(title: "T", duration: 1, camera: Synth.stands, players: [track]).sceneFrame(at: 0.5)
         XCTAssertEqual(sf.tokens.count, 1)
         XCTAssertTrue(sf.zones.isEmpty)
+        // As a tap target on the video: the feet below the head, both inside the frame.
+        let marker = try XCTUnwrap(VideoScene(title: "T", duration: 1, camera: Synth.stands, players: [track]).markers(at: 0.5).first)
+        XCTAssertEqual(marker.id, sf.tokens[0].id)
+        XCTAssertGreaterThan(marker.foot.y, marker.head.y)
+        XCTAssertTrue((0...1).contains(marker.foot.x) && (0...1).contains(marker.foot.y))
         XCTAssertEqual(try XCTUnwrap(sf.tokens[0].yaw),
                        try XCTUnwrap(VideoScene(title: "T", duration: 1, camera: Synth.stands, players: [track]).frame(at: 0.5).yaw[sf.tokens[0].id]),
                        accuracy: 1e-12)
