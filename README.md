@@ -5,11 +5,11 @@ the domain core as a tested Swift package, and an iPad app slice that runs a liv
 
 ## Status — read this first
 
-- **`CoachBoardCore` builds and passes its tests.** Swift 6.1 on Linux (the `swift:6.1-noble` image): clean build
-  with no warnings, 31 of 31 tests passing.
-- **The iPad app has not been compiled yet.** It needs the iOS SDK, so it only builds on macOS. The CI workflow
-  (`.github/workflows/ci.yml`) builds it for the iOS Simulator on a macOS runner with Xcode 26; until that run is
-  green, expect a short round of compile fixes. The Metal shaders have only been reviewed by reading.
+- **Everything builds, and the core tests pass.** CI (`.github/workflows/ci.yml`) runs on every push:
+  `CoachBoardCore` with Swift 6.1 on Linux and with Xcode 26 on macOS (31 of 31 tests passing on both), and the
+  iPad app built for the iOS Simulator on a macOS runner, shaders included.
+- **The app has not been run on a device yet.** Compiling proves types, SDK APIs and Metal syntax; rendering,
+  gestures and feedback still need a session on a real iPad.
 - **The logic is cross-checked.** The rules engine, the rotation templates, the timing model and the shape
   recognizer mirror executable Python references in `Verification/`, and the Swift unit tests assert the numbers
   those references produce (Appendix A and D of the blueprint).
