@@ -163,6 +163,13 @@ final class ThemeStore {
 
     private(set) var theme: Theme
     private(set) var courtOrientation: CourtOrientation
+    /// Simple (the default) shows the essentials in plain words; Advanced adds the expert tools everywhere.
+    private(set) var advanced: Bool
+
+    func setAdvanced(_ on: Bool) {
+        advanced = on
+        UserDefaults.standard.set(on, forKey: "advancedMode")
+    }
 
     func select(_ theme: Theme) {
         self.theme = theme
@@ -181,5 +188,6 @@ final class ThemeStore {
         let id = launchTheme ?? UserDefaults.standard.string(forKey: "themeID") ?? Theme.hall.id
         theme = Theme.all.first { $0.id == id } ?? .hall
         courtOrientation = CourtOrientation(rawValue: UserDefaults.standard.string(forKey: "courtOrientation") ?? "") ?? .auto
+        advanced = args.contains("-advanced") || UserDefaults.standard.bool(forKey: "advancedMode")
     }
 }
