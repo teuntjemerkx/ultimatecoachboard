@@ -1,8 +1,24 @@
 import AVFoundation
 import CoreGraphics
 import CoreImage
+import CoreML
 import ImageIO
 import Vision
+
+extension VNRequest {
+    /// The Simulator has no Neural Engine, and Vision's people models fail to set up there unless they run on the CPU.
+    /// On an iPad this does nothing: the models pick the Neural Engine themselves.
+    func runsOnCPUInSimulator() -> Self {
+        #if targetEnvironment(simulator)
+        if let stages = try? supportedComputeStageDevices() {
+            for (stage, devices) in stages {
+                if let cpu = devices.first(where: { $0 is MLCPUComputeDevice }) { setComputeDevice(cpu, for: stage) }
+            }
+        }
+        #endif
+        return self
+    }
+}
 
 /// What Apple's on-device Vision models see in one frame of a clip: people with their body keypoints, and a mask
 /// of where people are (for the clean background plate). Pixel coordinates of the upright frame, origin top-left.
@@ -87,8 +103,8 @@ enum VideoVision {
     /// Body pose plus person boxes; each pose is paired with the box that holds most of its keypoints.
     static func detect(_ image: CGImage, time: Double) throws -> VisionFrame {
         let size = CGSize(width: image.width, height: image.height)
-        let pose = VNDetectHumanBodyPoseRequest()
-        let boxes = VNDetectHumanRectanglesRequest()
+        let pose = VNDetectHumanBodyPoseRequest().runsOnCPUInSimulator()
+        let boxes = VNDetectHumanRectanglesRequest().runsOnCPUInSimulator()
         boxes.upperBodyOnly = false
         try VNImageRequestHandler(cgImage: image, orientation: .up).perform([pose, boxes])
         func px(_ p: CGPoint) -> CGPoint { CGPoint(x: p.x * size.width, y: (1 - p.y) * size.height) }
@@ -138,7 +154,7 @@ enum VideoVision {
         reader.add(output)
         guard reader.startReading() else { return [] }
         var points: [Double: CGPoint] = [:]
-        let request = VNDetectTrajectoriesRequest(frameAnalysisSpacing: .zero, trajectoryLength: 8)
+        let request = VNDetectTrajectoriesRequest(frameAnalysisSpacing: .zero, trajectoryLength: 8).runsOnCPUInSimulator()
         // A volleyball is about 0.21 m across: a small object, never a person.
         request.objectMinimumNormalizedRadius = 0.002
         request.objectMaximumNormalizedRadius = 0.03
@@ -195,7 +211,7 @@ enum VideoVision {
 
     /// Where people are (Vision person segmentation), grown a little so edges and shadows stay out of the plate.
     static func personMask(_ image: CGImage, width: Int, height: Int) -> [UInt8]? {
-        let request = VNGeneratePersonSegmentationRequest()
+        let request = VNGeneratePersonSegmentationRequest().runsOnCPUInSimulator()
         request.qualityLevel = .balanced
         request.outputPixelFormat = kCVPixelFormatType_OneComponent8
         guard (try? VNImageRequestHandler(cgImage: image, orientation: .up).perform([request])) != nil,
