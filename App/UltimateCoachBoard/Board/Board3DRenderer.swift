@@ -30,7 +30,9 @@ struct AvatarInstanceGPU {
     var color: SIMD4<Float>
     var dqOffset: UInt32
     var selected: UInt32
-    var pad0: UInt32 = 0, pad1: UInt32 = 0
+    /// POV: the viewer's own head and neck are culled (Section 5.1).
+    var hideHead: UInt32 = 0
+    var pad1: UInt32 = 0
 }
 
 struct WallVertexGPU {
@@ -63,6 +65,33 @@ struct Scene3D: Equatable {
     var highlights: [BoardScene.Route] = []
     /// 2.43 m men, 2.24 m women.
     var netHeight = 2.43
+
+    /// The player whose eyes the camera uses (Section 5.1), with free-look offsets in radians.
+    struct POV: Equatable {
+        var player: UUID
+        var yaw: Double
+        var pitch: Double
+    }
+    var pov: POV?
+
+    /// Gaze lasers (Section 5.6): eye to target; red and dashed from the first occlusion when under 50% visible.
+    struct GazeRay: Equatable {
+        var from: V3
+        var to: V3
+        var occlusion: V3?
+        var visible: Bool
+        var side: Side
+    }
+    var gaze: [GazeRay] = []
+
+    /// Visual-field bands drawn as cones from the eye in third-person views (Section 5.7).
+    struct FieldCones: Equatable {
+        var eye: V3
+        var forward: V3
+        var side: Side
+        var field: VisualField
+    }
+    var field: FieldCones?
 }
 
 extension simd_float4x4 {
@@ -99,8 +128,17 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         didSet { if oldValue != scene { requestRedraw() } }
     }
 
+    /// The orbit rig: gestures and presets move it.
     private(set) var camera: BoardCamera = .topDown(aspect: 1.5)
-    private var transition: (from: BoardCamera, to: BoardCamera, start: CFTimeInterval, duration: Double, done: (() -> Void)?)?
+    /// The pose this frame renders from: the orbit, a player's POV, or a transition between them.
+    private(set) var pose: CameraPose = BoardCamera.topDown(aspect: 1.5).pose
+    private enum Move {
+        case dolly(BoardCamera, BoardCamera)
+        case flight(CameraPose)
+    }
+    private var transition: (move: Move, start: CFTimeInterval, duration: Double, done: (() -> Void)?)?
+    /// While in POV the camera follows the player's eyes every frame (head-locked plus free-look).
+    private(set) var inPOV = false
 
     init?(view: MTKView) {
         assert(MemoryLayout<Scene3DUniforms>.stride == 128 && MemoryLayout<Quad3D>.stride == 80 && MemoryLayout<AvatarVertexGPU>.stride == 48
@@ -115,7 +153,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         view.colorPixelFormat = .bgra8Unorm
         view.depthStencilPixelFormat = .depth32Float
         view.sampleCount = Self.sampleCount
-        view.clearDepth = 1
+        view.clearDepth = 0            // reversed-Z (Section 3.2): near is 1, infinity 0
         view.clearColor = MTLClearColor(red: Tokens.canvasBase.r, green: Tokens.canvasBase.g, blue: Tokens.canvasBase.b, alpha: 1)
         view.preferredFramesPerSecond = 120
         view.enableSetNeedsDisplay = true
@@ -167,8 +205,8 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
             d.isDepthWriteEnabled = write
             return device.makeDepthStencilState(descriptor: d)
         }
-        depthWrite = depth(.less, write: true)
-        depthTestOnly = depth(.lessEqual, write: false)
+        depthWrite = depth(.greater, write: true)
+        depthTestOnly = depth(.greaterEqual, write: false)
         depthOff = depth(.always, write: false)
         return [floorPipeline, quadPipeline, avatarPipeline, wallPipeline, glyphPipeline].allSatisfy { $0 != nil }
             && depthWrite != nil && depthTestOnly != nil && depthOff != nil
@@ -183,16 +221,45 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
 
     // MARK: - Camera
 
-    /// Sets the camera immediately (gestures), cancelling a running transition.
+    /// Sets the orbit camera immediately (gestures), cancelling a running transition.
     func setCamera(_ c: BoardCamera) {
         transition = nil
         camera = c
+        if !inPOV { pose = c.pose }
         requestRedraw()
     }
 
-    /// A critically damped move to `target`, as a dolly-zoom so the court keeps its size on screen (Section 3.2).
+    /// A critically damped move to `target`: a dolly-zoom between orbit poses so the court keeps its size on screen
+    /// (Section 3.2), or, when leaving a POV, the fly-out arc.
     func animateCamera(to target: BoardCamera, duration: Double = 0.9, completion: (() -> Void)? = nil) {
-        transition = (camera, target, CACurrentMediaTime(), duration, completion)
+        let now = CACurrentMediaTime()
+        if inPOV {
+            inPOV = false
+            camera = target
+            transition = (.flight(pose), now, CameraPose.flightDuration(from: pose, to: target.pose), completion)
+        } else {
+            transition = (.dolly(camera, target), now, duration, completion)
+        }
+        runDisplayLink()
+    }
+
+    /// Fly into the POV player's eyes (Section 5.1: raised Bezier arc, slerped orientation, eased field of view).
+    func flyToPOV() {
+        guard let target = povPose() else { return }
+        inPOV = true
+        transition = (.flight(pose), CACurrentMediaTime(), CameraPose.flightDuration(from: pose, to: target), nil)
+        runDisplayLink()
+    }
+
+    /// Fly back out of the POV to the orbit camera.
+    func flyToOrbit() {
+        guard inPOV else { return }
+        inPOV = false
+        transition = (.flight(pose), CACurrentMediaTime(), CameraPose.flightDuration(from: pose, to: camera.pose), nil)
+        runDisplayLink()
+    }
+
+    private func runDisplayLink() {
         view?.enableSetNeedsDisplay = false
         view?.isPaused = false
     }
@@ -200,15 +267,36 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
     var isAnimating: Bool { transition != nil }
 
     private func stepCamera(now: CFTimeInterval) {
-        guard let t = transition else { return }
+        let target = inPOV ? (povPose() ?? camera.pose) : camera.pose
+        guard let t = transition else {
+            pose = target
+            return
+        }
         let f = min(1, (now - t.start) / t.duration)
-        camera = BoardCamera.dollyZoom(from: t.from, to: t.to, t: criticallyDamped(f))
+        let e = criticallyDamped(f)
+        switch t.move {
+        case let .dolly(a, b):
+            camera = BoardCamera.dollyZoom(from: a, to: b, t: e)
+            pose = camera.pose
+        case let .flight(from):
+            pose = CameraPose.flight(from: from, to: target, t: e)
+        }
         if f >= 1 {
             transition = nil
+            pose = inPOV ? (povPose() ?? camera.pose) : camera.pose
             view?.isPaused = true
             view?.enableSetNeedsDisplay = true
             t.done?()
         }
+    }
+
+    /// The POV player's head-locked eye pose with free-look, from the same posed skeleton the avatar uses.
+    private func povPose() -> CameraPose? {
+        guard let spec = scene.pov, let p = scene.players.first(where: { $0.id == spec.player }),
+              let m = mesh(stature: p.stature) else { return nil }
+        let posed = p.blend.map { m.skeleton.pose($0, position: p.point, facing: p.facing) }
+            ?? m.skeleton.pose(p.posture, position: p.point, facing: p.facing)
+        return m.skeleton.povPose(posed, aspect: aspect, yaw: spec.yaw, pitch: spec.pitch)
     }
 
     // MARK: - Hit testing
@@ -218,19 +306,19 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         guard let v = view, v.bounds.width > 0 else { return nil }
         let ndcX = Double(p.x / v.bounds.width) * 2 - 1
         let ndcY = 1 - Double(p.y / v.bounds.height) * 2
-        return camera.floorPoint(ndcX: ndcX, ndcY: ndcY, aspect: aspect)
+        return pose.floorPoint(ndcX: ndcX, ndcY: ndcY, aspect: aspect)
     }
 
     /// Screen position (points) of a world point, or nil behind the camera.
     func screenPoint(_ w: V3) -> CGPoint? {
-        guard let v = view, let c = camera.project(w, aspect: aspect) else { return nil }
+        guard let v = view, let c = pose.project(w, aspect: aspect) else { return nil }
         return CGPoint(x: (c.x + 1) / 2 * Double(v.bounds.width), y: (1 - c.y) / 2 * Double(v.bounds.height))
     }
 
     /// The player whose body (feet to head, projected) passes closest to a touch, within 36 points.
     func player(at p: CGPoint) -> UUID? {
         var best: (UUID, CGFloat)?
-        for player in scene.players {
+        for player in scene.players where player.id != scene.pov?.player || !inPOV {
             guard let a = screenPoint(V3(player.point)), let b = screenPoint(V3(player.point, y: player.stature)) else { continue }
             let d = distance(p, segment: a, b)
             if d <= 36, d < (best?.1 ?? .infinity) { best = (player.id, d) }
@@ -255,12 +343,12 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
               let pass = view.currentRenderPassDescriptor, let drawable = view.currentDrawable,
               let cmd = queue.makeCommandBuffer(), let enc = cmd.makeRenderCommandEncoder(descriptor: pass) else { return }
         let viewSize = SIMD2<Float>(Float(view.bounds.width), Float(view.bounds.height))
-        let eye = camera.eye
+        let eye = pose.eye
         let light = SIMD3<Float>(0.3, 1, 0.45)
         let l = simd_normalize(light)
         let (zones, zoneVerts) = ZoneGPU.pack(scene.zones, selected: scene.selectedZone, morphs: scene.zoneMorphs,
                                               intensities: scene.zoneIntensities)
-        var u = Scene3DUniforms(viewProjection: simd_float4x4(camera.viewProjection(aspect: aspect)),
+        var u = Scene3DUniforms(viewProjection: simd_float4x4(pose.viewProjection(aspect: aspect)),
                                 eye: SIMD4(Float(eye.x), Float(eye.y), Float(eye.z), 1),
                                 light: SIMD4(l.x, l.y, l.z, 0.35), zoneCount: UInt32(zones.count))
 
@@ -286,7 +374,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         let avatarCount = encodeAvatars(enc, uniforms: &u)
 
         // 3. Floor ribbons, player rings and the net (blended, depth-tested).
-        let quads = floorQuads() + netQuads()
+        let quads = floorQuads() + netQuads() + gazeQuads(eye: eye)
         if let qb = buffer(quads) {
             enc.setDepthStencilState(depthTestOnly)
             enc.setRenderPipelineState(quadPipeline)
@@ -296,7 +384,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         }
 
         // 4. Zone walls and cylinders (additive, depth-tested, no depth write).
-        let walls = wallVertices()
+        let walls = wallVertices() + fieldCones()
         if let wb = buffer(walls) {
             enc.setDepthStencilState(depthTestOnly)
             enc.setRenderPipelineState(wallPipeline)
@@ -308,7 +396,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         // 5. Labels above the heads, always on top (screen-space SDF glyphs).
         if let atlas {
             var glyphs: [GlyphInstance] = []
-            for p in scene.players {
+            for p in scene.players where !(inPOV && p.id == scene.pov?.player) {
                 guard let s = screenPoint(V3(p.point, y: p.stature + 0.32)) else { continue }
                 glyphs += atlas.layout(p.label, center: s, height: 20, color: (p.selected ? Tokens.white : Tokens.white.withAlpha(0.85)).simd)
             }
@@ -328,7 +416,8 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         if !loggedFrame {
             loggedFrame = true
             DemoMode.note("3D frame: \(avatarCount) avatars, \(quads.count) quads, \(walls.count / 6) wall panels, \(zones.count) zones, "
-                          + "camera pitch \(Int((camera.pitch * 180 / .pi).rounded()))\u{00B0} distance \(String(format: "%.1f", camera.distance)) m")
+                          + "camera pitch \(Int((camera.pitch * 180 / .pi).rounded()))\u{00B0} distance \(String(format: "%.1f", camera.distance)) m"
+                          + (scene.pov != nil ? ", POV" : "") + ", \(scene.gaze.count) gaze rays")
         }
     }
 
@@ -369,7 +458,9 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
                 dqs.append(SIMD4(Float(dq.dual.x), Float(dq.dual.y), Float(dq.dual.z), Float(dq.dual.w)))
             }
             let color = p.isLibero ? Tokens.white : (p.side == .home ? Tokens.accent : Tokens.opponent)
-            groups[key, default: []].append(AvatarInstanceGPU(color: color.simd, dqOffset: offset, selected: p.selected ? 1 : 0))
+            let hideHead: UInt32 = inPOV && transition == nil && p.id == scene.pov?.player ? 1 : 0
+            groups[key, default: []].append(AvatarInstanceGPU(color: color.simd, dqOffset: offset, selected: p.selected ? 1 : 0,
+                                                              hideHead: hideHead))
         }
         guard let dqBuffer = dqs.withUnsafeBytes({ device.makeBuffer(bytes: $0.baseAddress!, length: $0.count, options: .storageModeShared) })
         else { return 0 }
@@ -451,6 +542,73 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
             q.append(quad(origin: V3(px, 0, -0.05), u: V3(0, 0, 0.1), v: up * (nh + 0.12), color: RGBA(hex: 0x6A7398)))
         }
         return q
+    }
+
+    // MARK: - Gaze and field of view
+
+    /// A ribbon from a to b that always faces the camera.
+    private func billboard(_ a: V3, _ b: V3, width: Double, eye: V3, color: RGBA, pattern: UInt32 = 0) -> Quad3D? {
+        let d = b - a
+        guard d.length > 1e-4 else { return nil }
+        let side = d.cross(eye - (a + b) * 0.5).normalized * width
+        guard side.length > 1e-9 else { return nil }
+        return quad(origin: a - side * 0.5, u: d, v: side, color: color, pattern: pattern)
+    }
+
+    private func gazeQuads(eye: V3) -> [Quad3D] {
+        var q: [Quad3D] = []
+        let red = RGBA(hex: 0xFF3B1A)
+        for ray in scene.gaze {
+            let team = ray.side == .home ? Tokens.accent : Tokens.opponent
+            let dir = (ray.to - ray.from).normalized
+            let start = ray.from + dir * 0.12           // out of the head
+            if ray.visible || ray.occlusion == nil {
+                if let r = billboard(start, ray.to, width: 0.035, eye: eye, color: team.withAlpha(0.9)) { q.append(r) }
+            } else if let o = ray.occlusion {
+                if let r = billboard(start, o, width: 0.035, eye: eye, color: team.withAlpha(0.9)) { q.append(r) }
+                if let r = billboard(o, ray.to, width: 0.035, eye: eye, color: red, pattern: 4) { q.append(r) }
+                // An X at the first occlusion.
+                let toEye = (eye - o).normalized
+                let ref = abs(toEye.y) < 0.9 ? V3.up : V3(1, 0, 0)
+                let a = toEye.cross(ref).normalized, b = toEye.cross(a)
+                for d in [(a + b).normalized, (a - b).normalized] {
+                    if let r = billboard(o - d * 0.09, o + d * 0.09, width: 0.035, eye: eye, color: red) { q.append(r) }
+                }
+            }
+        }
+        return q
+    }
+
+    /// Nested translucent cones from the eye: central band at 20%, peripheral at 8% (Section 5.7).
+    private func fieldCones() -> [WallVertexGPU] {
+        guard let f = scene.field, !inPOV else { return [] }
+        let fw = f.forward.normalized
+        let right = fw.cross(.up).normalized
+        let up = right.cross(fw)
+        let tint = f.side == .home ? Tokens.accent : Tokens.opponent
+        func fan(_ directions: [V3], length: Double, alpha: Double) -> [WallVertexGPU] {
+            let c = tint.withAlpha(alpha).simd
+            func v(_ p: V3) -> WallVertexGPU { WallVertexGPU(position: SIMD4(Float(p.x), Float(p.y), Float(p.z), 0), color: c) }
+            var out: [WallVertexGPU] = []
+            for i in 0..<directions.count {
+                let a = f.eye + directions[i] * length, b = f.eye + directions[(i + 1) % directions.count] * length
+                out += [v(f.eye), v(a), v(b)]
+            }
+            return out
+        }
+        let n = 36
+        let central = (0..<n).map { i -> V3 in
+            let phi = 2 * Double.pi * Double(i) / Double(n)
+            let s = sin(f.field.central * .pi / 180), c = cos(f.field.central * .pi / 180)
+            return (fw * c + (right * cos(phi) + up * sin(phi)) * s).normalized
+        }
+        let peripheral = (0..<n).map { i -> V3 in
+            let phi = 2 * Double.pi * Double(i) / Double(n)
+            let th = f.field.peripheralHorizontal * cos(phi) * .pi / 180
+            let tv = (sin(phi) >= 0 ? f.field.peripheralUp : f.field.peripheralDown) * sin(phi) * .pi / 180
+            return ((fw * cos(th) + right * sin(th)) * cos(tv) + up * sin(tv)).normalized
+        }
+        return fan(peripheral, length: 2.2, alpha: 0.08) + fan(central, length: 3.5, alpha: 0.20)
     }
 
     // MARK: - Walls

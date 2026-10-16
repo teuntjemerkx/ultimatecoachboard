@@ -25,8 +25,19 @@ struct StudioView: View {
                     if controller.tool == .zone || controller.selectedZone != nil {
                         ZoneStrip(controller: controller).padding(12)
                     }
+                    if controller.view3D && controller.povPlayer != nil {
+                        FieldRings().allowsHitTesting(false)
+                    }
+                    if controller.view3D && controller.gazePlayer != nil {
+                        GazePanel(controller: controller)
+                            .frame(maxWidth: .infinity, alignment: .topTrailing)
+                            .padding(12)
+                    }
                     VStack(spacing: 8) {
                         Spacer()
+                        if controller.view3D && (controller.selectedTokenValue != nil || controller.povPlayer != nil) {
+                            POVStrip(controller: controller)
+                        }
                         if controller.view3D && controller.selectedTokenValue != nil {
                             PostureStrip(controller: controller)
                         }
@@ -331,6 +342,7 @@ struct Studio3DBoardView: UIViewRepresentable {
         var exiting = false
         var homeOnLeft = true
         var resetCount = 0
+        var povPlayer: UUID?
         /// A one-finger pan that started on empty floor with the select tool orbits instead of editing.
         var orbiting = false
         var lastPan: CGPoint = .zero
@@ -351,6 +363,11 @@ struct Studio3DBoardView: UIViewRepresentable {
         view.accessibilityLabel = "Volleyball court in 3D"
         view.onTap = { p in
             guard let r = coordinator.renderer else { return }
+            if c.povPlayer != nil {
+                // In POV a tap on another player adds or removes them as a gaze target.
+                if let id = r.player(at: p) { c.toggleGazeTarget(id) }
+                return
+            }
             if let id = r.player(at: p) {
                 c.tap(world: r.scene.players.first { $0.id == id }?.point ?? FloorPoint(x: 0, z: 0), token: id)
             } else if let w = r.floorPoint(at: p) {
@@ -363,6 +380,15 @@ struct Studio3DBoardView: UIViewRepresentable {
         view.onRedo = { c.redo() }
         view.onPanEvent = { phase, p in
             guard let r = coordinator.renderer else { return }
+            if c.povPlayer != nil {
+                // Free-look: drag to turn and tilt the head within the neck's range.
+                if phase == .began { coordinator.lastPan = p }
+                if phase == .changed {
+                    c.look(dx: Double(p.x - coordinator.lastPan.x) * 0.004, dy: Double(p.y - coordinator.lastPan.y) * 0.004)
+                    coordinator.lastPan = p
+                }
+                return
+            }
             let w = r.floorPoint(at: p)
             switch phase {
             case .began:
@@ -390,9 +416,12 @@ struct Studio3DBoardView: UIViewRepresentable {
                 coordinator.lastFloor = nil
             }
         }
-        view.onOrbit = { d in if let r = coordinator.renderer { Self.orbit(r, by: d) } }
+        view.onOrbit = { d in
+            if c.povPlayer != nil { c.look(dx: Double(d.x) * 0.004, dy: Double(d.y) * 0.004); return }
+            if let r = coordinator.renderer { Self.orbit(r, by: d) }
+        }
         view.onPinch = { s in
-            guard let r = coordinator.renderer else { return }
+            guard let r = coordinator.renderer, c.povPlayer == nil else { return }
             r.setCamera(r.camera.orbited(dHeading: 0, dPitch: 0, zoom: Double(s)))
         }
         view.onResize = { size in
@@ -428,6 +457,10 @@ struct Studio3DBoardView: UIViewRepresentable {
             coordinator.homeOnLeft = controller.homeOnLeft
             coordinator.resetCount = controller.cameraResetCount
             renderer.animateCamera(to: .bench(aspect: aspect, homeOnLeft: controller.homeOnLeft))
+        }
+        if coordinator.povPlayer != controller.povPlayer {
+            coordinator.povPlayer = controller.povPlayer
+            if controller.povPlayer != nil { renderer.flyToPOV() } else { renderer.flyToOrbit() }
         }
     }
 }
@@ -528,5 +561,93 @@ struct TimelineStrip: View {
                 .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.white.color)
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// POV controls (Section 5.1): fly into the selected player's eyes, gaze rays on or off, back to the orbit camera.
+struct POVStrip: View {
+    let controller: StudioController
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if let pov = controller.povPlayer {
+                let label = controller.scene.tokens.first { $0.id == pov }?.label ?? ""
+                Text("POV \(label) \u{00B7} HEAD-LOCKED").font(.system(size: 10, weight: .semibold).width(.expanded))
+                    .foregroundStyle(Tokens.textSecondary.color)
+                chip("LOOK AHEAD", on: controller.povYaw == 0 && controller.povPitch == 0) { controller.look(dx: controller.povYaw, dy: -controller.povPitch) }
+                if controller.selectedToken != nil && controller.selectedToken != pov {
+                    chip("POV \(controller.selectedTokenValue?.label ?? "")", on: false) { controller.enterPOV() }
+                }
+                chip("EXIT POV", on: true) { controller.exitPOV() }
+            } else if let token = controller.selectedTokenValue {
+                chip("POV \(token.label)", on: false) { controller.enterPOV() }
+                    .accessibilityLabel("See through the eyes of \(token.label)")
+                chip("GAZE", on: controller.gazePlayer == token.id) { controller.toggleGaze() }
+                    .accessibilityLabel("Gaze rays and field of view of \(token.label)")
+            }
+        }
+        .padding(10)
+        .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.accent.withAlpha(0.5).color))
+    }
+
+    private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).font(.system(size: 11, weight: .bold).width(.expanded))
+                .padding(.horizontal, 8).frame(minHeight: 36)
+                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 4))
+                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.white.color)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Gaze readouts (Section 5.6): one line per target with its band and visibility.
+struct GazePanel: View {
+    let controller: StudioController
+
+    var body: some View {
+        let readouts = controller.gazeReadouts
+        VStack(alignment: .leading, spacing: 6) {
+            Text("LINE OF SIGHT").font(.system(size: 10, weight: .semibold).width(.expanded))
+                .foregroundStyle(Tokens.textSecondary.color)
+            if readouts.isEmpty {
+                Text(controller.povPlayer != nil ? "Tap a player to add a target" : "No targets")
+                    .font(.system(size: 12)).foregroundStyle(Tokens.textSecondary.color)
+            }
+            ForEach(readouts, id: \.self) { r in
+                HStack(spacing: 6) {
+                    Circle().fill((r.visibility.fraction >= 0.5 ? Tokens.white : RGBA(hex: 0xFF3B1A)).color).frame(width: 8, height: 8)
+                    Text(r.text).font(.system(size: 12, weight: .medium)).foregroundStyle(Tokens.white.color)
+                }
+            }
+            if controller.povPlayer != nil {
+                Text("Head orientation, not eye tracking: the rings show the central field around where the head points.")
+                    .font(.system(size: 10)).foregroundStyle(Tokens.textSecondary.color)
+                    .frame(maxWidth: 300, alignment: .leading)
+            }
+        }
+        .padding(10)
+        .background(Tokens.canvasRaised.withAlpha(0.92).color, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.hairline.color))
+        .frame(maxWidth: 420, alignment: .trailing)
+    }
+}
+
+/// In POV, thin rings mark the central field (+-30 degrees) and the foveal core (+-2.5 degrees) (Section 5.7).
+/// With 90 degrees horizontal field of view, an angle theta from the centre sits at (width / 2) * tan(theta).
+struct FieldRings: View {
+    var body: some View {
+        GeometryReader { g in
+            let half = g.size.width / 2
+            let central = half * tan(30 * .pi / 180), foveal = half * tan(2.5 * .pi / 180)
+            ZStack {
+                Circle().stroke(Tokens.accent.withAlpha(0.55).color, lineWidth: 1.5)
+                    .frame(width: central * 2, height: central * 2)
+                Circle().stroke(Tokens.white.withAlpha(0.7).color, lineWidth: 1)
+                    .frame(width: foveal * 2, height: foveal * 2)
+            }
+            .position(x: g.size.width / 2, y: g.size.height / 2)
+        }
     }
 }

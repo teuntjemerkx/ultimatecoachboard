@@ -66,7 +66,7 @@ struct Quad3D {
     float4 edgeU;       // xyz, w = length in metres
     float4 edgeV;       // xyz, w = length in metres
     float4 color;       // straight rgb + alpha
-    uint pattern;       // 0 solid, 1 net mesh, 2 antenna stripes, 3 floor ring (player marker)
+    uint pattern;       // 0 solid, 1 net mesh, 2 antenna stripes, 3 floor ring (player marker), 4 dashed
     uint pad0, pad1, pad2;
 };
 
@@ -115,6 +115,9 @@ fragment float4 quad3DFragment(Quad3DOut in [[stage_in]]) {
         float band = 1.0 - smoothstep(0.03 - aa, 0.03 + aa, abs(d - (radius - 0.04)));
         float disc = 0.18 * (1.0 - smoothstep(radius - 0.04 - aa, radius - 0.04 + aa, d));
         a *= max(band, disc);
+    } else if (in.pattern == 4) {
+        // Dashes along the ribbon: 15 cm on, 10 cm off (occluded part of a gaze ray).
+        a *= step(fract(in.metres.x / 0.25), 0.6);
     }
     return float4(rgb * a, a);
 }
@@ -131,7 +134,8 @@ struct AvatarInstance {
     float4 color;
     uint dqOffset;      // first joint of this avatar in the dual-quaternion buffer
     uint selected;
-    uint pad0, pad1;
+    uint hideHead;      // POV: cull the viewer's own head and neck (Section 5.1)
+    uint pad1;
 };
 
 struct AvatarOut {
@@ -167,6 +171,8 @@ vertex AvatarOut avatarVertex(uint vid [[vertex_id]], uint iid [[instance_id]],
     o.position = u.viewProjection * float4(o.world, 1.0);
     o.color = a.color;
     o.selected = a.selected;
+    // Joints 3 and 4 are the neck and head: outside the clip volume, so their triangles vanish.
+    if (a.hideHead != 0 && (j0 == 3 || j0 == 4)) o.position = float4(2.0, 2.0, 2.0, 1.0);
     return o;
 }
 

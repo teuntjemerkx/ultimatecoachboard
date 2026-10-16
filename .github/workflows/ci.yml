@@ -79,7 +79,7 @@ jobs:
           # The first launch after boot can take minutes while the Simulator finishes setting up; warm it up once.
           limit 240 xcrun simctl launch "$UDID" app.ultimatecoachboard.ipad || echo "warm-up launch failed or timed out" >> shots/ci-log.txt
           sleep 5
-          for s in launcher setup live advanced setbreak log studio studio3d; do
+          for s in launcher setup live advanced setbreak log studio studio3d pov; do
             launched=no
             for attempt in 1 2; do
               if limit 90 xcrun simctl launch --terminate-running-process "$UDID" app.ultimatecoachboard.ipad -demoScreen "$s"; then

@@ -96,7 +96,13 @@ final class StudioController {
     private(set) var cameraResetCount = 0
 
     func toggle3D() {
-        if view3D { exiting3D = true } else { view3D = true }
+        if view3D {
+            povPlayer = nil
+            gazePlayer = nil
+            exiting3D = true
+        } else {
+            view3D = true
+        }
     }
 
     func finishExit3D() {
@@ -104,7 +110,82 @@ final class StudioController {
         view3D = false
     }
 
-    func resetCamera() { cameraResetCount += 1 }
+    func resetCamera() {
+        povPlayer = nil
+        cameraResetCount += 1
+    }
+
+    // MARK: - POV and gaze (Sections 5.1, 5.6, 5.7)
+
+    /// The player whose eyes the 3D camera uses; nil for the orbit camera.
+    private(set) var povPlayer: UUID?
+    /// Free-look offsets from head-forward, radians (clamped to the neck's range by the core).
+    private(set) var povYaw = 0.0
+    private(set) var povPitch = 0.0
+    /// Whose gaze rays and field-of-view bands are shown (the POV player while in POV).
+    private(set) var gazePlayer: UUID?
+    /// Explicit gaze targets; nil uses the role defaults (opposing setter's head, front row's hitting shoulders).
+    private var gazeTargets: [UUID: GazeReadout.Aim]?
+
+    func enterPOV() {
+        guard view3D, let id = selectedToken else { return }
+        if povPlayer != id { gazeTargets = nil }
+        povPlayer = id
+        gazePlayer = id
+        povYaw = 0
+        povPitch = 0
+    }
+
+    func exitPOV() { povPlayer = nil }
+
+    func toggleGaze() {
+        if gazePlayer != nil && gazePlayer == selectedToken { gazePlayer = nil; return }
+        guard let id = selectedToken else { return }
+        if gazePlayer != id { gazeTargets = nil }
+        gazePlayer = id
+    }
+
+    /// Free-look in POV: horizontal drag turns the head, vertical drag tilts it.
+    func look(dx: Double, dy: Double) {
+        guard povPlayer != nil else { return }
+        povYaw = max(-70 * .pi / 180, min(70 * .pi / 180, povYaw - dx))
+        povPitch = max(-50 * .pi / 180, min(60 * .pi / 180, povPitch + dy))
+    }
+
+    /// Tapping another player while the gaze is shown adds or removes them as a target.
+    func toggleGazeTarget(_ id: UUID) {
+        guard let viewer = gazePlayer, id != viewer else { return }
+        var targets = gazeTargets ?? Dictionary(uniqueKeysWithValues: currentGazeTargets(frame.posedPlayers()))
+        if targets[id] != nil { targets[id] = nil } else {
+            let role = scene.tokens.first { $0.id == id }?.role ?? ""
+            targets[id] = ["S", "S1", "S2"].contains(role) ? .head : .hittingShoulder
+        }
+        gazeTargets = targets
+    }
+
+    private func currentGazeTargets(_ players: [PosedPlayer]) -> [(UUID, GazeReadout.Aim)] {
+        guard let id = gazePlayer, let viewer = players.first(where: { $0.id == id }) else { return [] }
+        if let gazeTargets { return gazeTargets.map { ($0.key, $0.value) }.sorted { $0.0.uuidString < $1.0.uuidString } }
+        return Gaze.defaultTargets(for: viewer, among: players)
+    }
+
+    /// Gaze readouts for the gaze player at the current frame (eye and forward are independent of the viewport).
+    func gazeAnalysis(_ f: SceneFrame) -> (eye: V3, forward: V3, side: Side, readouts: [GazeReadout])? {
+        guard let id = gazePlayer else { return nil }
+        let players = f.posedPlayers()
+        guard let viewer = players.first(where: { $0.id == id }) else { return nil }
+        let yaw = povPlayer == id ? povYaw : 0, pitch = povPlayer == id ? povPitch : 0
+        let pov = viewer.skeleton.povPose(viewer.joints, aspect: 1, yaw: yaw, pitch: pitch)
+        let headForward = viewer.skeleton.povPose(viewer.joints, aspect: 1).forward
+        let readouts = Gaze.readouts(viewer: viewer, pov: pov, targets: currentGazeTargets(players), players: players,
+                                     netHeight: netHeight)
+        return (pov.eye, headForward, viewer.token.side, readouts)
+    }
+
+    var gazeReadouts: [GazeReadout] { gazeAnalysis(frame)?.readouts ?? [] }
+
+    /// Net height for POV and line of sight: 2.43 m (men); 2.24 m (women) is a setting to come.
+    var netHeight = 2.43
 
     var selectedTokenValue: SceneToken? { selectedToken.flatMap { id in scene.tokens.first { $0.id == id } } }
 
@@ -511,16 +592,6 @@ final class StudioController {
         return s
     }
 
-    /// Default stature by role when a token has none (metres): liberos shortest, middles tallest.
-    static func defaultStature(role: String) -> Double {
-        switch role {
-        case "L": return 1.80
-        case "S", "S1", "S2": return 1.90
-        case "MB", "MB1", "MB2", "M", "M1", "M2": return 2.02
-        default: return 1.95
-        }
-    }
-
     var scene3D: Scene3D {
         let f = frame
         let flat = boardScene(f)
@@ -529,13 +600,22 @@ final class StudioController {
             let point = flat.tokens.first { $0.id == t.id }?.point ?? t.point
             return Scene3D.Player(id: t.id, side: t.side, point: point, label: t.label,
                                   posture: t.posture ?? SceneToken.automaticPosture(at: point), blend: f.postureBlends[t.id],
-                                  facing: t.facing, stature: t.stature ?? Self.defaultStature(role: t.role),
+                                  facing: t.facing, stature: t.effectiveStature,
                                   isLibero: t.role == "L", selected: t.id == selectedToken)
         }
         s.zones = flat.zones
         s.zoneMorphs = flat.zoneMorphs
         s.zoneIntensities = flat.zoneIntensities
         s.selectedZone = flat.selectedZone
+        s.netHeight = netHeight
+        s.pov = povPlayer.map { Scene3D.POV(player: $0, yaw: povYaw, pitch: povPitch) }
+        if let g = gazeAnalysis(f) {
+            s.gaze = g.readouts.map { r in
+                Scene3D.GazeRay(from: g.eye, to: r.point, occlusion: r.visibility.occlusionPoint,
+                                visible: r.visibility.fraction >= 0.5, side: g.side)
+            }
+            s.field = Scene3D.FieldCones(eye: g.eye, forward: g.forward, side: g.side, field: VisualField())
+        }
         s.ink = flat.ink
         s.highlights = flat.highlights
         return s

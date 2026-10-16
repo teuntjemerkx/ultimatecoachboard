@@ -1,7 +1,7 @@
 import UIKit
 import CoachBoardCore
 
-/// Launch-argument demo states (`-demoScreen launcher|setup|live|advanced|setbreak|log|studio|studio3d`) so CI can capture screenshots of
+/// Launch-argument demo states (`-demoScreen launcher|setup|live|advanced|setbreak|log|studio|studio3d|pov`) so CI can capture screenshots of
 /// real screens in the Simulator. Only reachable through launch arguments; never shown to a coach.
 enum DemoMode {
     static var screen: String? {
@@ -46,7 +46,7 @@ enum DemoMode {
             codeRally(c, winner: .home)
             if let t = c.state.tokens().first(where: { $0.side == .home && $0.position == .p4 }) { c.openSkillPad(for: t) }
             model.screen = .live(c)
-        case "studio", "studio3d":
+        case "studio", "studio3d", "pov":
             var scene = SceneStore.newScene(labels: [.p1: "8", .p2: "12", .p3: "4", .p4: "9", .p5: "14", .p6: "2"])
             scene.title = "Tip coverage vs Dynamo R3"
             let c = StudioController(scene: scene)
@@ -59,7 +59,7 @@ enum DemoMode {
             demoZone(c, loop(FloorPoint(x: 0.0, z: 4.6), 1.1, squash: 0.8), tag: .freeBall, forced: .freeform)
             note("studio: \(c.scene.zones.count) zones: " + c.scene.zones.map { "\($0.semantic.tag.rawValue) \($0.geometry)" }.joined(separator: " | "))
             c.tool = .zone
-            if screen == "studio3d" {
+            if screen == "studio3d" || screen == "pov" {
                 // Opponent front row up at the net, home passers low.
                 for t in c.scene.tokens {
                     if t.side == .opponent && abs(t.point.z) < 3.5 {
@@ -82,7 +82,17 @@ enum DemoMode {
                 c.tool = .select
                 c.selectToken(c.scene.tokens.first { $0.side == .home && $0.role == "OH1" }?.id)
                 c.toggle3D()
+                c.toggleGaze()
                 note("studio3d: postures " + c.frame.tokens.map { "\($0.label):\($0.posture?.rawValue ?? "-")" }.joined(separator: " "))
+                note("studio3d gaze: " + c.gazeReadouts.map(\.text).joined(separator: " | "))
+            } else if screen == "pov" {
+                // The opposing middle blocker's eyes at the home attack.
+                c.scrub(to: 3)
+                c.tool = .select
+                c.selectToken(c.scene.tokens.first { $0.side == .opponent && $0.role == "MB1" }?.id)
+                c.toggle3D()
+                c.enterPOV()
+                note("pov gaze: " + c.gazeReadouts.map(\.text).joined(separator: " | "))
             } else {
                 c.tool = .zone
             }
