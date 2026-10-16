@@ -11,7 +11,7 @@ export interface Settings {
 }
 
 const KEY = "coachboard.settings";
-const defaults: Settings = { themeId: "hall", advanced: false, women: true, teamName: "" };
+const defaults: Settings = { themeId: "locker", advanced: false, women: true, teamName: "" };
 
 function load(): Settings {
   try {

@@ -75,7 +75,7 @@ export function Settings() {
 
           <section className="stack" style={{ gap: 10 }}>
             <h2 className="group-title">Look</h2>
-            <div className="grid-tiles" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 210px), 1fr))" }}>
+            <div className="grid-lockers">
               {themes.map((t) => (
                 <button key={t.id} className="tile" style={{ minHeight: 0, outline: s.themeId === t.id ? "3px solid var(--c-focus)" : undefined }}
                         onClick={() => { s.set({ themeId: t.id }); applyTheme(themeById(t.id)); }}>

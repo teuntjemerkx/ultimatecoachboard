@@ -4,6 +4,9 @@
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* Athletic lettering for names, numbers and big calls to action (the locker nameplate); body text stays the
+     system face so older eyes read it easily. */
+  --font-athletic: "Barlow Condensed", "Arial Narrow", "Helvetica Neue Condensed", sans-serif;
   --radius: 10px;
   --radius-card: 14px;
   --radius-small: 6px;
@@ -15,7 +18,7 @@
   /* Light template values until applyTheme runs. */
   --c-bg: #F4F6F9; --c-surface: #FFFFFF; --c-hairline: rgba(17,24,39,0.12); --c-text: #111827; --c-text2: #4B5563;
   --c-accent: #111827; --c-onAccent: #FFFFFF; --c-fault: #C2410C; --c-home: #0067A5; --c-opponent: #D55E00;
-  --c-focus: #2563EB;
+  --c-focus: #2D7DFF; --c-band: #0A2A66; --c-bandText: #FFFFFF; --c-bandSoft: #9DB8E8; --c-led: #2D7DFF;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -44,16 +47,26 @@ button { font: inherit; color: inherit; }
 .bar {
   height: var(--bar); flex: none; display: flex; align-items: center; gap: 12px;
   padding: 0 var(--gutter-r) 0 var(--gutter-l);
-  background: var(--c-surface); border-bottom: 1px solid var(--c-hairline);
+  background: var(--c-band); color: var(--c-bandText);
+  box-shadow: inset 0 -2px 0 var(--c-led), 0 6px 18px color-mix(in srgb, var(--c-led) 18%, transparent);
+  position: relative; z-index: 2;
 }
-.bar h1 { font: 600 19px/1.2 var(--font-display); margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar h1 {
+  font: 800 24px/1 var(--font-athletic); text-transform: uppercase; letter-spacing: 0.05em;
+  margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bar .btn { background: transparent; color: var(--c-bandText); }
+.bar .btn.secondary { border-color: color-mix(in srgb, var(--c-bandText) 45%, transparent); }
+.bar .btn.on { background: var(--c-bandText); color: var(--c-band); }
 .bar .spacer { flex: 1; }
 
 /* Type */
-.title { font: 700 34px/1.1 var(--font-display); letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.title { font: 800 46px/0.95 var(--font-athletic); text-transform: uppercase; letter-spacing: 0.03em; margin: 0; text-wrap: balance; }
+.athletic { font-family: var(--font-athletic); text-transform: uppercase; letter-spacing: 0.05em; }
+.stars { color: var(--c-led); letter-spacing: 0.35em; font-size: 12px; }
 .subtitle { color: var(--c-text2); margin: 4px 0 0; }
-.group-title { font: 600 17px/1.3 var(--font); margin: 0 0 10px; }
-.label { font: 600 13px/1.2 var(--font); color: var(--c-text2); letter-spacing: 0.02em; }
+.group-title { font: 800 21px/1.1 var(--font-athletic); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px; }
+.label { font: 700 14px/1.2 var(--font-athletic); color: var(--c-text2); letter-spacing: 0.1em; text-transform: uppercase; }
 .muted { color: var(--c-text2); }
 .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
@@ -65,7 +78,11 @@ button { font: inherit; color: inherit; }
 }
 .btn:active { opacity: 0.7; }
 .btn:disabled { opacity: 0.4; cursor: default; }
-.btn.primary { min-height: var(--target-primary); padding: 0 24px; background: var(--c-accent); color: var(--c-onAccent); font-size: 18px; font-weight: 700; }
+.btn.primary {
+  min-height: var(--target-primary); padding: 0 28px; background: var(--c-accent); color: var(--c-onAccent);
+  font: 800 22px/1 var(--font-athletic); text-transform: uppercase; letter-spacing: 0.06em;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--c-accent) 30%, transparent);
+}
 .btn.secondary { border-color: color-mix(in srgb, var(--c-text) 35%, transparent); }
 .btn.quiet { background: transparent; }
 .btn.small { min-height: 36px; padding: 0 12px; font-size: 15px; }
@@ -76,7 +93,7 @@ button { font: inherit; color: inherit; }
 /* Segmented choice */
 .choice { display: flex; gap: 4px; padding: 4px; border-radius: calc(var(--radius-small) + 4px); background: var(--c-bg); border: 1px solid var(--c-hairline); }
 .choice button { flex: 1; min-height: var(--target); border: 0; border-radius: var(--radius-small); background: transparent; font-weight: 600; cursor: pointer; }
-.choice button[aria-pressed="true"] { background: var(--c-accent); color: var(--c-onAccent); }
+.choice button[aria-pressed="true"] { background: var(--c-accent); color: var(--c-onAccent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-led) 35%, transparent); }
 
 /* Cards and panels */
 .card { background: var(--c-surface); border: 1px solid var(--c-hairline); border-radius: var(--radius-card); padding: 20px; }
@@ -87,6 +104,9 @@ button { font: inherit; color: inherit; }
 }
 .stack { display: flex; flex-direction: column; gap: 16px; }
 .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.grid-lockers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (min-width: 1000px) { .grid-lockers { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .grid-lockers { grid-template-columns: 1fr; } }
 .grid-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 16px; }
 
 .tile {
@@ -97,6 +117,49 @@ button { font: inherit; color: inherit; }
 .tile .tile-icon { width: 34px; height: 34px; color: var(--c-home); margin-bottom: 8px; }
 .tile strong { font: 700 21px/1.2 var(--font-display); }
 .tile span { color: var(--c-text2); font-size: 16px; }
+
+/* A locker: the nameplate band on top, the open locker below with a blue light along its top edge, and the
+   perforated vent at the bottom. */
+.locker {
+  text-align: left; cursor: pointer; padding: 0; overflow: hidden; display: flex; flex-direction: column;
+  background: var(--c-surface); border: 1px solid var(--c-hairline); border-radius: var(--radius-card);
+  min-height: 210px; box-shadow: 0 1px 0 var(--c-hairline);
+}
+.locker:active { transform: translateY(1px); }
+.locker .plate {
+  background: var(--c-band); color: var(--c-bandText); padding: 12px 18px 11px; display: flex; align-items: center; gap: 10px;
+  font: 800 23px/1 var(--font-athletic); text-transform: uppercase; letter-spacing: 0.06em;
+  box-shadow: inset 0 -3px 0 var(--c-led);
+}
+.locker .plate .num { margin-left: auto; font-size: 15px; color: var(--c-bandSoft); letter-spacing: 0.1em; }
+.locker .inside {
+  flex: 1; padding: 16px 18px 14px; display: flex; flex-direction: column; gap: 8px;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--c-led) 12%, transparent), transparent 38%);
+}
+.locker .inside .tile-icon { width: 34px; height: 34px; color: var(--c-accent); }
+.locker .inside span { color: var(--c-text2); font-size: 16px; }
+.locker .vent {
+  height: 30px; margin: 0 18px 14px; border-radius: 4px;
+  background-image: radial-gradient(color-mix(in srgb, var(--c-text) 22%, transparent) 1.6px, transparent 1.8px);
+  background-size: 9px 9px; background-color: color-mix(in srgb, var(--c-text) 4%, transparent);
+}
+
+/* The hero: a navy wall with pinstripes and the team's nameplate. */
+.hero {
+  position: relative; overflow: hidden; border-radius: var(--radius-card); padding: 26px 26px 24px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 46px, color-mix(in srgb, var(--c-bandText) 6%, transparent) 46px 48px),
+    linear-gradient(160deg, color-mix(in srgb, var(--c-band) 82%, #000) 0%, var(--c-band) 60%);
+  color: var(--c-bandText); box-shadow: inset 0 -4px 0 var(--c-led), 0 10px 30px color-mix(in srgb, var(--c-led) 22%, transparent);
+}
+.hero .label { color: var(--c-bandSoft); }
+.hero .btn.secondary { color: var(--c-bandText); border-color: color-mix(in srgb, var(--c-bandText) 45%, transparent); background: transparent; }
+.hero .btn.primary { background: var(--c-bandText); color: var(--c-band); }
+.nameplate {
+  display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px; border-radius: 4px;
+  background: var(--c-bandText); color: var(--c-band); font: 800 18px/1 var(--font-athletic);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
 
 .list { display: flex; flex-direction: column; border: 1px solid var(--c-hairline); border-radius: var(--radius-card); overflow: hidden; background: var(--c-surface); }
 .list > * { padding: 12px 16px; min-height: 56px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--c-hairline); }
@@ -121,4 +184,4 @@ button { font: inherit; color: inherit; }
 }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
-@media (max-width: 600px) { .title { font-size: 28px; } }
+@media (max-width: 600px) { .title { font-size: 36px; } }
