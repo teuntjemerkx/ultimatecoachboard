@@ -1,0 +1,54 @@
+{
+ "format": "cb.rule-court-profile/1",
+ "name": "FIVB senior indoor",
+ "source": "FIVB Official Volleyball Rules; verify against the current edition before each app release",
+ "court": {
+  "length": 18.0,
+  "width": 9.0,
+  "attackLine": 3.0,
+  "lineWidth": 0.05,
+  "freeZoneMin": 3.0
+ },
+ "net": {
+  "heightPresets": {
+   "men": 2.43,
+   "women": 2.24
+  },
+  "height": 2.43,
+  "antennaAboveTape": 0.8,
+  "tapeWidth": 0.07
+ },
+ "playersPerSide": 6,
+ "rotation": {
+  "enabled": true
+ },
+ "overlap": {
+  "checkServingTeam": true,
+  "checkReceivingTeam": true,
+  "requireInsideCourt": true,
+  "serverExempt": true,
+  "footprint": {
+   "footLength": 0.28,
+   "footWidth": 0.1,
+   "stanceWidth": 0.3
+  }
+ },
+ "libero": {
+  "allowed": true,
+  "maxPerTeam": 2,
+  "mayServe": false
+ },
+ "substitutions": {
+  "maxPerSet": 6
+ },
+ "scoring": {
+  "pointsPerSet": 25,
+  "decidingSetPoints": 15,
+  "winBy": 2,
+  "setsToWin": 3
+ },
+ "timeOuts": {
+  "perSet": 2,
+  "seconds": 30
+ }
+}
