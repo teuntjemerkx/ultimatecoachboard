@@ -29,7 +29,7 @@ struct MatchSetupData: Codable, Equatable {
     var homeBench: [SlotPlayer]?
     var firstServer: Side = .home
     var mode: CoachMode = .solo
-    var netHeight = 2.43
+    var netHeight = PlayerBodies.netHeight
 }
 
 /// Screen 2: a mini half-court with six position slots and a libero slot, fed by a strip of jersey chips;
