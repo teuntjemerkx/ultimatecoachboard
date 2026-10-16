@@ -76,6 +76,8 @@ public struct MatchLogRow: Hashable, Sendable, Identifiable {
     public var substitutions = 0
     public var timeOuts = 0
     public var notes: [String] = []
+    /// Skill codes of this rally (Advanced Mode).
+    public var skills: [SkillCode] = []
 
     public var id: UInt64 { rally.seq }
 
@@ -102,6 +104,7 @@ public enum MatchLog {
             case .scout: pending.scoutLines += 1
             case .ink: pending.sketchStrokes += 1
             case .substitution: pending.substitutions += 1
+            case .skill(let code): pending.skills.append(code)
             case .nextSet, .rotationCorrection: break
             }
         }

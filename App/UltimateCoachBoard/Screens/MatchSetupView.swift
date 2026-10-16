@@ -25,6 +25,8 @@ struct MatchSetupData: Codable, Equatable {
     var opponentNumbers: [Int?] = Array(repeating: nil, count: 6)
     var opponentLibero: Int?
     var opponentSetterPosition = 1
+    /// Roster players not in the lineup, available as substitutes.
+    var homeBench: [SlotPlayer]?
     var firstServer: Side = .home
     var mode: CoachMode = .solo
     var netHeight = 2.43
@@ -352,7 +354,7 @@ struct MatchSetupView: View {
                 Text(w).font(.system(size: 13)).foregroundStyle(Tokens.textSecondary.color)
             }
             Spacer(minLength: 8)
-            Button { onStart(setup) } label: {
+            Button { onStart(withBench(setup)) } label: {
                 Text("START")
                     .font(.system(size: 20, weight: .heavy).width(.expanded))
                     .frame(maxWidth: .infinity, minHeight: Tokens.targetLiveCritical)
@@ -362,6 +364,13 @@ struct MatchSetupView: View {
             .disabled(validationProblem != nil)
         }
         .frame(width: 320)
+    }
+
+    /// The roster players left off the lineup become the substitutes' bench.
+    private func withBench(_ s: MatchSetupData) -> MatchSetupData {
+        var s = s
+        s.homeBench = bench.map { SlotPlayer(id: $0.id, jersey: $0.jersey, name: $0.displayName) }
+        return s
     }
 
     private func group<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {

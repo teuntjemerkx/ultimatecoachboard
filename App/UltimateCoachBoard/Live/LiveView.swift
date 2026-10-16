@@ -22,6 +22,13 @@ struct LiveView: View {
                         StatusStrip(controller: controller, showCorrection: $showCorrection)
                         BoardView(controller: controller)
                             .overlay { RouteChips(controller: controller).allowsHitTesting(false) }
+                            .overlay { SkillPadOverlay(controller: controller) }
+                            .overlay(alignment: gripRight ? .topLeading : .topTrailing) {
+                                if controller.ringOpen || controller.preview != nil {
+                                    RingPanel(controller: controller).padding(12)
+                                }
+                            }
+                        if controller.state.mode == .advanced { LiveStatStrip(controller: controller) }
                     }
                     if !gripRight { Rail(controller: controller, onExit: onExit) }
                 }
@@ -69,8 +76,12 @@ struct LiveView: View {
     }
 
     @ViewBuilder private var overlays: some View {
-        VStack {
+        VStack(alignment: .leading) {
             Spacer()
+            if controller.subTarget != nil {
+                BenchStrip(controller: controller)
+                    .padding(.leading, Tokens.railWidth + 16)
+            }
             HStack(spacing: 12) {
                 if controller.undoChipVisible {
                     Button { controller.undo() } label: {
@@ -95,7 +106,7 @@ struct LiveView: View {
             .padding(.leading, Tokens.railWidth + 16)
             .padding(.bottom, 24)
         }
-        .allowsHitTesting(controller.undoChipVisible)
+        .allowsHitTesting(controller.undoChipVisible || controller.subTarget != nil)
     }
 }
 
@@ -177,6 +188,16 @@ struct StatusStrip: View {
                 .onLongPressGesture(minimumDuration: 0.6) { showCorrection = true }
                 .accessibilityHint("Long-press to correct the rotation")
             Text("SUB \(controller.substitutionsUsed)/6").font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
+            if let badge = controller.pointBadge {
+                Text(badge).font(.sectionLabel).foregroundStyle(Tokens.accentActive.color)
+            }
+            if let p = controller.preview {
+                Text("PREVIEW R\(p.rotation) \(p.phase.uppercased())")
+                    .font(.sectionLabel)
+                    .padding(.horizontal, 8).frame(height: 22)
+                    .background(Tokens.accent.color, in: Capsule())
+                    .foregroundStyle(Tokens.canvasBase.color)
+            }
             Spacer()
             Button("SWITCH ENDS") { controller.switchEnds() }.font(.sectionLabel)
             Text(controller.state.mode == .solo ? "SOLO" : "ADV")
@@ -201,7 +222,7 @@ struct Rail: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            railButton("RING", "circle.dashed") { controller.resetTokens() }
+            railButton(controller.preview == nil ? "RING" : "LIVE", "circle.dashed") { controller.ringTapped() }
             railButton(controller.attacksVisible ? "LINES" : "LINES OFF", "arrow.up.right") { controller.attacksVisible.toggle() }
             railButton(controller.routesVisible ? "ROUTES" : "ROUTES OFF", "point.topleft.down.to.point.bottomright.curvepath") {
                 controller.routesVisible.toggle()

@@ -264,11 +264,13 @@ public struct MatchStartedPayload: Codable, Hashable, Sendable {
     public var opponentTemplateID: String?
     /// Display names of players, when the roster has them.
     public var names: [PlayerID: String]?
+    /// Home players available as substitutes (roster players not in the starting lineup).
+    public var homeBench: [PlayerID]?
 
     public init(profileName: String, home: TeamSheet, opponent: TeamSheet, firstServer: Side,
                 mode: CoachMode, templateID: String, homeName: String? = nil, opponentName: String? = nil,
                 jerseys: [PlayerID: Int]? = nil, netHeight: Double? = nil, opponentTemplateID: String? = nil,
-                names: [PlayerID: String]? = nil) {
+                names: [PlayerID: String]? = nil, homeBench: [PlayerID]? = nil) {
         self.profileName = profileName
         self.home = home
         self.opponent = opponent
@@ -281,6 +283,7 @@ public struct MatchStartedPayload: Codable, Hashable, Sendable {
         self.netHeight = netHeight
         self.opponentTemplateID = opponentTemplateID
         self.names = names
+        self.homeBench = homeBench
     }
 
     public static let defaultOpponentTemplateID = TeamSystem.fiveOneOutside.rawValue

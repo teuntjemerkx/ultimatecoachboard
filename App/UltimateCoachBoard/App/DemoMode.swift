@@ -37,6 +37,15 @@ enum DemoMode {
             play(c, rallies: [.home, .home, .opponent, .home], scout: true)
             c.routesVisible = true
             model.screen = .live(c)
+        case "advanced":
+            var s = setup
+            s.mode = .advanced
+            guard let c = try? LiveController(setup: s) else { return }
+            codeRally(c, winner: .home)
+            codeRally(c, winner: .opponent)
+            codeRally(c, winner: .home)
+            if let t = c.state.tokens().first(where: { $0.side == .home && $0.position == .p4 }) { c.openSkillPad(for: t) }
+            model.screen = .live(c)
         case "setbreak":
             guard let c = try? LiveController(setup: setup) else { return }
             playSet(c)
@@ -71,6 +80,23 @@ enum DemoMode {
             c.swipe(winner: i % 3 == 2 ? .opponent : .home)
             i += 1
         }
+    }
+
+    /// One coded rally: serve, reception, set and attack, then the swipe.
+    @MainActor
+    private static func codeRally(_ c: LiveController, winner: Side) {
+        let receiving = c.state.match.current.serving.other
+        let serving = c.state.match.current.serving
+        func code(_ side: Side, _ pos: CourtPosition, _ skill: Skill, _ grade: SkillGrade) {
+            guard let t = c.state.tokens().first(where: { $0.side == side && $0.position == pos }) else { return }
+            c.openSkillPad(for: t)
+            c.code(skill: skill, grade: grade)
+        }
+        code(serving, .p1, .serve, .fair)
+        code(receiving, .p6, .reception, .positive)
+        code(receiving, .p2, .set, .perfect)
+        code(receiving, .p4, .attack, winner == receiving ? .perfect : .error)
+        c.swipe(winner: winner)
     }
 
     /// Two scouting taps: origin in the opponent's front court, landing in the home half.

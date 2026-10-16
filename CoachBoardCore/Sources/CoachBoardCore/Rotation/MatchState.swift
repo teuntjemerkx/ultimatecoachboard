@@ -43,14 +43,26 @@ public struct TeamSheet: Codable, Hashable, Sendable {
 public struct TeamInSet: Codable, Hashable, Sendable {
     /// Rotational order as at the start of the set; substitutions replace a slot in place.
     public var lineup: [PlayerID]
+    /// The lineup the set started with; a slot's starter decides its role and libero rule after substitutions.
+    public var starters: [PlayerID]
     /// Side-out rotations performed in this set.
     public var rotations: Int
     public var substitutionsUsed: Int
+    /// Substitution partners in this set (starter <-> substitute), both directions.
+    public var partners: [PlayerID: PlayerID] = [:]
+    /// Players whose substitution pair is complete (the starter came back): no further substitution this set.
+    public var completed: Set<PlayerID> = []
 
     public init(lineup: [PlayerID]) {
         self.lineup = lineup
+        self.starters = lineup
         self.rotations = 0
         self.substitutionsUsed = 0
+    }
+
+    /// The starter of the slot a player occupies now.
+    public func starter(ofSlotHeldBy id: PlayerID) -> PlayerID? {
+        lineup.firstIndex(of: id).map { starters[$0] }
     }
 
     /// Lineup mapping of blueprint Section 2.5: player(i, n) = L[(i - 1 + n) mod 6].
@@ -92,6 +104,8 @@ public enum MatchError: Error, Equatable {
     case playerNotOnCourt
     case substitutionLimitReached
     case notALiberoChange
+    /// The FIVB pairing rule: a starter leaves and returns once, a substitute only for the player it replaced.
+    case illegalSubstitution
 }
 
 /// The rally-by-rally state machine behind the Point Swipe Wheel (blueprint Section 2.5).
@@ -164,14 +178,55 @@ public struct MatchState: Codable, Hashable, Sendable {
                              home: TeamInSet(lineup: home), opponent: TeamInSet(lineup: opponent), winner: nil))
     }
 
-    /// A regular substitution: `incoming` takes `outgoing`'s rotational slot.
+    /// A regular substitution: `incoming` takes `outgoing`'s rotational slot. FIVB pairing: a starter may leave
+    /// once and come back once, into its own slot, and only for its substitute; then the pair is closed for the set.
     public mutating func substitute(side: Side, outgoing: PlayerID, incoming: PlayerID) throws {
         var set = current
-        guard set[side].substitutionsUsed < maxSubstitutionsPerSet else { throw MatchError.substitutionLimitReached }
-        guard let slot = set[side].lineup.firstIndex(of: outgoing) else { throw MatchError.playerNotOnCourt }
-        set[side].lineup[slot] = incoming
-        set[side].substitutionsUsed += 1
+        var team = set[side]
+        guard team.substitutionsUsed < maxSubstitutionsPerSet else { throw MatchError.substitutionLimitReached }
+        guard let slot = team.lineup.firstIndex(of: outgoing) else { throw MatchError.playerNotOnCourt }
+        let liberos = sheets[side]?.liberos ?? []
+        guard !team.lineup.contains(incoming), !liberos.contains(incoming), !liberos.contains(outgoing),
+              !team.completed.contains(outgoing), !team.completed.contains(incoming) else { throw MatchError.illegalSubstitution }
+        if let partner = team.partners[outgoing] {
+            guard partner == incoming else { throw MatchError.illegalSubstitution }
+            team.completed.formUnion([outgoing, incoming])
+        } else {
+            guard team.partners[incoming] == nil else { throw MatchError.illegalSubstitution }
+            team.partners[outgoing] = incoming
+            team.partners[incoming] = outgoing
+        }
+        team.lineup[slot] = incoming
+        team.substitutionsUsed += 1
+        set[side] = team
         current = set
+    }
+
+    /// The role shown for a player: its own role, or the role of the starter whose slot it took.
+    public func displayRole(of id: PlayerID, side: Side) -> String? {
+        guard let sheet = sheets[side] else { return nil }
+        if let role = sheet.roles[id] { return role }
+        return current[side].starter(ofSlotHeldBy: id).flatMap { sheet.roles[$0] }
+    }
+
+    /// The bench: players listed for the team who are neither on court nor liberos.
+    public func bench(_ side: Side, listed: [PlayerID]) -> [PlayerID] {
+        let team = current[side]
+        let liberos = sheets[side]?.liberos ?? []
+        let everyone = listed + (sheets[side]?.startingLineup ?? []) + team.starters
+        var seen: Set<PlayerID> = []
+        return everyone.filter { !team.lineup.contains($0) && !liberos.contains($0) && seen.insert($0).inserted }
+    }
+
+    public enum PointStatus: Sendable { case setPoint, matchPoint }
+
+    /// Set point or match point for a side: winning the next rally would end the set (or the match).
+    public func pointStatus(_ side: Side) -> PointStatus? {
+        guard current.winner == nil, !isOver else { return nil }
+        let target = scoring.targetPoints(forSet: current.number)
+        let mine = current.score[side] + 1, theirs = current.score[side.other]
+        guard mine >= target, mine - theirs >= scoring.winBy else { return nil }
+        return setsWon(side) == scoring.setsToWin - 1 ? .matchPoint : .setPoint
     }
 
     /// Manual correction of a rotation or serving side (journal type 0x0012, Appendix C6).
@@ -197,7 +252,10 @@ public struct MatchState: Codable, Hashable, Sendable {
         for pos in CourtPosition.allCases {
             let id = team.player(at: pos)
             out[pos] = id
-            guard let sheet, let libero = sheet.liberos.first, pos.isBackRow, sheet.liberoPartners.contains(id) else { continue }
+            // The libero rule follows the slot: a substitute for a middle is replaced like the middle.
+            let starter = team.starter(ofSlotHeldBy: id) ?? id
+            guard let sheet, let libero = sheet.liberos.first, pos.isBackRow,
+                  sheet.liberoPartners.contains(id) || sheet.liberoPartners.contains(starter) else { continue }
             let partnerServes = pos == .p1 && current.serving == side
             if partnerServes && !liberoMayServe { continue }
             out[pos] = libero

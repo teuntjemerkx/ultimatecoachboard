@@ -50,6 +50,8 @@ public enum LiveEvent: Sendable {
     case redo
     case startNextSet(firstServer: Side?, homeStartRotation: Int? = nil)
     case correctRotation(side: Side, setterPosition: CourtPosition?, serving: Side?)
+    /// Advanced Mode: one coded touch from the skill pad (Screen 4).
+    case skill(side: Side, player: PlayerID, skill: Skill, grade: SkillGrade)
 }
 
 /// A token as drawn on the board.
@@ -71,6 +73,7 @@ public enum LiveAction: Codable, Hashable, Sendable {
     case ink(InkStroke)
     case nextSet(Side?, Int?)
     case rotationCorrection(Side, CourtPosition?, Side?)
+    case skill(SkillCode)
 }
 
 public struct LoggedAction: Codable, Hashable, Sendable {
@@ -98,6 +101,8 @@ public struct LiveState: Sendable {
     public private(set) var nextSeq: UInt64
     /// Every rally of the active log, in order, with the facts from just before it was played.
     public private(set) var rallies: [RallyRecord] = []
+    /// Advanced Mode skill codes of the active log, in order.
+    public private(set) var skillCodes: [SkillCode] = []
 
     public init(setup: MatchStartedPayload, profile: RuleCourtProfile, template: RotationTemplate,
                 opponentTemplate: RotationTemplate? = nil, nextSeq: UInt64 = 2) {
@@ -213,6 +218,15 @@ public struct LiveState: Sendable {
             rebuild()
             return effects + [.commitJournal]
 
+        case .skill(let side, let player, let skill, let grade):
+            guard context == .live, match.current.winner == nil else { return [.haptic(.rejected)] }
+            let code = SkillCode(side: side, player: player, skill: skill, grade: grade,
+                                 setNumber: match.current.number, score: match.current.score,
+                                 homeRotation: match.rotationNumber(.home), opponentRotation: match.rotationNumber(.opponent))
+            let effects = record(.skill(code), type: .skillCode, payload: code)
+            rebuild()
+            return effects + [.haptic(.originAccepted)]
+
         case .correctRotation(let side, let setterPosition, let serving):
             let effects = record(.rotationCorrection(side, setterPosition, serving), type: .rotationCorrection,
                                  payload: RotationCorrectionPayload(side: side, rotations: nil,
@@ -242,6 +256,7 @@ public struct LiveState: Sendable {
         var lines: [ScoutLine] = []
         var strokes: [InkStroke] = []
         var played: [RallyRecord] = []
+        var codes: [SkillCode] = []
         for entry in log where entry.active {
             switch entry.action {
             case .rally(let winner):
@@ -257,12 +272,14 @@ public struct LiveState: Sendable {
                 _ = try? m.startNextSet(homeLineup: start.flatMap { m.lineup(.home, startingIn: $0) }, firstServer: server)
             case .rotationCorrection(let side, let pos, let serving):
                 m.correctRotation(side: side, setterPosition: pos, rotations: nil, serving: serving)
+            case .skill(let code): codes.append(code)
             }
         }
         match = m
         scoutLines = lines
         ink = strokes
         rallies = played
+        skillCodes = codes
         if case .panicTimeOut = context { return }
         context = m.isOver ? .matchOver : (m.current.winner != nil ? .setBreak : .live)
     }
@@ -285,7 +302,7 @@ public struct LiveState: Sendable {
             for pos in CourtPosition.allCases {
                 guard let id = onCourt[pos] else { continue }
                 let isLibero = sheet?.liberos.contains(id) ?? false
-                let role = isLibero ? "L" : (sheet?.roles[id] ?? pos.label)
+                let role = isLibero ? "L" : (match.displayRole(of: id, side: side) ?? pos.label)
                 let point = overrides[side]?[pos] ?? anchors[pos] ?? Self.genericAnchors(serving: false)[pos]!
                 out.append(BoardToken(side: side, position: pos, player: id, role: role, point: point,
                                       isServer: pos == .p1 && match.current.serving == side, isLibero: isLibero))
@@ -328,6 +345,32 @@ public struct LiveState: Sendable {
     }
 
     // MARK: - Replay
+
+    /// Skill codes since the last rally (the touches of the rally being played).
+    public var codesThisRally: [SkillCode] {
+        var out: [SkillCode] = []
+        for entry in log where entry.active {
+            switch entry.action {
+            case .rally, .nextSet: out = []
+            case .skill(let code): out.append(code)
+            default: break
+            }
+        }
+        return out
+    }
+
+    /// The home team's substitutes right now (roster bench plus starters who went off).
+    public var homeBench: [PlayerID] { match.bench(.home, listed: setup.homeBench ?? []) }
+
+    /// A what-if copy for the RING tool: the home team in any rotation and phase of its template.
+    public func previewing(homeRotation rotation: Int, phase: String) -> LiveState {
+        var s = self
+        s.match.correctRotation(side: .home, setterPosition: CourtPosition(rawValue: rotation),
+                                rotations: (7 - rotation) % 6, serving: phase == "serve" ? .home : .opponent)
+        s.overrides = [:]
+        s.context = .live
+        return s
+    }
 
     /// The state as it was just before the action with sequence number `seq` (Match Log, read-only board):
     /// everything logged from `seq` on is set aside, so later undos are respected exactly.
@@ -399,6 +442,10 @@ public struct LiveState: Sendable {
                 }
             case .modeChanged:
                 if let p = try? JournalPayload.decode(ModeChangedPayload.self, from: r.payload) { state.mode = p.mode }
+            case .skillCode:
+                if let code = try? JournalPayload.decode(SkillCode.self, from: r.payload) {
+                    state.appendReplayed(.skill(code), seq: r.seq)
+                }
             default:
                 break   // types without derived state (notes, time-outs, view facts) or unknown types
             }

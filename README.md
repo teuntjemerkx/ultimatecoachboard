@@ -72,6 +72,9 @@ Verification/              Python references that generated and verified the num
 | Route timing validator (2.6) | `Templates/RouteTiming.swift`, ROUTES on the rail | Tested; drawn live (dashed on time, solid with a LATE chip), re-timed while dragging |
 | Micro-Scouting with aggregation (2.9) | `Scouting/MicroScout.swift`, board taps, Set Break fans | Implemented with attribution and summaries |
 | Panic Time-Out (2.8) | `Live/LiveView.swift` `PanicOverlay` | Countdown, ink, flip for players, attacks toggle, clear |
+| Substitutions (Screen 3) | long-press a token, then a bench chip | FIVB pairing rule, limit per set; libero and role follow the slot |
+| RING tool (Screen 3) | rail, `Live/LiveTools.swift` | Any rotation and phase of the template as a read-only preview with routes |
+| Advanced Mode (Screen 4) | `Store/SkillCoding.swift`, skill pad, stat strip | Skill codes S/R/E/A/B/D/F × #/+/!/−///= with a predicted skill, journalled and undoable; side-out/break strip; player stats in the Match Log |
 | Roster with jersey-only quick add (Screens 18, 19) | `Roster/` | SwiftData teams and players, biometrics with range checks |
 | Match Setup (Screen 2) | `Screens/MatchSetupView.swift` | Position slots fed by jersey chips, system, setter, inline validation |
 | Set Break Summary (Screen 6) | `Live/SetBreakView.swift` | Side-out bars per rotation, attack fans, suggested start, next-set rotation |
@@ -82,6 +85,5 @@ Verification/              Python references that generated and verified the num
 | 2D Metal board (3.2) | `Board/` | Court, zone grid, SDF tokens, signed-distance-field numbers, vectors, routes, tethers, ink, hatched envelope |
 | Eyes-free feedback (1.6) | `Services/Haptics.swift`, `EdgePulse` | Edge pulse, optional click, Pencil Pro path-completed haptic |
 
-Not yet in this slice: multi-channel (MSDF) glyphs (numbers use a single-channel distance field), the skill-coding
-pad (Advanced Mode), Desk Link, the `.coachboard` package (the log exports the raw journal), the EDR/P3 colour
+Not yet in this slice: multi-channel (MSDF) glyphs (numbers use a single-channel distance field), Desk Link, the `.coachboard` package (the log exports the raw journal), the EDR/P3 colour
 pipeline and Sideline Boost. Phase 2 starts with the 3D renderer and the Zone & Hatching engine.

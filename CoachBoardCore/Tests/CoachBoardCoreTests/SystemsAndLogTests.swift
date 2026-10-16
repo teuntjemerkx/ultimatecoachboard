@@ -214,3 +214,90 @@ final class NextSetAndStatsTests: XCTestCase {
         XCTAssertEqual(rows[1].rally.scoreAfter, Score(home: 1, opponent: 1))
     }
 }
+
+final class SkillCodingTests: XCTestCase {
+    func makeState() throws -> (LiveState, TestTeam, TestTeam) {
+        let home = TestTeam(), away = TestTeam()
+        let setup = MatchStartedPayload(profileName: "FIVB senior indoor", home: home.sheet, opponent: away.sheet,
+                                        firstServer: .opponent, mode: .advanced, templateID: "5-1-outside-follows-setter")
+        let state = LiveState(setup: setup, profile: try RuleCourtProfile.fivbSenior(),
+                              template: try TemplateLibrary.shipped("5-1-outside-follows-setter"))
+        return (state, home, away)
+    }
+
+    func testCodesAreJournalledUndoneAndReplayed() throws {
+        let made = try makeState()
+        var s = made.0
+        let home = made.1, away = made.2
+        var records: [JournalRecord] = [
+            JournalRecord(type: JournalRecordType.matchStarted.rawValue, seq: 1, lamport: 1, wallClock: 0,
+                          payload: try JournalPayload.encode(s.setup)),
+        ]
+        func run(_ e: LiveEvent) -> [LiveEffect] {
+            var seq = s.nextSeq
+            let effects = s.reduce(e)
+            for effect in effects {
+                if case let .journal(type, payload) = effect {
+                    records.append(JournalRecord(type: type.rawValue, seq: seq, lamport: seq, wallClock: 0, payload: payload))
+                    seq += 1
+                }
+            }
+            return effects
+        }
+        _ = run(.skill(side: .opponent, player: away.s, skill: .serve, grade: .fair))
+        let effects = run(.skill(side: .home, player: home.oh1, skill: .reception, grade: .positive))
+        XCTAssertTrue(effects.contains { if case .journal(.skillCode, _) = $0 { return true } else { return false } })
+        XCTAssertEqual(s.codesThisRally.map(\.code), ["S!", "R+"])
+        _ = run(.skill(side: .home, player: home.oh2, skill: .attack, grade: .error))
+        _ = run(.undo)
+        XCTAssertEqual(s.skillCodes.count, 2)
+        _ = run(.skill(side: .home, player: home.oh2, skill: .attack, grade: .perfect))
+        _ = run(.pointSwipe(winner: .home))
+        XCTAssertTrue(s.codesThisRally.isEmpty)
+        XCTAssertEqual(s.skillCodes.last?.score, Score())                     // coded before the rally ended
+        let replayed = try XCTUnwrap(LiveState.replay(records: records, profile: s.profile))
+        XCTAssertEqual(replayed.skillCodes, s.skillCodes)
+        let rows = MatchLog.rows(state: replayed, records: records)
+        XCTAssertEqual(rows.first?.skills.map(\.code), ["S!", "R+", "A#"])
+    }
+
+    func testPredictorAndStats() {
+        let p = UUID()
+        func code(_ side: Side, _ skill: Skill) -> SkillCode {
+            SkillCode(side: side, player: p, skill: skill, grade: .positive, setNumber: 1, score: Score(),
+                      homeRotation: 1, opponentRotation: 1)
+        }
+        XCTAssertEqual(SkillPredictor.next(side: .home, isServer: true, isFrontRow: false, role: "OH1",
+                                           serving: .home, codesThisRally: []), .serve)
+        XCTAssertEqual(SkillPredictor.next(side: .home, isServer: false, isFrontRow: false, role: "OH1",
+                                           serving: .opponent, codesThisRally: []), .reception)
+        let received = [code(.opponent, .serve), code(.home, .reception)]
+        XCTAssertEqual(SkillPredictor.next(side: .home, isServer: false, isFrontRow: true, role: "S",
+                                           serving: .opponent, codesThisRally: received), .set)
+        XCTAssertEqual(SkillPredictor.next(side: .home, isServer: false, isFrontRow: true, role: "OH2",
+                                           serving: .opponent, codesThisRally: received), .attack)
+        XCTAssertEqual(SkillPredictor.next(side: .opponent, isServer: false, isFrontRow: true, role: "MB1",
+                                           serving: .opponent, codesThisRally: received + [code(.home, .attack)]), .block)
+
+        var line = SkillLine()
+        line.counts = [.perfect: 5, .positive: 2, .fair: 1, .poor: 1, .error: 1]
+        XCTAssertEqual(line.total, 10)
+        XCTAssertEqual(line.positiveRate ?? 0, 0.7, accuracy: 1e-9)
+        XCTAssertEqual(line.efficiency ?? 0, 0.3, accuracy: 1e-9)
+    }
+
+    func testRingPreviewLoadsAnyRotationAndPhase() throws {
+        let made = try makeState()
+        let s = made.0
+        let home = made.1
+        let preview = s.previewing(homeRotation: 4, phase: "receive")
+        XCTAssertEqual(preview.match.rotationNumber(.home), 4)
+        XCTAssertEqual(preview.match.current.home.player(at: .p4), home.s)
+        let p4 = try XCTUnwrap(preview.tokens().first { $0.side == .home && $0.position == .p4 })
+        XCTAssertEqual(p4.point, LocalPoint(l: 0.9, d: 0.5))                  // Appendix A2, R4 receive
+        XCTAssertEqual(s.match.rotationNumber(.home), 1)                       // the live state is untouched
+        let serve = s.previewing(homeRotation: 2, phase: "serve")
+        XCTAssertEqual(serve.match.current.serving, .home)
+        XCTAssertEqual(serve.tokens().first { $0.side == .home && $0.position == .p1 }?.point.d, 10.0)
+    }
+}

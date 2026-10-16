@@ -11,6 +11,7 @@ extension MatchStartedPayload {
                 out[id] = jerseys?[id].map { String($0) } ?? role
             }
         }
+        for (id, n) in jerseys ?? [:] where out[id] == nil { out[id] = String(n) }   // bench players
         return out
     }
 }

@@ -100,17 +100,55 @@ final class MatchStateTests: XCTestCase {
         XCTAssertEqual(m.onCourt(.home)[.p1], home.libero)
     }
 
-    func testSubstitutionLimit() throws {
+    func testSubstitutionPairingAndLimit() throws {
         let made = try makeMatch()
         var m = made.0
         let home = made.1
-        for _ in 0..<3 {
-            try m.substitute(side: .home, outgoing: home.oh2, incoming: home.bench)
-            try m.substitute(side: .home, outgoing: home.bench, incoming: home.oh2)
+        let b1 = UUID(), b2 = UUID(), b3 = UUID()
+        try m.substitute(side: .home, outgoing: home.oh2, incoming: b1)
+        // A substitute may only leave for the starter it replaced.
+        XCTAssertThrowsError(try m.substitute(side: .home, outgoing: b1, incoming: b2)) { error in
+            XCTAssertEqual(error as? MatchError, .illegalSubstitution)
         }
-        XCTAssertThrowsError(try m.substitute(side: .home, outgoing: home.oh2, incoming: home.bench)) { error in
+        try m.substitute(side: .home, outgoing: b1, incoming: home.oh2)
+        // The pair is complete: the starter cannot leave again in this set.
+        XCTAssertThrowsError(try m.substitute(side: .home, outgoing: home.oh2, incoming: b2)) { error in
+            XCTAssertEqual(error as? MatchError, .illegalSubstitution)
+        }
+        try m.substitute(side: .home, outgoing: home.oh1, incoming: b2)
+        try m.substitute(side: .home, outgoing: b2, incoming: home.oh1)
+        try m.substitute(side: .home, outgoing: home.opp, incoming: b3)
+        try m.substitute(side: .home, outgoing: b3, incoming: home.opp)
+        XCTAssertThrowsError(try m.substitute(side: .home, outgoing: home.s, incoming: UUID())) { error in
             XCTAssertEqual(error as? MatchError, .substitutionLimitReached)
         }
+    }
+
+    func testLiberoAndRoleFollowTheSlotAfterASubstitution() throws {
+        let made = try makeMatch(firstServer: .opponent)
+        var m = made.0
+        let home = made.1
+        let sub = UUID()
+        // MB2 starts in P6 (back row): the libero is in for MB2.
+        XCTAssertEqual(m.onCourt(.home)[.p6], home.libero)
+        try m.substitute(side: .home, outgoing: home.mb2, incoming: sub)
+        XCTAssertEqual(m.onCourt(.home)[.p6], home.libero)     // the libero now replaces the substitute
+        XCTAssertEqual(m.displayRole(of: sub, side: .home), "MB2")
+        XCTAssertTrue(m.bench(.home, listed: [sub]).contains(home.mb2))
+        XCTAssertFalse(m.bench(.home, listed: [sub]).contains(sub))
+    }
+
+    func testSetPointAndMatchPoint() throws {
+        var m = try makeMatch(firstServer: .home).0
+        for _ in 0..<24 { try m.applyRally(winner: .home) }
+        XCTAssertEqual(m.pointStatus(.home), .setPoint)
+        XCTAssertNil(m.pointStatus(.opponent))
+        try m.applyRally(winner: .home)
+        try m.startNextSet()
+        for _ in 0..<25 { try m.applyRally(winner: .home) }
+        try m.startNextSet()
+        for _ in 0..<24 { try m.applyRally(winner: .home) }
+        XCTAssertEqual(m.pointStatus(.home), .matchPoint)
     }
 
     func testRotationCorrectionBySetterPosition() throws {

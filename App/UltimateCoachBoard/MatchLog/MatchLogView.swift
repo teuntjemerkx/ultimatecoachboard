@@ -15,6 +15,7 @@ struct MatchLogView: View {
     @State private var noteTarget: MatchLogRow?
     @State private var noteText = ""
     @State private var loadError: String?
+    @State private var showStats = false
 
     enum LogFilter: String, CaseIterable, Identifiable {
         case all = "All", sideOuts = "Side-outs", breaks = "Breaks", timeOuts = "Time-outs"
@@ -51,6 +52,8 @@ struct MatchLogView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Close", action: onClose) }
                 ToolbarItemGroup(placement: .primaryAction) {
+                    Button { showStats = true } label: { Label("Player stats", systemImage: "tablecells") }
+                        .disabled(state == nil)
                     if !summary.finished {
                         Button("Resume match") { onResume(summary.url) }
                     }
@@ -63,6 +66,9 @@ struct MatchLogView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 if let r = noteTarget?.rally { Text("Set \(r.setNumber), \(r.scoreBefore.home):\(r.scoreBefore.opponent)") }
+            }
+            .sheet(isPresented: $showStats) {
+                if let state { PlayerStatsSheet(state: state, labels: labels, teamName: summary.homeName) }
             }
             .task { load() }
         }
@@ -141,6 +147,13 @@ struct MatchLogView: View {
                 }
                 .foregroundStyle(Tokens.white.color)
                 .padding(.horizontal, 16).padding(.top, 12)
+                if !row.skills.isEmpty {
+                    Text(row.skills.map { "\($0.side == .home ? "" : "them ")#\(labels[$0.player] ?? "?") \($0.skill.rawValue)\($0.grade.symbol)" }
+                        .joined(separator: "   "))
+                        .font(.dataMono)
+                        .foregroundStyle(Tokens.white.color)
+                        .padding(.horizontal, 16)
+                }
                 StaticBoardView(scene: BoardScene.snapshot(before, labels: labels, lines: lines))
                 ForEach(row.notes, id: \.self) { n in
                     Label(n, systemImage: "note.text").font(.system(size: 14)).padding(.horizontal, 16)
@@ -206,6 +219,7 @@ struct LogRowView: View {
             }
             Spacer()
             HStack(spacing: 6) {
+                if !row.skills.isEmpty { icon("list.bullet.clipboard", row.skills.count) }
                 if row.scoutLines > 0 { icon("scope", row.scoutLines) }
                 if row.sketchStrokes > 0 { icon("pencil.tip", nil) }
                 if row.substitutions > 0 { icon("arrow.left.arrow.right", row.substitutions) }
@@ -223,5 +237,79 @@ struct LogRowView: View {
             if let count, count > 1 { Text("\(count)").font(.system(size: 11)) }
         }
         .font(.system(size: 13))
+    }
+}
+
+/// Player statistics from the Advanced Mode skill codes: per skill the number of touches, the share of # and +,
+/// and the efficiency (# − / − =) / total.
+struct PlayerStatsSheet: View {
+    let state: LiveState
+    let labels: [PlayerID: String]
+    let teamName: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var setFilter = 0          // 0 = whole match
+
+    private let skills: [Skill] = [.serve, .reception, .set, .attack, .block, .dig]
+
+    var body: some View {
+        let setNumber = setFilter == 0 ? nil : setFilter
+        let table = SkillStats.table(state.skillCodes, side: .home, setNumber: setNumber)
+        let team = SkillStats.team(state.skillCodes, side: .home, setNumber: setNumber)
+        let players = table.keys.sorted { (Int(labels[$0] ?? "") ?? 999) < (Int(labels[$1] ?? "") ?? 999) }
+        NavigationStack {
+            ScrollView {
+                if players.isEmpty {
+                    Text("No skill codes yet. Long-press the mode badge in Live to switch to Advanced and code touches.")
+                        .foregroundStyle(Tokens.textSecondary.color)
+                        .padding(24)
+                } else {
+                    Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 10) {
+                        GridRow {
+                            Text("#").font(.sectionLabel)
+                            ForEach(skills, id: \.self) { Text($0.name.uppercased()).font(.sectionLabel) }
+                        }
+                        .foregroundStyle(Tokens.textSecondary.color)
+                        Divider()
+                        ForEach(players, id: \.self) { p in
+                            GridRow {
+                                Text(labels[p] ?? "?").font(.system(size: 20, weight: .bold).width(.expanded).monospacedDigit())
+                                ForEach(skills, id: \.self) { s in cell(table[p]?[s]) }
+                            }
+                        }
+                        Divider()
+                        GridRow {
+                            Text(teamName.uppercased()).font(.sectionLabel)
+                            ForEach(skills, id: \.self) { s in cell(team[s]) }
+                        }
+                    }
+                    .padding(24)
+                }
+            }
+            .background(Tokens.canvasBase.color)
+            .navigationTitle("Player stats")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Picker("Set", selection: $setFilter) {
+                        Text("Match").tag(0)
+                        ForEach(state.match.sets.map(\.number), id: \.self) { Text("Set \($0)").tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                }
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
+        }
+    }
+
+    @ViewBuilder private func cell(_ line: SkillLine?) -> some View {
+        if let line, line.total > 0 {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(line.total)  \(line.positiveRate.map { "\(Int(($0 * 100).rounded()))%" } ?? "–")")
+                    .font(.dataMono)
+                Text("eff \(line.efficiency.map { String(format: "%+.0f", $0 * 100) } ?? "–")")
+                    .font(.system(size: 11)).foregroundStyle(Tokens.textSecondary.color)
+            }
+        } else {
+            Text("–").foregroundStyle(Tokens.textSecondary.color)
+        }
     }
 }
