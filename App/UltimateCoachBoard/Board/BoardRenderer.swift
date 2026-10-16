@@ -1,0 +1,323 @@
+import MetalKit
+import CoachBoardCore
+
+// Instance layouts; must match Shaders.metal byte for byte.
+struct SegmentInstance {
+    var p0: SIMD2<Float>
+    var p1: SIMD2<Float>
+    var halfWidth: Float
+    var dash: Float = 0
+    var gap: Float = 0
+    var pad: Float = 0
+    var color: SIMD4<Float>
+}
+
+struct TokenInstance {
+    var center: SIMD2<Float>
+    var radius: Float
+    var ring: Float
+    var shape: Float
+    var glow: Float
+    var pad: SIMD2<Float> = .zero
+    var fill: SIMD4<Float>
+    var ringColor: SIMD4<Float>
+}
+
+struct GlyphInstance {
+    var origin: SIMD2<Float>
+    var size: SIMD2<Float>
+    var uvOrigin: SIMD2<Float>
+    var uvSize: SIMD2<Float>
+    var color: SIMD4<Float>
+}
+
+struct HatchInstance {
+    var center: SIMD2<Float>
+    var halfSize: SIMD2<Float>
+    var angle: Float
+    var spacing: Float
+    var lineWidth: Float
+    var pad: Float = 0
+    var color: SIMD4<Float>
+}
+
+/// Everything the board shows, as a value snapshot built by the Live controller.
+struct BoardScene: Equatable {
+    struct Token: Equatable {
+        var id: UUID
+        var side: Side
+        var point: FloorPoint
+        var label: String
+        var isLibero: Bool
+        var isServer: Bool
+        var selected: Bool
+    }
+
+    struct Tether: Equatable {
+        var a: FloorPoint
+        var b: FloorPoint
+        var margin: Double
+        /// For faults: the boundary the offending player must not cross, drawn across their lane.
+        var boundary: (FloorPoint, FloorPoint)?
+
+        static func == (l: Tether, r: Tether) -> Bool {
+            l.a == r.a && l.b == r.b && l.margin == r.margin && l.boundary?.0 == r.boundary?.0 && l.boundary?.1 == r.boundary?.1
+        }
+    }
+
+    var tokens: [Token] = []
+    var scoutLines: [(FloorPoint, FloorPoint, Double)] = []      // origin, landing, opacity
+    var tethers: [Tether] = []
+    var ink: [[FloorPoint]] = []
+    var envelope: (FloorPoint, FloorPoint)?                      // two opposite corners in world metres
+
+    static func == (l: BoardScene, r: BoardScene) -> Bool {
+        l.tokens == r.tokens && l.tethers == r.tethers && l.ink == r.ink
+            && l.scoutLines.count == r.scoutLines.count
+            && zip(l.scoutLines, r.scoutLines).allSatisfy { $0.0 == $1.0 && $0.1 == $1.1 && $0.2 == $1.2 }
+            && l.envelope?.0 == r.envelope?.0 && l.envelope?.1 == r.envelope?.1
+    }
+}
+
+/// The Phase 1 2D Metal renderer: court, zone grid, tokens, vectors, tethers, ink and the Legal Envelope.
+/// It renders only when something changes (render-on-demand, Section 6.3) and animates token moves.
+final class BoardRenderer: NSObject, MTKViewDelegate {
+    let device: MTLDevice
+    private let queue: MTLCommandQueue
+    private var segmentPipeline: MTLRenderPipelineState!
+    private var tokenPipeline: MTLRenderPipelineState!
+    private var glyphPipeline: MTLRenderPipelineState!
+    private var hatchPipeline: MTLRenderPipelineState!
+    private let atlas: GlyphAtlas?
+
+    var geometry = BoardGeometry(size: .zero)
+    var scene = BoardScene() {
+        didSet { if oldValue != scene { beginAnimation(from: oldValue, to: scene) } }
+    }
+
+    // Token animation: player id -> start position; positions interpolate over 0.35 s.
+    private var animationStart: CFTimeInterval = 0
+    private var fromPositions: [UUID: FloorPoint] = [:]
+    private let animationDuration: CFTimeInterval = 0.35
+    weak var view: MTKView?
+
+    init?(view: MTKView) {
+        guard let device = view.device ?? MTLCreateSystemDefaultDevice(), let queue = device.makeCommandQueue() else { return nil }
+        self.device = device
+        self.queue = queue
+        self.atlas = GlyphAtlas(device: device)
+        super.init()
+        self.view = view
+        view.device = device
+        view.colorPixelFormat = .bgra8Unorm
+        view.clearColor = MTLClearColor(red: Tokens.canvasBase.r, green: Tokens.canvasBase.g, blue: Tokens.canvasBase.b, alpha: 1)
+        view.preferredFramesPerSecond = 120
+        view.enableSetNeedsDisplay = true
+        view.isPaused = true
+        guard buildPipelines(format: view.colorPixelFormat) else { return nil }
+        view.delegate = self
+    }
+
+    private func buildPipelines(format: MTLPixelFormat) -> Bool {
+        guard let library = device.makeDefaultLibrary() else { return false }
+        func make(_ vertex: String, _ fragment: String) -> MTLRenderPipelineState? {
+            let d = MTLRenderPipelineDescriptor()
+            d.vertexFunction = library.makeFunction(name: vertex)
+            d.fragmentFunction = library.makeFunction(name: fragment)
+            let c = d.colorAttachments[0]!
+            c.pixelFormat = format
+            c.isBlendingEnabled = true
+            c.rgbBlendOperation = .add
+            c.alphaBlendOperation = .add
+            c.sourceRGBBlendFactor = .one
+            c.sourceAlphaBlendFactor = .one
+            c.destinationRGBBlendFactor = .oneMinusSourceAlpha
+            c.destinationAlphaBlendFactor = .oneMinusSourceAlpha
+            return try? device.makeRenderPipelineState(descriptor: d)
+        }
+        segmentPipeline = make("segmentVertex", "segmentFragment")
+        tokenPipeline = make("tokenVertex", "tokenFragment")
+        glyphPipeline = make("glyphVertex", "glyphFragment")
+        hatchPipeline = make("hatchVertex", "hatchFragment")
+        return segmentPipeline != nil && tokenPipeline != nil && glyphPipeline != nil && hatchPipeline != nil
+    }
+
+    func requestRedraw() { view?.setNeedsDisplay() }
+
+    private func beginAnimation(from old: BoardScene, to new: BoardScene) {
+        let now = CACurrentMediaTime()
+        var from: [UUID: FloorPoint] = [:]
+        let targets = Dictionary(new.tokens.map { ($0.id, $0.point) }, uniquingKeysWith: { a, _ in a })
+        for t in old.tokens {
+            let shown = currentPosition(of: t.id, target: t.point, now: now)
+            guard let target = targets[t.id] else { continue }
+            let dx = target.x - shown.x, dz = target.z - shown.z
+            // Large moves (rotations, formation loads) animate; drags follow the finger 1:1.
+            if (dx * dx + dz * dz).squareRoot() > 0.4 { from[t.id] = shown }
+        }
+        fromPositions = from
+        animationStart = now
+        if !from.isEmpty {
+            // Run the display link until the move settles; on-demand mode is switched off meanwhile.
+            view?.enableSetNeedsDisplay = false
+            view?.isPaused = false
+        }
+        requestRedraw()
+    }
+
+    private func currentPosition(of id: UUID, target: FloorPoint, now: CFTimeInterval) -> FloorPoint {
+        guard let start = fromPositions[id] else { return target }
+        let t = min(max((now - animationStart) / animationDuration, 0), 1)
+        let e = 1 - pow(1 - t, 3)    // ease-out cubic, critically damped feel
+        return FloorPoint(x: start.x + (target.x - start.x) * e, z: start.z + (target.z - start.z) * e)
+    }
+
+    // MARK: - MTKViewDelegate
+
+    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+        requestRedraw()
+    }
+
+    func draw(in view: MTKView) {
+        let now = CACurrentMediaTime()
+        if now - animationStart > animationDuration, !view.isPaused {
+            fromPositions = [:]
+            view.isPaused = true
+            view.enableSetNeedsDisplay = true
+        }
+        geometry.size = view.bounds.size
+        guard geometry.size.width > 0,
+              let pass = view.currentRenderPassDescriptor, let drawable = view.currentDrawable,
+              let cmd = queue.makeCommandBuffer(), let enc = cmd.makeRenderCommandEncoder(descriptor: pass) else { return }
+        var uniforms = SIMD2<Float>(Float(geometry.size.width), Float(geometry.size.height))
+
+        let (court, overlays) = buildSegments()
+        let (tokens, glyphs) = buildTokens(now: now)
+        let hatches = buildHatches()
+
+        func encode<T>(_ items: [T], pipeline: MTLRenderPipelineState, texture: MTLTexture? = nil) {
+            guard !items.isEmpty, let buffer = items.withUnsafeBytes({ raw in
+                device.makeBuffer(bytes: raw.baseAddress!, length: raw.count, options: .storageModeShared)
+            }) else { return }
+            enc.setRenderPipelineState(pipeline)
+            enc.setVertexBuffer(buffer, offset: 0, index: 0)
+            enc.setVertexBytes(&uniforms, length: MemoryLayout<SIMD2<Float>>.stride, index: 1)
+            if let texture { enc.setFragmentTexture(texture, index: 0) }
+            enc.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: items.count)
+        }
+
+        encode(court, pipeline: segmentPipeline)
+        encode(hatches, pipeline: hatchPipeline)
+        encode(overlays, pipeline: segmentPipeline)
+        encode(tokens, pipeline: tokenPipeline)
+        if let atlas { encode(glyphs, pipeline: glyphPipeline, texture: atlas.texture) }
+        enc.endEncoding()
+        cmd.present(drawable)
+        cmd.commit()
+    }
+
+    // MARK: - Scene to instances
+
+    private func v(_ p: FloorPoint) -> SIMD2<Float> {
+        let q = geometry.toView(p)
+        return SIMD2(Float(q.x), Float(q.y))
+    }
+
+    private func segment(_ a: FloorPoint, _ b: FloorPoint, width: CGFloat, color: RGBA, dash: CGFloat = 0, gap: CGFloat = 0) -> SegmentInstance {
+        SegmentInstance(p0: v(a), p1: v(b), halfWidth: Float(width / 2), dash: Float(dash), gap: Float(gap), color: color.simd)
+    }
+
+    private func buildSegments() -> ([SegmentInstance], [SegmentInstance]) {
+        let lineWidth = max(geometry.metres(0.05), 1.5)
+        var court: [SegmentInstance] = []
+        // Faint nine-zone grid on both halves (Micro-Scouting orientation aid).
+        for x in [-1.5, 1.5] {
+            court.append(segment(FloorPoint(x: x, z: -9), FloorPoint(x: x, z: 9), width: 1, color: Tokens.gridMinor))
+        }
+        for z in [-6.0, 6.0] {
+            court.append(segment(FloorPoint(x: -4.5, z: z), FloorPoint(x: 4.5, z: z), width: 1, color: Tokens.gridMinor))
+        }
+        // Court boundary, attack lines, centre line.
+        let corners = [FloorPoint(x: -4.5, z: -9), FloorPoint(x: 4.5, z: -9), FloorPoint(x: 4.5, z: 9), FloorPoint(x: -4.5, z: 9)]
+        for i in 0..<4 { court.append(segment(corners[i], corners[(i + 1) % 4], width: lineWidth, color: Tokens.courtLine)) }
+        for z in [-3.0, 3.0] {
+            court.append(segment(FloorPoint(x: -4.5, z: z), FloorPoint(x: 4.5, z: z), width: lineWidth, color: Tokens.courtLine))
+        }
+        // Net (drawn beyond the sidelines to the posts) and antennas.
+        court.append(segment(FloorPoint(x: -5.0, z: 0), FloorPoint(x: 5.0, z: 0), width: max(lineWidth * 2.2, 3.5), color: Tokens.white.withAlpha(0.9)))
+        for x in [-4.55, 4.55] {
+            court.append(segment(FloorPoint(x: x, z: -0.08), FloorPoint(x: x, z: 0.08), width: 4, color: Tokens.accent))
+        }
+
+        var overlays: [SegmentInstance] = []
+        // Micro-Scouting vectors with arrowheads.
+        for (o, t, opacity) in scene.scoutLines {
+            let color = Tokens.accent.withAlpha(opacity)
+            overlays.append(segment(o, t, width: 3, color: color))
+            let dx = t.x - o.x, dz = t.z - o.z
+            let len = max((dx * dx + dz * dz).squareRoot(), 1e-6)
+            let ux = dx / len, uz = dz / len
+            let back = 0.45, wing = 0.25
+            for s in [-1.0, 1.0] {
+                let wp = FloorPoint(x: t.x - ux * back + (-uz) * wing * s, z: t.z - uz * back + ux * wing * s)
+                overlays.append(segment(t, wp, width: 3, color: color))
+            }
+        }
+        // Overlap tethers (Section 3.4.4).
+        for tether in scene.tethers {
+            if tether.margin <= 0 {
+                overlays.append(segment(tether.a, tether.b, width: 3, color: Tokens.accentActive))
+                if let (b0, b1) = tether.boundary {
+                    overlays.append(segment(b0, b1, width: 2, color: Tokens.accentActive, dash: 6, gap: 5))
+                }
+            } else {
+                let alpha = max(0.15, 1 - tether.margin / 0.25)
+                overlays.append(segment(tether.a, tether.b, width: 1.5 + 1.5 * CGFloat(alpha), color: Tokens.accent.withAlpha(alpha)))
+            }
+        }
+        // Ink in #FF1493, 4 pt.
+        for stroke in scene.ink where stroke.count > 1 {
+            for i in 1..<stroke.count { overlays.append(segment(stroke[i - 1], stroke[i], width: 4, color: Tokens.accentActive)) }
+        }
+        return (court, overlays)
+    }
+
+    private func buildTokens(now: CFTimeInterval) -> ([TokenInstance], [GlyphInstance]) {
+        let radius = max(geometry.metres(0.30), 17)
+        var tokens: [TokenInstance] = []
+        var glyphs: [GlyphInstance] = []
+        for t in scene.tokens {
+            let p = currentPosition(of: t.id, target: t.point, now: now)
+            let c = v(p)
+            let home = t.side == .home
+            let ringColor = (home ? Tokens.accent : Tokens.opponent).simd
+            let scale: Float = t.selected ? 1.15 : 1
+            tokens.append(TokenInstance(center: c, radius: Float(radius) * scale, ring: 3, shape: home ? 0 : 1,
+                                        glow: t.selected ? 1 : 0, fill: Tokens.canvasBase.withAlpha(0.8).simd, ringColor: ringColor))
+            if t.isLibero {
+                tokens.append(TokenInstance(center: c, radius: Float(radius) * scale - 6, ring: 1.5, shape: home ? 0 : 1,
+                                            glow: 0, fill: SIMD4(0, 0, 0, 0), ringColor: ringColor))
+            }
+            if t.isServer {
+                // Server marker: a short bar outside the ring.
+                tokens.append(TokenInstance(center: c + SIMD2(0, Float(radius) * 1.45), radius: 3, ring: 3, shape: 0,
+                                            glow: 0, fill: ringColor, ringColor: ringColor))
+            }
+            if let atlas {
+                glyphs += atlas.layout(t.label, center: CGPoint(x: CGFloat(c.x), y: CGFloat(c.y)),
+                                       height: radius * 1.05, color: Tokens.white.simd)
+            }
+        }
+        return (tokens, glyphs)
+    }
+
+    private func buildHatches() -> [HatchInstance] {
+        guard let (a, b) = scene.envelope else { return [] }
+        let pa = v(a), pb = v(b)
+        let center = (pa + pb) / 2
+        let half = SIMD2<Float>(abs(pb.x - pa.x), abs(pb.y - pa.y)) / 2
+        guard half.x > 1, half.y > 1 else { return [] }
+        return [HatchInstance(center: center, halfSize: half, angle: .pi / 4, spacing: 9, lineWidth: 1.5,
+                              color: Tokens.accent.withAlpha(0.45).simd)]
+    }
+}

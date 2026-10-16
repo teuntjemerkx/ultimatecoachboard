@@ -1,0 +1,46 @@
+# XcodeGen spec. On a Mac: `brew install xcodegen && cd App && xcodegen` and open UltimateCoachBoard.xcodeproj.
+name: UltimateCoachBoard
+options:
+  bundleIdPrefix: app.ultimatecoachboard
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+packages:
+  CoachBoardCore:
+    path: ../CoachBoardCore
+targets:
+  UltimateCoachBoard:
+    type: application
+    platform: iOS
+    sources:
+      - path: UltimateCoachBoard
+    dependencies:
+      - package: CoachBoardCore
+    info:
+      path: UltimateCoachBoard/Info.plist
+      properties:
+        CFBundleDisplayName: Coach Board
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+        UIUserInterfaceStyle: Dark
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.ultimatecoachboard.ipad
+        TARGETED_DEVICE_FAMILY: "2"
+        SWIFT_VERSION: "5.0"
+        SWIFT_STRICT_CONCURRENCY: targeted
+        GENERATE_INFOPLIST_FILE: false
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+schemes:
+  UltimateCoachBoard:
+    build:
+      targets:
+        UltimateCoachBoard: all

@@ -1,0 +1,1026 @@
+{
+ "format": "cb.rotation-template/1",
+ "id": "5-1-outside-follows-setter",
+ "system": "5-1",
+ "lineupOrder": [
+  "S",
+  "OH1",
+  "MB1",
+  "OPP",
+  "OH2",
+  "MB2"
+ ],
+ "libero": {
+  "replaces": [
+   "MB1",
+   "MB2"
+  ],
+  "whenServing": false
+ },
+ "setterTarget": [
+  6.0,
+  0.7
+ ],
+ "routeTargets": {
+  "target": [
+   6.0,
+   0.7
+  ],
+  "left": [
+   -0.3,
+   3.8
+  ],
+  "right": [
+   9.3,
+   3.8
+  ],
+  "quick": [
+   4.6,
+   3.0
+  ],
+  "pipe": [
+   4.5,
+   6.6
+  ],
+  "dball": [
+   7.8,
+   6.6
+  ]
+ },
+ "baseSlots": {
+  "LF": [
+   1.0,
+   0.7
+  ],
+  "MF": [
+   4.5,
+   0.7
+  ],
+  "RF": [
+   8.0,
+   0.7
+  ],
+  "LB": [
+   1.2,
+   6.3
+  ],
+  "MBK": [
+   4.5,
+   8.0
+  ],
+  "RB": [
+   7.8,
+   6.3
+  ]
+ },
+ "formations": [
+  {
+   "rotation": 1,
+   "phase": "receive",
+   "players": [
+    {
+     "role": "S",
+     "position": 1,
+     "anchor": [
+      8.4,
+      5.8
+     ],
+     "passes": false,
+     "route": "target"
+    },
+    {
+     "role": "OH1",
+     "position": 2,
+     "anchor": [
+      2.2,
+      5.0
+     ],
+     "passes": true,
+     "route": "left"
+    },
+    {
+     "role": "MB1",
+     "position": 3,
+     "anchor": [
+      1.5,
+      1.0
+     ],
+     "passes": false,
+     "route": "quick"
+    },
+    {
+     "role": "OPP",
+     "position": 4,
+     "anchor": [
+      0.7,
+      0.6
+     ],
+     "passes": false,
+     "route": "right"
+    },
+    {
+     "role": "OH2",
+     "position": 5,
+     "anchor": [
+      4.5,
+      5.4
+     ],
+     "passes": true,
+     "route": "pipe"
+    },
+    {
+     "role": "L",
+     "position": 6,
+     "anchor": [
+      7.0,
+      5.0
+     ],
+     "passes": true,
+     "route": null
+    }
+   ],
+   "expectedMinMargin": 0.7
+  },
+  {
+   "rotation": 6,
+   "phase": "receive",
+   "players": [
+    {
+     "role": "OH1",
+     "position": 1,
+     "anchor": [
+      7.0,
+      5.0
+     ],
+     "passes": true,
+     "route": "pipe"
+    },
+    {
+     "role": "MB1",
+     "position": 2,
+     "anchor": [
+      7.6,
+      0.6
+     ],
+     "passes": false,
+     "route": "quick"
+    },
+    {
+     "role": "OPP",
+     "position": 3,
+     "anchor": [
+      5.0,
+      0.5
+     ],
+     "passes": false,
+     "route": "right"
+    },
+    {
+     "role": "OH2",
+     "position": 4,
+     "anchor": [
+      2.0,
+      5.0
+     ],
+     "passes": true,
+     "route": "left"
+    },
+    {
+     "role": "L",
+     "position": 5,
+     "anchor": [
+      4.0,
+      5.7
+     ],
+     "passes": true,
+     "route": null
+    },
+    {
+     "role": "S",
+     "position": 6,
+     "anchor": [
+      5.6,
+      1.2
+     ],
+     "passes": false,
+     "route": "target"
+    }
+   ],
+   "expectedMinMargin": 0.7
+  },
+  {
+   "rotation": 5,
+   "phase": "receive",
+   "players": [
+    {
+     "role": "L",
+     "position": 1,
+     "anchor": [
+      7.0,
+      5.0
+     ],
+     "passes": true,
+     "route": null
+    },
+    {
+     "role": "OPP",
+     "position": 2,
+     "anchor": [
+      8.0,
+      0.6
+     ],
+     "passes": false,
+     "route": "right"
+    },
+    {
+     "role": "OH2",
+     "position": 3,
+     "anchor": [
+      2.0,
+      5.0
+     ],
+     "passes": true,
+     "route": "left"
+    },
+    {
+     "role": "MB2",
+     "position": 4,
+     "anchor": [
+      1.2,
+      0.6
+     ],
+     "passes": false,
+     "route": "quick"
+    },
+    {
+     "role": "S",
+     "position": 5,
+     "anchor": [
+      3.6,
+      1.0
+     ],
+     "passes": false,
+     "route": "target"
+    },
+    {
+     "role": "OH1",
+     "position": 6,
+     "anchor": [
+      4.5,
+      5.5
+     ],
+     "passes": true,
+     "route": "pipe"
+    }
+   ],
+   "expectedMinMargin": 0.4
+  },
+  {
+   "rotation": 4,
+   "phase": "receive",
+   "players": [
+    {
+     "role": "OPP",
+     "position": 1,
+     "anchor": [
+      8.3,
+      7.6
+     ],
+     "passes": false,
+     "route": "dball"
+    },
+    {
+     "role": "OH2",
+     "position": 2,
+     "anchor": [
+      2.4,
+      4.6
+     ],
+     "passes": true,
+     "route": "left"
+    },
+    {
+     "role": "MB2",
+     "position": 3,
+     "anchor": [
+      1.7,
+      0.9
+     ],
+     "passes": false,
+     "route": "quick"
+    },
+    {
+     "role": "S",
+     "position": 4,
+     "anchor": [
+      0.9,
+      0.5
+     ],
+     "passes": false,
+     "route": "target"
+    },
+    {
+     "role": "OH1",
+     "position": 5,
+     "anchor": [
+      4.6,
+      5.1
+     ],
+     "passes": true,
+     "route": "pipe"
+    },
+    {
+     "role": "L",
+     "position": 6,
+     "anchor": [
+      6.9,
+      5.0
+     ],
+     "passes": true,
+     "route": null
+    }
+   ],
+   "expectedMinMargin": 0.7
+  },
+  {
+   "rotation": 3,
+   "phase": "receive",
+   "players": [
+    {
+     "role": "OH2",
+     "position": 1,
+     "anchor": [
+      7.0,
+      5.0
+     ],
+     "passes": true,
+     "route": "pipe"
+    },
+    {
+     "role": "MB2",
+     "position": 2,
+     "anchor": [
+      7.2,
+      0.6
+     ],
+     "passes": false,
+     "route": "quick"
+    },
+    {
+     "role": "S",
+     "position": 3,
+     "anchor": [
+      5.0,
+      0.5
+     ],
+     "passes": false,
+     "route": "target"
+    },
+    {
+     "role": "OH1",
+     "position": 4,
+     "anchor": [
+      2.0,
+      5.0
+     ],
+     "passes": true,
+     "route": "left"
+    },
+    {
+     "role": "L",
+     "position": 5,
+     "anchor": [
+      4.0,
+      5.6
+     ],
+     "passes": true,
+     "route": null
+    },
+    {
+     "role": "OPP",
+     "position": 6,
+     "anchor": [
+      5.8,
+      7.8
+     ],
+     "passes": false,
+     "route": "dball"
+    }
+   ],
+   "expectedMinMargin": 0.6
+  },
+  {
+   "rotation": 2,
+   "phase": "receive",
+   "players": [
+    {
+     "role": "L",
+     "position": 1,
+     "anchor": [
+      7.0,
+      5.0
+     ],
+     "passes": true,
+     "route": null
+    },
+    {
+     "role": "S",
+     "position": 2,
+     "anchor": [
+      7.0,
+      0.5
+     ],
+     "passes": false,
+     "route": "target"
+    },
+    {
+     "role": "OH1",
+     "position": 3,
+     "anchor": [
+      2.0,
+      5.0
+     ],
+     "passes": true,
+     "route": "left"
+    },
+    {
+     "role": "MB1",
+     "position": 4,
+     "anchor": [
+      1.2,
+      0.6
+     ],
+     "passes": false,
+     "route": "quick"
+    },
+    {
+     "role": "OPP",
+     "position": 5,
+     "anchor": [
+      1.0,
+      8.0
+     ],
+     "passes": false,
+     "route": "dball"
+    },
+    {
+     "role": "OH2",
+     "position": 6,
+     "anchor": [
+      4.5,
+      5.6
+     ],
+     "passes": true,
+     "route": "pipe"
+    }
+   ],
+   "expectedMinMargin": 0.6
+  },
+  {
+   "rotation": 1,
+   "phase": "serve",
+   "players": [
+    {
+     "role": "OPP",
+     "position": 4,
+     "anchor": [
+      3.7,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      8.0,
+      0.7
+     ]
+    },
+    {
+     "role": "MB1",
+     "position": 3,
+     "anchor": [
+      4.5,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      4.5,
+      0.7
+     ]
+    },
+    {
+     "role": "OH1",
+     "position": 2,
+     "anchor": [
+      5.3,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      1.0,
+      0.7
+     ]
+    },
+    {
+     "role": "OH2",
+     "position": 5,
+     "anchor": [
+      2.5,
+      8.0
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      4.5,
+      8.0
+     ]
+    },
+    {
+     "role": "L",
+     "position": 6,
+     "anchor": [
+      3.3,
+      6.3
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      1.2,
+      6.3
+     ]
+    },
+    {
+     "role": "S",
+     "position": 1,
+     "anchor": [
+      7.8,
+      10.0
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      7.8,
+      6.3
+     ]
+    }
+   ],
+   "expectedMinMargin": 0.8
+  },
+  {
+   "rotation": 6,
+   "phase": "serve",
+   "players": [
+    {
+     "role": "OH2",
+     "position": 4,
+     "anchor": [
+      1.0,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      1.0,
+      0.7
+     ]
+    },
+    {
+     "role": "OPP",
+     "position": 3,
+     "anchor": [
+      5.9,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      8.0,
+      0.7
+     ]
+    },
+    {
+     "role": "MB1",
+     "position": 2,
+     "anchor": [
+      6.7,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      4.5,
+      0.7
+     ]
+    },
+    {
+     "role": "L",
+     "position": 5,
+     "anchor": [
+      1.2,
+      6.3
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      1.2,
+      6.3
+     ]
+    },
+    {
+     "role": "S",
+     "position": 6,
+     "anchor": [
+      7.8,
+      6.3
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      7.8,
+      6.3
+     ]
+    },
+    {
+     "role": "OH1",
+     "position": 1,
+     "anchor": [
+      4.5,
+      10.0
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      4.5,
+      8.0
+     ]
+    }
+   ],
+   "expectedMinMargin": 0.8
+  },
+  {
+   "rotation": 5,
+   "phase": "serve",
+   "players": [
+    {
+     "role": "MB2",
+     "position": 4,
+     "anchor": [
+      2.4,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      4.5,
+      0.7
+     ]
+    },
+    {
+     "role": "OH2",
+     "position": 3,
+     "anchor": [
+      3.2,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      1.0,
+      0.7
+     ]
+    },
+    {
+     "role": "OPP",
+     "position": 2,
+     "anchor": [
+      8.0,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      8.0,
+      0.7
+     ]
+    },
+    {
+     "role": "S",
+     "position": 5,
+     "anchor": [
+      5.8,
+      6.3
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      7.8,
+      6.3
+     ]
+    },
+    {
+     "role": "OH1",
+     "position": 6,
+     "anchor": [
+      6.6,
+      8.0
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      4.5,
+      8.0
+     ]
+    },
+    {
+     "role": "MB1",
+     "position": 1,
+     "anchor": [
+      1.2,
+      10.0
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      1.2,
+      6.3
+     ]
+    }
+   ],
+   "expectedMinMargin": 0.8
+  },
+  {
+   "rotation": 4,
+   "phase": "serve",
+   "players": [
+    {
+     "role": "S",
+     "position": 4,
+     "anchor": [
+      3.7,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      8.0,
+      0.7
+     ]
+    },
+    {
+     "role": "MB2",
+     "position": 3,
+     "anchor": [
+      4.5,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      4.5,
+      0.7
+     ]
+    },
+    {
+     "role": "OH2",
+     "position": 2,
+     "anchor": [
+      5.3,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      1.0,
+      0.7
+     ]
+    },
+    {
+     "role": "OH1",
+     "position": 5,
+     "anchor": [
+      2.5,
+      8.0
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      4.5,
+      8.0
+     ]
+    },
+    {
+     "role": "L",
+     "position": 6,
+     "anchor": [
+      3.3,
+      6.3
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      1.2,
+      6.3
+     ]
+    },
+    {
+     "role": "OPP",
+     "position": 1,
+     "anchor": [
+      7.8,
+      10.0
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      7.8,
+      6.3
+     ]
+    }
+   ],
+   "expectedMinMargin": 0.8
+  },
+  {
+   "rotation": 3,
+   "phase": "serve",
+   "players": [
+    {
+     "role": "OH1",
+     "position": 4,
+     "anchor": [
+      1.0,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      1.0,
+      0.7
+     ]
+    },
+    {
+     "role": "S",
+     "position": 3,
+     "anchor": [
+      5.9,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      8.0,
+      0.7
+     ]
+    },
+    {
+     "role": "MB2",
+     "position": 2,
+     "anchor": [
+      6.7,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      4.5,
+      0.7
+     ]
+    },
+    {
+     "role": "L",
+     "position": 5,
+     "anchor": [
+      1.2,
+      6.3
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      1.2,
+      6.3
+     ]
+    },
+    {
+     "role": "OPP",
+     "position": 6,
+     "anchor": [
+      7.8,
+      6.3
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      7.8,
+      6.3
+     ]
+    },
+    {
+     "role": "OH2",
+     "position": 1,
+     "anchor": [
+      4.5,
+      10.0
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      4.5,
+      8.0
+     ]
+    }
+   ],
+   "expectedMinMargin": 0.8
+  },
+  {
+   "rotation": 2,
+   "phase": "serve",
+   "players": [
+    {
+     "role": "MB1",
+     "position": 4,
+     "anchor": [
+      2.4,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      4.5,
+      0.7
+     ]
+    },
+    {
+     "role": "OH1",
+     "position": 3,
+     "anchor": [
+      3.2,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      1.0,
+      0.7
+     ]
+    },
+    {
+     "role": "S",
+     "position": 2,
+     "anchor": [
+      8.0,
+      0.8
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      8.0,
+      0.7
+     ]
+    },
+    {
+     "role": "OPP",
+     "position": 5,
+     "anchor": [
+      5.8,
+      6.3
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      7.8,
+      6.3
+     ]
+    },
+    {
+     "role": "OH2",
+     "position": 6,
+     "anchor": [
+      6.6,
+      8.0
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      4.5,
+      8.0
+     ]
+    },
+    {
+     "role": "MB2",
+     "position": 1,
+     "anchor": [
+      1.2,
+      10.0
+     ],
+     "passes": false,
+     "route": null,
+     "switchTo": [
+      1.2,
+      6.3
+     ]
+    }
+   ],
+   "expectedMinMargin": 0.8
+  }
+ ]
+}

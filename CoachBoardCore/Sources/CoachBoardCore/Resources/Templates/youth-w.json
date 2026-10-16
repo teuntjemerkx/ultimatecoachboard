@@ -1,0 +1,114 @@
+{
+ "format": "cb.rotation-template/1",
+ "id": "youth-w",
+ "system": "youth-W",
+ "lineupOrder": [
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F"
+ ],
+ "libero": null,
+ "setterTarget": [
+  4.5,
+  0.8
+ ],
+ "routeTargets": {
+  "target": [
+   6.0,
+   0.7
+  ],
+  "left": [
+   -0.3,
+   3.8
+  ],
+  "right": [
+   9.3,
+   3.8
+  ],
+  "quick": [
+   4.6,
+   3.0
+  ],
+  "pipe": [
+   4.5,
+   6.6
+  ],
+  "dball": [
+   7.8,
+   6.6
+  ]
+ },
+ "formations": [
+  {
+   "rotation": 0,
+   "phase": "receive",
+   "players": [
+    {
+     "role": "E",
+     "position": 1,
+     "anchor": [
+      6.0,
+      6.6
+     ],
+     "passes": true,
+     "route": null
+    },
+    {
+     "role": "B",
+     "position": 2,
+     "anchor": [
+      7.5,
+      4.2
+     ],
+     "passes": true,
+     "route": null
+    },
+    {
+     "role": "C (setter)",
+     "position": 3,
+     "anchor": [
+      4.5,
+      0.6
+     ],
+     "passes": false,
+     "route": null
+    },
+    {
+     "role": "D",
+     "position": 4,
+     "anchor": [
+      1.5,
+      4.2
+     ],
+     "passes": true,
+     "route": null
+    },
+    {
+     "role": "F",
+     "position": 5,
+     "anchor": [
+      3.0,
+      6.6
+     ],
+     "passes": true,
+     "route": null
+    },
+    {
+     "role": "A",
+     "position": 6,
+     "anchor": [
+      4.5,
+      4.4
+     ],
+     "passes": true,
+     "route": null
+    }
+   ],
+   "expectedMinMargin": 1.5,
+   "note": "Position-based: the W is the same in every rotation; the player in P3 sets."
+  }
+ ]
+}

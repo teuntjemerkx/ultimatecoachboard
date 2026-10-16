@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  core-linux:
+    name: Core tests (Linux, Swift 6.1)
+    runs-on: ubuntu-latest
+    container: swift:6.1-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: swift test
+        working-directory: CoachBoardCore
+        run: swift test
+
+  app-ios:
+    name: Core tests and iPad app build (macOS, Xcode 26)
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode version
+        run: xcodebuild -version
+      - name: swift test
+        working-directory: CoachBoardCore
+        run: swift test
+      - name: Generate the Xcode project
+        working-directory: App
+        run: |
+          brew install xcodegen
+          xcodegen
+      - name: Build for the iOS Simulator
+        working-directory: App
+        run: |
+          xcodebuild -project UltimateCoachBoard.xcodeproj -scheme UltimateCoachBoard \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
