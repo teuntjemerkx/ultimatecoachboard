@@ -132,6 +132,7 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
     private var glyphPipeline: MTLRenderPipelineState!
     private var hatchPipeline: MTLRenderPipelineState!
     private var zonePipeline: MTLRenderPipelineState!
+    private var loggedZonePass = false
     private let atlas: GlyphAtlas?
 
     var geometry = BoardGeometry(size: .zero)
@@ -297,7 +298,7 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
                 z.kind = 2; frame(c, ang); z.params = SIMD4(Float(a), Float(b), 0, 0)
             case .polygon, .freeform:
                 let outline = zone.outline
-                guard outline.count >= 3 else { continue }
+                guard (3...256).contains(outline.count) else { continue }
                 z.kind = 3
                 z.vertexOffset = UInt32(verts.count)
                 z.vertexCount = UInt32(outline.count)
@@ -307,6 +308,10 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
         }
         guard !gpu.isEmpty else { return }
         if verts.isEmpty { verts = [.zero] }
+        if !loggedZonePass {
+            loggedZonePass = true
+            DemoMode.note("zone pass: \(gpu.count) zones, \(verts.count) vertices, kinds \(gpu.map(\.kind))")
+        }
         var u = FloorUniforms(viewSize: SIMD2(Float(geometry.size.width), Float(geometry.size.height)),
                               center: SIMD2(Float(geometry.center.x), Float(geometry.center.y)),
                               scale: Float(geometry.scale), flipped: geometry.isFlipped ? 1 : 0, zoneCount: UInt32(gpu.count))

@@ -52,10 +52,12 @@ enum DemoMode {
             let c = StudioController(scene: scene)
             // Zones built from synthetic hand strokes through the real recognizer and snapping.
             let seam = CourtFrame.world(LocalPoint(l: 1.5, d: 4.5), of: .opponent)
+            note("studio: scene ready")
             demoZone(c, loop(FloorPoint(x: seam.x + 0.1, z: seam.z - 0.1), 1.2), tag: .tipAlert)
             demoZone(c, box(FloorPoint(x: 1.6, z: 6.1), FloorPoint(x: 4.4, z: 8.8)), tag: .noFly)
             demoZone(c, loop(FloorPoint(x: -3.0, z: -7.4), 1.0, squash: 0.55), tag: .serveTarget)
             demoZone(c, loop(FloorPoint(x: 0.0, z: 4.6), 1.1, squash: 0.8), tag: .freeBall, forced: .freeform)
+            note("studio: \(c.scene.zones.count) zones: " + c.scene.zones.map { "\($0.semantic.tag.rawValue) \($0.geometry)" }.joined(separator: " | "))
             c.tool = .zone
             model.screen = .studio(c)
         case "setbreak":
