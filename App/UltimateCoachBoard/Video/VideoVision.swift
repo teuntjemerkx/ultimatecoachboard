@@ -10,9 +10,12 @@ extension VNRequest {
     /// On an iPad this does nothing: the models pick the Neural Engine themselves.
     func runsOnCPUInSimulator() -> Self {
         #if targetEnvironment(simulator)
-        if let stages = try? supportedComputeStageDevices() {
-            for (stage, devices) in stages {
-                if let cpu = devices.first(where: { $0 is MLCPUComputeDevice }) { setComputeDevice(cpu, for: stage) }
+        let stages = (try? self.supportedComputeStageDevices) ?? [:]
+        for (stage, devices) in stages {
+            for device in devices {
+                guard case .cpu = device else { continue }
+                setComputeDevice(device, for: stage)
+                break
             }
         }
         #endif
