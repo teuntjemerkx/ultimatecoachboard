@@ -64,6 +64,35 @@ export class Detector {
    */
   detect(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number,
     wantsPose?: (box: DetectedPerson["box"]) => boolean): FrameDetections {
+    const { people, balls } = this.objects(frame, width, height);
+    // Pose from a square crop around each person, about 256 px tall.
+    const crop = canvas(256, 256);
+    const g = crop.getContext("2d")!;
+    for (const p of people) {
+      if (wantsPose && !wantsPose(p.box)) continue;
+      const { x, y, w, h } = p.box;
+      const side = Math.max(w, h) * 1.5, cx = x + w / 2, cy = y + h / 2;
+      g.clearRect(0, 0, 256, 256);
+      g.drawImage(frame, cx - side / 2, cy - side / 2, side, side, 0, 0, 256, 256);
+      const r = this.pose.detect(crop);
+      const lm = r.landmarks[0];
+      if (!lm) continue;
+      const at = (i: number): Keypoint => ({ x: cx - side / 2 + lm[i].x * side, y: cy - side / 2 + lm[i].y * side, confidence: lm[i].visibility ?? 0.5 });
+      for (const [name, i] of LANDMARKS) p.keypoints[name] = at(i);
+      const mid = (a: Keypoint, b: Keypoint): Keypoint => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, confidence: Math.min(a.confidence, b.confidence) });
+      p.keypoints.neck = mid(at(11), at(12));
+      p.keypoints.root = mid(at(23), at(24));
+    }
+    return { people, balls };
+  }
+
+  /** The ball candidates in a frame, best first: the object detector alone, for the frames between the pose frames. */
+  detectBalls(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number): FrameDetections["balls"] {
+    return this.objects(frame, width, height).balls;
+  }
+
+  /** People (boxes only) and ball candidates from the object detector. */
+  private objects(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number): FrameDetections {
     // Upscale so far players are large enough, and cut into two overlapping tiles (the detector's input is square-ish).
     const S = width < 1400 ? 2 : 1;
     const big = canvas(width * S, height * S);
@@ -87,24 +116,6 @@ export class Detector {
     raw.sort((a, b) => b.score - a.score);
     const people: DetectedPerson[] = [];
     for (const p of raw) if (!people.some((q) => iou(q.box, p.box) > 0.5)) people.push(p);
-    // Pose from a square crop around each person, about 256 px tall.
-    const crop = canvas(256, 256);
-    const g = crop.getContext("2d")!;
-    for (const p of people) {
-      if (wantsPose && !wantsPose(p.box)) continue;
-      const { x, y, w, h } = p.box;
-      const side = Math.max(w, h) * 1.5, cx = x + w / 2, cy = y + h / 2;
-      g.clearRect(0, 0, 256, 256);
-      g.drawImage(frame, cx - side / 2, cy - side / 2, side, side, 0, 0, 256, 256);
-      const r = this.pose.detect(crop);
-      const lm = r.landmarks[0];
-      if (!lm) continue;
-      const at = (i: number): Keypoint => ({ x: cx - side / 2 + lm[i].x * side, y: cy - side / 2 + lm[i].y * side, confidence: lm[i].visibility ?? 0.5 });
-      for (const [name, i] of LANDMARKS) p.keypoints[name] = at(i);
-      const mid = (a: Keypoint, b: Keypoint): Keypoint => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, confidence: Math.min(a.confidence, b.confidence) });
-      p.keypoints.neck = mid(at(11), at(12));
-      p.keypoints.root = mid(at(23), at(24));
-    }
     balls.sort((a, b) => b.score - a.score);
     return { people, balls };
   }
