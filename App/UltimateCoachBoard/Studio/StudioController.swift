@@ -148,9 +148,13 @@ final class StudioController {
         let m = video.camera.normalizedProjection.map(Float.init)
         guard m.count == 12 else { return nil }
         let rows = [SIMD4(m[0], m[1], m[2], m[3]), SIMD4(m[4], m[5], m[6], m[7]), SIMD4<Float>(0, 0, 0, 0), SIMD4(m[8], m[9], m[10], m[11])]
-        let env = video.environment
+        // The hall's walls at their usual distances, except that the box always holds the video camera: a wall
+        // between the camera and the court would be painted with the court.
+        let env = video.environment, c = video.camera.center
         return Scene3D.Backdrop(plate: folder.appendingPathComponent(plate), worldToImage: simd_float4x4(rows: rows),
-                                halfWidth: env.halfWidth, halfLength: env.halfLength, height: env.height)
+                                minX: min(-env.halfWidth, c.x - 1.5), maxX: max(env.halfWidth, c.x + 1.5),
+                                minZ: min(-env.halfLength, c.z - 1.5), maxZ: max(env.halfLength, c.z + 1.5),
+                                height: max(env.height, c.y + 1.5))
     }
 
     /// The ball now: the video's reconstructed flight, or the scene's ball plan.

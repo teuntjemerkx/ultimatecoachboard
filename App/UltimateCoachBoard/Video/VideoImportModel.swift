@@ -50,13 +50,22 @@ final class VideoImportModel {
                 step = .failed("That video could not be opened.")
                 return
             }
-            let clip = try await VideoVision.open(movie.url)
+            await load(url: movie.url)
+        } catch {
+            step = .failed("That video could not be opened: \(error.localizedDescription)")
+        }
+    }
+
+    /// Opens a movie file and shows its first still for marking the court.
+    func load(url: URL) async {
+        do {
+            let clip = try await VideoVision.open(url)
             guard clip.duration >= 1 else {
                 step = .failed("That video is too short. Choose a clip of 4 to 10 seconds.")
                 return
             }
             self.clip = clip
-            sourceURL = movie.url
+            sourceURL = url
             duration = clip.duration
             start = 0
             let image = try await VideoVision.image(clip, at: 0.2)
@@ -69,6 +78,15 @@ final class VideoImportModel {
             step = .failed("That video could not be read: \(error.localizedDescription)")
         }
     }
+
+    /// Demo and CI: the dots placed where a coach put them (pixels of the still: our end line, then theirs).
+    func setCorners(ours: [CGPoint], theirs: [CGPoint]) {
+        corners = theirs.map { Corner(label: "THEM", ours: false, point: $0) } + ours.map { Corner(label: "US", ours: true, point: $0) }
+        solve()
+    }
+
+    /// What the last build found, for the diagnostics.
+    private(set) var report = ""
 
     /// Demo and CI: the court-marking step on a still, the dots near (not on) the corners.
     func demo(still image: CGImage, camera: VideoCamera) {
@@ -185,6 +203,11 @@ final class VideoImportModel {
             // The camera was calibrated on the still; Vision frames may be a different size.
             let camera = calibration.camera.scaled(toWidth: Double(size.width), height: Double(size.height))
             let observations = VideoPipeline.observations(frames, ball: ball, camera: camera)
+            let people = frames.map(\.people.count), posed = frames.map { $0.people.filter { !$0.keypoints.isEmpty }.count }
+            report = String(format: "calibration %@ rms %.2f px, camera %.1f m up %.1f m back, fovY %.1f deg; %d frames, people per frame %d-%d (with pose %d-%d), detections on court %d, ball points %d",
+                            calibration.quality.rawValue, calibration.rmsError, camera.center.y, camera.center.z, camera.fovY * 180 / .pi,
+                            frames.count, people.min() ?? 0, people.max() ?? 0, posed.min() ?? 0, posed.max() ?? 0,
+                            observations.reduce(0) { $0 + $1.detections.count }, ball.count)
             let title = "Video \(Date().formatted(date: .abbreviated, time: .shortened))"
             let netHeight = PlayerBodies.netHeight
             var scene = await Task.detached(priority: .userInitiated) {
@@ -201,6 +224,9 @@ final class VideoImportModel {
             scene.plateFile = VideoStore.plateName
             scene.clipStart = start
             try VideoStore.save(scene, in: folder)
+            report += String(format: "; rebuilt %d players (%d home, %d away), %d ball flights over %.1f s", scene.players.count,
+                             scene.players.filter { $0.side == .home }.count, scene.players.filter { $0.side == .opponent }.count,
+                             scene.ball.count, scene.duration)
             progress = 1
             self.folder = folder
             result = scene

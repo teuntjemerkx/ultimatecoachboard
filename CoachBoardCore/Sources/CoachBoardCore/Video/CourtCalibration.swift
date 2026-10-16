@@ -178,7 +178,8 @@ public struct CalibrationPoint: Hashable, Codable, Sendable {
 
 /// How far a calibration can be trusted.
 public enum CalibrationQuality: String, Codable, Sendable, Hashable {
-    /// Below 2 px RMS at 1080p, camera 0.5-25 m above the floor, vertical field of view 15-120 degrees.
+    /// Below 2 px RMS at 1080p, camera 0.5-25 m above the floor, vertical field of view 4-120 degrees (from a
+    /// broadcast telephoto in the stands to a wide phone lens).
     case good
     /// Usable with care: below 6 px RMS at 1080p and a plausible camera.
     case rough
@@ -360,8 +361,8 @@ public enum CourtCalibration {
     public static func quality(_ cam: VideoCamera, rms: Double) -> CalibrationQuality {
         let scale = min(cam.width, cam.height) / 1080
         let fov = cam.fovY * 180 / .pi, h = cam.center.y
-        if rms < 2 * scale && (0.5...25).contains(h) && (15...120).contains(fov) { return .good }
-        if rms < 6 * scale && (0.2...40).contains(h) && (8...150).contains(fov) { return .rough }
+        if rms < 2 * scale && (0.5...25).contains(h) && (4...120).contains(fov) { return .good }
+        if rms < 6 * scale && (0.2...40).contains(h) && (3...150).contains(fov) { return .rough }
         return .failed
     }
 
@@ -403,7 +404,7 @@ public enum CourtCalibration {
                 var score = r.rmsError / scale
                 if let d = r.focalDisagreement, d > 0.25 { score += 20 * (d - 0.25) }
                 let fov = r.camera.fovY * 180 / .pi
-                if !(15...120).contains(fov) { score += 10 }
+                if !(4...120).contains(fov) { score += 10 }
                 if r.quality == .failed { score += 100 }
                 if best == nil || score < best!.score { best = (score, r) }
             }

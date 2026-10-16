@@ -1,7 +1,7 @@
 import UIKit
 import CoachBoardCore
 
-/// Launch-argument demo states (`-demoScreen launcher|setup|live|advanced|setbreak|log|studio|studio3d|pov|rally|rallyeye|videomark|videowatch|video3d|videoeye|gallery`) so CI can capture screenshots of
+/// Launch-argument demo states (`-demoScreen launcher|setup|live|advanced|setbreak|log|studio|studio3d|pov|rally|rallyeye|videomark|videowatch|video3d|videoeye|realmark|realvideo|realeye|gallery`) so CI can capture screenshots of
 /// real screens in the Simulator. Only reachable through launch arguments; never shown to a coach.
 enum DemoMode {
     static var screen: String? {
@@ -143,6 +143,36 @@ enum DemoMode {
                 w.watch(m.id)
             }
             model.screen = .videoWatch(w)
+        case "realmark", "realvideo", "realeye":
+            // A real broadcast rally (Tokyo 2020, filmed from behind an end line; CI puts the GIF in Documents)
+            // through the whole import: movie, still, the four dots where a coach puts them, Vision, the rebuild,
+            // then the clip with tappable players or one player's eye view.
+            let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let gif = docs.appendingPathComponent("sample-rally.gif"), movie = docs.appendingPathComponent("sample-rally.mp4")
+            guard FileManager.default.fileExists(atPath: gif.path) else { note("real: no sample-rally.gif"); return }
+            let importer = VideoImportModel()
+            model.screen = .videoImport(importer)
+            Task { @MainActor in
+                let t0 = Date()
+                guard VideoDemo.movie(fromGIF: gif, to: movie) else { note("real: GIF to movie failed"); return }
+                await importer.load(url: movie)
+                importer.setCorners(ours: [CGPoint(x: 51.5, y: 331), CGPoint(x: 554.2, y: 331)],
+                                    theirs: [CGPoint(x: 142.0, y: 136.5), CGPoint(x: 463.5, y: 136.5)])
+                note(String(format: "real: still %.0fx%.0f, fit %@, %.1f s", importer.imageSize.width, importer.imageSize.height,
+                            "\(importer.fit)", Date().timeIntervalSince(t0)))
+                if screen == "realmark" { return }
+                await importer.build()
+                note(String(format: "real: built in %.1f s: ", Date().timeIntervalSince(t0)) + importer.report)
+                guard let scene = importer.result, let folder = importer.folder else { note("real: \(importer.step)"); return }
+                let w = VideoWatchController(scene: scene, folder: folder)
+                w.seek(to: 2.0)
+                note("real markers at 2.0 s: " + w.markers.map { "\($0.side == .home ? "" : "o")\($0.label)" }.joined(separator: " "))
+                if screen == "realeye", let m = w.markers.first(where: { $0.side == .home }) {
+                    w.watch(m.id)
+                    note("real eye view of \(m.label)")
+                }
+                model.screen = .videoWatch(w)
+            }
         case "gallery":
             // Every technique of the posture library side by side, each in the variant of the position that uses it
             // most, seen side-on from the bench. Jersey numbers index the legend in the diagnostics.

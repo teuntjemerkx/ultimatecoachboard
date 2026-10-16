@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import CoreGraphics
+import ImageIO
 import Vision
 import CoachBoardCore
 
@@ -33,12 +34,8 @@ enum VideoPipeline {
         return out.sorted { $0.time < $1.time }
     }
 
-    /// A hall box that holds the camera (filmed from the stands, it may stand beyond the default walls).
-    static func environment(for camera: VideoCamera) -> HallEnvironment {
-        let c = camera.center
-        return HallEnvironment(sideClearance: max(7, abs(c.x) - 4.5 + 1.5), endClearance: max(8, abs(c.z) - 9 + 1.5),
-                               height: max(10, c.y + 1.5))
-    }
+    /// The hall around the court at its usual distances; the 3D view widens it on the camera's side as needed.
+    static func environment(for camera: VideoCamera) -> HallEnvironment { HallEnvironment() }
 }
 
 extension VideoCamera {
@@ -237,6 +234,48 @@ enum VideoDemo {
             CVPixelBufferUnlockBaseAddress(pb, [])
             while !input.isReadyForMoreMediaData { Thread.sleep(forTimeInterval: 0.002) }
             guard adaptor.append(pb, withPresentationTime: CMTime(value: CMTimeValue(k), timescale: fps)) else { return false }
+        }
+        input.markAsFinished()
+        let done = DispatchSemaphore(value: 0)
+        writer.finishWriting { done.signal() }
+        done.wait()
+        return writer.status == .completed
+    }
+
+    /// A GIF (CI's real broadcast sample) as an H.264 movie with the GIF's own frame timing.
+    static func movie(fromGIF gif: URL, to url: URL) -> Bool {
+        guard let source = CGImageSourceCreateWithURL(gif as CFURL, nil) else { return false }
+        let count = CGImageSourceGetCount(source)
+        guard count > 1, let first = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return false }
+        let w = first.width / 2 * 2, h = first.height / 2 * 2
+        try? FileManager.default.removeItem(at: url)
+        guard let writer = try? AVAssetWriter(outputURL: url, fileType: .mp4) else { return false }
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: [AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: w, AVVideoHeightKey: h])
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA, kCVPixelBufferWidthKey as String: w, kCVPixelBufferHeightKey as String: h,
+        ])
+        guard writer.canAdd(input) else { return false }
+        writer.add(input)
+        guard writer.startWriting() else { return false }
+        writer.startSession(atSourceTime: .zero)
+        var t = 0.0
+        for i in 0..<count {
+            guard let image = CGImageSourceCreateImageAtIndex(source, i, nil) else { continue }
+            let props = CGImageSourceCopyPropertiesAtIndex(source, i, nil) as? [CFString: Any]
+            let gifProps = props?[kCGImagePropertyGIFDictionary] as? [CFString: Any]
+            let delay = (gifProps?[kCGImagePropertyGIFUnclampedDelayTime] as? Double) ?? (gifProps?[kCGImagePropertyGIFDelayTime] as? Double) ?? 0.1
+            var buffer: CVPixelBuffer?
+            guard let pool = adaptor.pixelBufferPool, CVPixelBufferPoolCreatePixelBuffer(nil, pool, &buffer) == kCVReturnSuccess,
+                  let pb = buffer else { return false }
+            CVPixelBufferLockBaseAddress(pb, [])
+            CGContext(data: CVPixelBufferGetBaseAddress(pb), width: w, height: h, bitsPerComponent: 8,
+                      bytesPerRow: CVPixelBufferGetBytesPerRow(pb), space: CGColorSpaceCreateDeviceRGB(),
+                      bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)?
+                .draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+            CVPixelBufferUnlockBaseAddress(pb, [])
+            while !input.isReadyForMoreMediaData { Thread.sleep(forTimeInterval: 0.002) }
+            guard adaptor.append(pb, withPresentationTime: CMTime(seconds: t, preferredTimescale: 600)) else { return false }
+            t += max(delay, 0.02)
         }
         input.markAsFinished()
         let done = DispatchSemaphore(value: 0)

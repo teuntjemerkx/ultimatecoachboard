@@ -138,9 +138,13 @@ struct Scene3D: Equatable {
         var plate: URL
         /// World point to normalized image coordinates (u right, v down): q = M (p, 1), uv = q.xy / q.w, seen when q.w > 0.
         var worldToImage: simd_float4x4
-        var halfWidth: Double = 10
-        var halfLength: Double = 17
-        var height: Double = 9
+        /// The hall box: walls at minX/maxX and minZ/maxZ, the ceiling at `height`. It holds the video camera, so the
+        /// wall on the camera's side may stand much further out than the others.
+        var minX: Double = -11.5
+        var maxX: Double = 11.5
+        var minZ: Double = -17
+        var maxZ: Double = 17
+        var height: Double = 10
     }
     var backdrop: Backdrop?
 }
@@ -429,7 +433,8 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
             if let vb = buffer(box) {
                 var e = EnvUniformsGPU(worldToImage: backdrop.worldToImage,
                                        fallback: SIMD4(Float(Tokens.hall.r), Float(Tokens.hall.g), Float(Tokens.hall.b), 0.92),
-                                       box: SIMD4(Float(backdrop.halfWidth), Float(backdrop.halfLength), Float(backdrop.height), 0))
+                                       box: SIMD4(Float(backdrop.maxX - backdrop.minX) / 2, Float(backdrop.maxZ - backdrop.minZ) / 2,
+                                                  Float(backdrop.height), 0))
                 enc.setDepthStencilState(depthWrite)
                 enc.setRenderPipelineState(envPipeline)
                 enc.setVertexBuffer(vb, offset: 0, index: 0)
@@ -837,26 +842,23 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
     /// The hall box's walls and ceiling as triangles. A wall the eye is outside of is left out, so from the orbit
     /// camera the hall opens like a doll's house and from a player's eyes it closes all round.
     private func envBox(_ b: Scene3D.Backdrop, eye: V3) -> [SIMD4<Float>] {
-        let w = b.halfWidth, l = b.halfLength, h = b.height
+        let x0 = b.minX, x1 = b.maxX, z0 = b.minZ, z1 = b.maxZ, h = b.height
         func quad(_ a: V3, _ bb: V3, _ c: V3, _ d: V3) -> [SIMD4<Float>] {
             [a, bb, c, a, c, d].map { SIMD4(Float($0.x), Float($0.y), Float($0.z), 1) }
         }
         var out: [SIMD4<Float>] = []
-        if eye.x < w { out += quad(V3(w, 0, -l), V3(w, 0, l), V3(w, h, l), V3(w, h, -l)) }
-        if eye.x > -w { out += quad(V3(-w, 0, -l), V3(-w, 0, l), V3(-w, h, l), V3(-w, h, -l)) }
-        if eye.z < l { out += quad(V3(-w, 0, l), V3(w, 0, l), V3(w, h, l), V3(-w, h, l)) }
-        if eye.z > -l { out += quad(V3(-w, 0, -l), V3(w, 0, -l), V3(w, h, -l), V3(-w, h, -l)) }
-        if eye.y < h { out += quad(V3(-w, h, -l), V3(w, h, -l), V3(w, h, l), V3(-w, h, l)) }
-        // The hall floor beyond the board's floor (10 x 17 m half extents), when the hall is bigger.
+        if eye.x < x1 { out += quad(V3(x1, 0, z0), V3(x1, 0, z1), V3(x1, h, z1), V3(x1, h, z0)) }
+        if eye.x > x0 { out += quad(V3(x0, 0, z0), V3(x0, 0, z1), V3(x0, h, z1), V3(x0, h, z0)) }
+        if eye.z < z1 { out += quad(V3(x0, 0, z1), V3(x1, 0, z1), V3(x1, h, z1), V3(x0, h, z1)) }
+        if eye.z > z0 { out += quad(V3(x0, 0, z0), V3(x1, 0, z0), V3(x1, h, z0), V3(x0, h, z0)) }
+        if eye.y < h { out += quad(V3(x0, h, z0), V3(x1, h, z0), V3(x1, h, z1), V3(x0, h, z1)) }
+        // The hall floor beyond the board's floor (x within +-10, z within +-17), where the hall is bigger.
         let fw = 10.0, fl = 17.0
-        if l > fl {
-            out += quad(V3(-w, 0, fl), V3(w, 0, fl), V3(w, 0, l), V3(-w, 0, l))
-            out += quad(V3(-w, 0, -l), V3(w, 0, -l), V3(w, 0, -fl), V3(-w, 0, -fl))
-        }
-        if w > fw {
-            out += quad(V3(fw, 0, -fl), V3(w, 0, -fl), V3(w, 0, fl), V3(fw, 0, fl))
-            out += quad(V3(-w, 0, -fl), V3(-fw, 0, -fl), V3(-fw, 0, fl), V3(-w, 0, fl))
-        }
+        if z1 > fl { out += quad(V3(x0, 0, fl), V3(x1, 0, fl), V3(x1, 0, z1), V3(x0, 0, z1)) }
+        if z0 < -fl { out += quad(V3(x0, 0, z0), V3(x1, 0, z0), V3(x1, 0, -fl), V3(x0, 0, -fl)) }
+        let zz0 = max(z0, -fl), zz1 = min(z1, fl)
+        if x1 > fw { out += quad(V3(fw, 0, zz0), V3(x1, 0, zz0), V3(x1, 0, zz1), V3(fw, 0, zz1)) }
+        if x0 < -fw { out += quad(V3(x0, 0, zz0), V3(-fw, 0, zz0), V3(-fw, 0, zz1), V3(x0, 0, zz1)) }
         return out
     }
 

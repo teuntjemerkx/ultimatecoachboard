@@ -1,5 +1,6 @@
 import SwiftUI
 import Observation
+import CoachBoardCore
 
 /// A visual template: palette for the UI, the board and the avatars, plus a few layout choices.
 ///
