@@ -11,6 +11,7 @@ import { MatchSetup } from "./screens/MatchSetup";
 import { Live } from "./screens/Live";
 import { MatchLogView } from "./screens/MatchLogView";
 import { Season } from "./screens/Season";
+import { Studio } from "./studio/StudioScreen";
 import type { Route } from "./store/nav";
 
 export function App() {
@@ -30,6 +31,7 @@ function screen(route: Route) {
     case "live": return <Live key={route.matchId} matchId={route.matchId} />;
     case "log": return <MatchLogView key={route.matchId} matchId={route.matchId} />;
     case "season": return <Season />;
+    case "studio": return <Studio boardId={route.boardId} />;
     default: return <div className="screen"><Bar title="Coming next" /><div className="empty">This part is being built.</div></div>;
   }
 }

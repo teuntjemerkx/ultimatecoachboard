@@ -24,8 +24,10 @@ export interface GestureHandlers {
  * A canvas with the 3D board. One finger: the screen's handlers decide (move a player) or the camera orbits; two
  * fingers: turn and pinch to zoom.
  */
-export function Court3DView({ onReady, netHeight, handlers, themeKey }: {
+export function Court3DView({ onReady, onDispose, netHeight, handlers, themeKey }: {
   onReady: (b: Board3D) => void;
+  /** Just before the board is disposed (the screen frees what it added to the scene). */
+  onDispose?: (b: Board3D) => void;
   netHeight: number;
   handlers?: GestureHandlers;
   themeKey: string;
@@ -91,6 +93,7 @@ export function Court3DView({ onReady, netHeight, handlers, themeKey }: {
     canvas.addEventListener("wheel", wheel, { passive: false });
     return () => {
       ro.disconnect();
+      onDispose?.(board);
       board.dispose();
       boardRef.current = null;
     };

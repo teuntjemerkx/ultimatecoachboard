@@ -27,48 +27,39 @@ The owner speaks Dutch: always answer in Dutch. App UI text, code, comments and 
   - Set break with side-out by rotation and the next start rotation.
   - Match log.
   - Saved after every point as the binary journal (`web/src/app/match/session.ts`).
-- Core ported from Swift to TypeScript with Vitest tests (119 pass):
+- Match schedule (commit 05509c8): Settings → Match schedule takes the team's programme link (Nevobo export, webcal, any iCal/RSS). `web/api/schedule.ts` (a Vercel function, also mounted in the dev and preview servers) fetches it, because the feeds send no CORS headers. Home shows the next matches; tapping one opens New match with the opponent filled in. Code in `web/src/app/schedule/`.
+- Studio (Screen 8), in `web/src/app/studio/`, opened from the Studio locker on Home:
+  - `StudioScreen.tsx`: the screen, mirroring the native `StudioView.swift` and `StudioControls.swift`. It is not called `Studio.tsx` because macOS file systems ignore case, and that name clashes with the store `studio.ts`.
+    - Tool rail: Move / Draw / Zone, Undo / Redo, Delete (selected zone), Erase (ink). Cmd-Z and Shift-Cmd-Z work too.
+    - Top bar: title (tap to rename), 2D|3D, Reset view (3D), and Boards (new board from a system, rotation and serve or receive; open; delete with a second tap).
+    - Dock under the board: the lineup bar (system, rotation ‹ ›, Serve Us/Them, Play a rally Left/Middle/Right/Back row), the timeline strip (play/pause, phase chips, Clear rally) and the eye-view strip.
+    - Over the board: the zone strip (Lines/Dots/Glow/Outline, Ours/Theirs), the field rings in eye view, and the sight-line readouts.
+    - Advanced adds: the opponent's system and rotation, Swap ends, the Cross fill, and sight lines.
+    - `PlayerBodies.women` follows Settings, so the net and the statures follow women/men.
+  - `studio.ts`: the zustand store around `SceneEditor`. Boards are saved in the IndexedDB `boards` store. Opening and creating boards run one after another, and a pending save is written before another board opens.
+  - `Board2D.tsx`: the 2D board (zones as SVG patterns, ink, the ball, tokens; drag, tap, pen and zone tools).
+  - `StudioBoard3D.tsx`: the 3D board wired to the store.
+    - One finger on a player or zone drags it (with the same snapping as 2D). With Draw or Zone it draws through the touch ray. Elsewhere it turns the court; two fingers turn and pinch.
+    - Entering 3D flies down from the 2D view to the bench (behind the home end line when the board stands upright); leaving flies back up first.
+    - Eye view: `board.flyTo` follows `skeleton.povPose`, one finger looks around, and the player's own avatar hides once the camera is in their head.
+  - `web/src/app/three/Players3D.ts`: the 3D scene content.
+    - Avatars use `AvatarMesh` buffers cached per stature with CPU dual-quaternion skinning, in team colours (the libero in white).
+    - Each player has a label above the head and a ring on the floor.
+    - Also drawn: the ball and its shadow, zones (pattern textures) and ink as floor ribbons, sight lines, and a cylinder pick for taps.
+  - `Court3DView.tsx` has an `onDispose` callback, so the Studio frees what it added before the board goes.
+- Core ported from Swift to TypeScript with Vitest tests (126 pass):
   - `web/src/core/match` (match domain)
   - `web/src/core/spatial` (3D math, skeleton, avatar mesh, postures, ball flight, line of sight, POV)
   - `web/src/core/zones` (zones, tactical scene, timeline, ball plan, rally autopilot)
 - `web/src/app/video/detect.ts`: two-stage MediaPipe detection, tested on real broadcast frames. The models are downloaded at build time by `web/scripts/fetch-models.mjs`. Not wired to a screen yet.
-- `web/src/app/three/Board3D.ts` and `Court3DView.tsx`: Three.js court, net, orbit camera, and fly-to eye view. Not wired to a screen yet.
 
-## Web app: in progress, the Studio (task 1)
+## Studio: not ported yet (Advanced extras of the native app)
 
-Route `{ name: "studio" }` in `web/src/app/store/nav.ts`. It still shows "Coming next" in `App.tsx`.
-
-**Written:**
-- `web/src/app/studio/studio.ts`: zustand store around `SceneEditor`.
-  - Boards are saved in the IndexedDB `boards` store.
-  - Lineup and setup changes, rotate, play a rally (autopilot), timeline playback (1.1 s per phase).
-  - Move a player with placement snapping, ink, zones built from a stroke, zone style, undo/redo, rename.
-  - Eye view state (`pov`, `povYaw`, `povPitch`) and sight lines (`gaze`).
-- `web/src/app/studio/Board2D.tsx`: the 2D board.
-  - Zones drawn with SVG patterns, ink, the ball, and tokens.
-  - Gestures: drag to move a player or zone, tap to select, pen and zone tools.
-- Zone tint colours `zoneA` and `zoneB` added to every theme. `courtView()` is exported from `ui/Court2D.tsx`.
-
-**Still to do:**
-1. `web/src/app/three/Players3D.ts`, the skinned avatars:
-   - Use `new AvatarMesh(skeleton).buffers()`, cached per stature, with CPU dual-quaternion skinning per frame (`skeleton.skin(joints)` gives a `DualQuat` per joint).
-   - Vertex colours per `AvatarMaterial`; the jersey takes the team colour (`--c-home` / `--c-opponent`).
-   - A number sprite above the head, the ball as a sphere (r 0.105), zones as `ShapeGeometry` on the floor, and ink as lines.
-   - Poses come from `posedPlayers(frame)`. Hide the eye-view player's own avatar.
-2. `web/src/app/studio/Board3D` wrapper. Use `Court3DView`:
-   - One finger: drag a player, or look around when in eye view.
-   - Tap: select.
-   - Eye view: `board.flyTo(() => pose)`, where the pose is `skeleton.povPose(joints, aspect, {yaw, pitch})`. Its `eye`, `rotation` (x, y, z, w) and `fovY` (radians) map onto the Three.js camera.
-3. `web/src/app/studio/Studio.tsx`. Mirror the native `App/UltimateCoachBoard/Studio/StudioView.swift` and `StudioControls.swift`:
-   - Tool rail: Move / Draw / Zone, Undo / Redo, Delete, Erase.
-   - Top bar: title (tap to rename), 2D|3D, Boards list.
-   - Lineup bar: system, rotation ‹ ›, Serve Us/Them, "Play a rally" Left/Middle/Right/Back row.
-   - Timeline strip: play/pause, phase chips Serve/Pass/Set/Attack/Cover/Defence, Clear rally.
-   - Eye view strip: "See what X sees" / "Leave eye view".
-   - Simple zone strip: Lines/Dots/Glow/Outline, Ours/Theirs.
-   - Advanced only: opponent system and rotation, sight lines.
-   - Set `PlayerBodies.women` from settings, so net and statures follow women/men.
-4. Route it in `App.tsx`, then check it in headless Chromium: Playwright with `executablePath: '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell'`.
+- Keyframes per phase ("Animate by phase" for a static scene, "Hold here" / "Clear key", hide or show a zone per phase).
+- The posture strip and the ball strip (contacts, aim the landing).
+- The full zone strip: shape, density, angle, edge, and tags; the alternative-shape chip after a stroke.
+- In eye view, a tap on another player adds or removes them as a gaze target (now it selects them for "Switch to").
+- Zone walls and extrusions in 3D, and numbers printed on the jerseys.
 
 ## Web app: next, Video to 3D (task 2)
 
@@ -86,4 +77,5 @@ Route `{ name: "studio" }` in `web/src/app/store/nav.ts`. It still shows "Coming
 ```
 cd web && npx tsc -b && npx vitest run && npm run build
 ```
+On the owner's Mac, Node is in `~/.local/node` (linked from `~/.local/bin`). In the Claude desktop app, the browser pane starts the dev server from the `coach-board-studio` entry in `~/.claude/launch.json` (Vite on port 5174).
 Commit trailers used in this repo end with a `Co-Authored-By:` line and a `Claude-Session:` line.

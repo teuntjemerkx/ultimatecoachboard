@@ -55,7 +55,8 @@ interface StudioState {
   /** Home on the left of the 2D court (Swap ends turns it). */
   flipped: boolean;
   open(boardId?: string): Promise<void>;
-  newBoard(): Promise<void>;
+  /** A new board, its players placed from a setup (the default: 5-1, rotation 1, they serve). */
+  newBoard(setup?: SceneSetup): Promise<void>;
   scene(): TacticalScene;
   setup(): SceneSetup;
   frame(): SceneFrame;
@@ -87,6 +88,14 @@ interface StudioState {
 }
 
 let saveTimer: number | undefined;
+let queue: Promise<void> = Promise.resolve();
+
+/** Opening and creating boards run one after another, so two quick opens never make two new boards. */
+function serially(job: () => Promise<void>): Promise<void> {
+  queue = queue.then(job, job);
+  return queue;
+}
+
 let tween: number | undefined;
 
 function stopTween() {
@@ -103,7 +112,7 @@ export const useStudio = create<StudioState>((set, getState) => {
     const keepZone = s.selectedZone && scene.zones.some((z) => z.id === s.selectedZone) ? s.selectedZone : undefined;
     set({ version: s.version + 1, selectedToken: keepToken, selectedZone: keepZone });
     if (saveTimer !== undefined) clearTimeout(saveTimer);
-    saveTimer = window.setTimeout(() => void save(), 500);
+    saveTimer = window.setTimeout(() => { saveTimer = undefined; void save(); }, 500);
   };
 
   const save = async () => {
@@ -129,6 +138,22 @@ export const useStudio = create<StudioState>((set, getState) => {
     tween = requestAnimationFrame(step);
   };
 
+  /** Writes a pending save now (before another board replaces this one). */
+  const flush = async () => {
+    if (saveTimer === undefined) return;
+    clearTimeout(saveTimer);
+    saveTimer = undefined;
+    await save();
+  };
+
+  const createBoard = async (setup?: SceneSetup) => {
+    resetPlayers();
+    const count = (await all<BoardRecord>("boards").catch(() => [])).length;
+    const scene = TacticalScene.placed(`Board ${count + 1}`, setup ?? SceneSetup.create());
+    set({ editor: new SceneEditor(scene), selectedToken: undefined, selectedZone: undefined, version: getState().version + 1 });
+    await save();
+  };
+
   const resetPlayers = () => {
     stopTween();
     set({ time: 0, playing: false, pov: undefined, gaze: undefined });
@@ -145,25 +170,27 @@ export const useStudio = create<StudioState>((set, getState) => {
     zoneStyle: { ...ZoneStyle.create(), pattern: "diagonal", tint: "pink" },
     flipped: false,
 
-    async open(boardId) {
-      resetPlayers();
-      let record: BoardRecord | undefined;
-      if (boardId) record = await get<BoardRecord>("boards", boardId);
-      if (!record) {
-        const boards = await all<BoardRecord>("boards").catch(() => []);
-        record = boards.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt))[0];
-      }
-      if (!record) return getState().newBoard();
-      set({ editor: new SceneEditor(TacticalScene.decode(record.scene)), selectedToken: undefined, selectedZone: undefined,
-        version: getState().version + 1 });
+    open(boardId) {
+      return serially(async () => {
+        await flush();
+        resetPlayers();
+        let record: BoardRecord | undefined;
+        if (boardId) record = await get<BoardRecord>("boards", boardId);
+        if (!record) {
+          const boards = await all<BoardRecord>("boards").catch(() => []);
+          record = boards.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt))[0];
+        }
+        if (!record) return createBoard();
+        set({ editor: new SceneEditor(TacticalScene.decode(record.scene)), selectedToken: undefined, selectedZone: undefined,
+          version: getState().version + 1 });
+      });
     },
 
-    async newBoard() {
-      resetPlayers();
-      const count = (await all<BoardRecord>("boards").catch(() => [])).length;
-      const scene = TacticalScene.placed(`Board ${count + 1}`, SceneSetup.create());
-      set({ editor: new SceneEditor(scene), selectedToken: undefined, selectedZone: undefined, version: getState().version + 1 });
-      await save();
+    newBoard(setup) {
+      return serially(async () => {
+        await flush();
+        await createBoard(setup);
+      });
     },
 
     scene() {

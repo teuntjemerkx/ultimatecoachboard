@@ -25,6 +25,11 @@ const paths: Record<string, string> = {
   close: "M6 6l12 12 M18 6L6 18",
   timeout: "M12 7v5l3 2 M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z",
   swap: "M7 7h13l-4-4 M17 17H4l4 4",
+  stack: "M12 3l9 5-9 5-9-5z M3 13l9 5 9-5 M3 17.5l9 5 9-5",
+  eraser: "M8 20h12 M5.5 14.5l8-8a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11 19H8z M9 11l5 5",
+  chevronLeft: "M15 5l-7 7 7 7",
+  chevronRight: "M9 5l7 7-7 7",
+  target: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M12 2v3 M12 19v3 M2 12h3 M19 12h3",
 };
 
 export function Icon({ name, size = 20, className = "icon" }: { name: keyof typeof paths | string; size?: number; className?: string }) {

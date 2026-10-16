@@ -1,0 +1,113 @@
+/* The Studio (Screen 8): the top bar, a tool rail on the left, the board, and a dock of strips under it. Floating
+   panels over the board hold the zone controls and the sight-line readouts. */
+.studio-bar { gap: 8px; }
+.studio-title {
+  display: inline-flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; min-height: var(--target);
+  padding: 0 6px; border: 0; background: transparent; color: var(--c-bandText); cursor: pointer;
+  font: 800 24px/1 var(--font-athletic); text-transform: uppercase; letter-spacing: 0.05em;
+}
+.studio-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.studio-title .icon { opacity: 0.7; }
+.studio-count { color: var(--c-bandSoft); font-size: 14px; white-space: nowrap; }
+.studio-switch {
+  display: flex; gap: 2px; padding: 3px; flex: none; border-radius: calc(var(--radius-small) + 3px);
+  background: color-mix(in srgb, var(--c-bandText) 14%, transparent);
+}
+.studio-switch button {
+  min-width: 52px; min-height: 38px; border: 0; border-radius: var(--radius-small); background: transparent; cursor: pointer;
+  color: var(--c-bandText); font: 800 19px/1 var(--font-athletic); letter-spacing: 0.06em;
+}
+.studio-switch button[aria-pressed="true"] { background: var(--c-bandText); color: var(--c-band); }
+
+.studio-body { flex: 1; min-height: 0; display: flex; }
+.studio-rail {
+  flex: none; width: 76px; display: flex; flex-direction: column; align-items: center; gap: 6px; overflow-y: auto;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px)); margin-left: env(safe-area-inset-left, 0px);
+  background: var(--c-surface); border-right: 1px solid var(--c-hairline);
+}
+.studio-rail hr { width: 44px; border: 0; border-top: 1px solid var(--c-hairline); margin: 4px 0; }
+.studio-tool {
+  width: 60px; min-height: 58px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; border: 0; border-radius: var(--radius); background: transparent; color: var(--c-text); cursor: pointer;
+  font: 600 12px/1 var(--font);
+}
+.studio-tool[aria-pressed="true"] { background: var(--c-accent); color: var(--c-onAccent); }
+.studio-tool:disabled { opacity: 0.35; cursor: default; }
+
+.studio-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.studio-board { flex: 1; min-height: 0; position: relative; overflow: hidden; background: var(--c-hallFloor); }
+.studio-dock {
+  flex: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+  padding: 8px var(--gutter-r) calc(8px + env(safe-area-inset-bottom, 0px)) 12px;
+  background: var(--c-bg); border-top: 1px solid var(--c-hairline);
+}
+.studio-dock:empty { display: none; }
+.studio-dock .panel { max-width: 100%; }
+.studio-emphasis { border-color: color-mix(in srgb, var(--c-accent) 50%, transparent); }
+
+.studio-chip {
+  min-height: var(--target); padding: 0 12px; border: 0; border-radius: var(--radius-small); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  background: var(--c-bg); color: var(--c-text); font: 700 15px/1 var(--font);
+}
+.studio-chip:active { opacity: 0.7; }
+.studio-chip:disabled { opacity: 0.4; cursor: default; }
+.studio-chip.on { background: var(--c-accent); color: var(--c-onAccent); }
+.studio-chip.prominent {
+  background: var(--c-accent); color: var(--c-onAccent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-led) 35%, transparent);
+}
+.studio-play { width: 56px; justify-content: center; }
+.studio-label { color: var(--c-text2); font-size: 14px; font-weight: 600; white-space: nowrap; }
+.studio-sep { width: 1px; align-self: stretch; min-height: 32px; background: var(--c-hairline); margin: 0 4px; }
+.studio-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.studio-lineup { column-gap: 20px; }
+
+.studio-select {
+  position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: var(--target); padding: 0 12px;
+  border-radius: var(--radius-small); background: var(--c-bg); white-space: nowrap; cursor: pointer;
+}
+.studio-select select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
+.studio-stepper { display: inline-flex; align-items: center; border-radius: var(--radius-small); background: var(--c-bg); }
+.studio-stepper button {
+  width: var(--target); height: var(--target); border: 0; background: transparent; cursor: pointer;
+  display: grid; place-items: center; color: var(--c-text);
+}
+.studio-stepper button:disabled { cursor: default; }
+.studio-stepper div { min-width: 104px; display: flex; flex-direction: column; align-items: center; font-variant-numeric: tabular-nums; }
+.studio-stepper small { font-size: 11px; color: var(--c-text2); }
+
+.studio-hint {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); max-width: calc(100% - 24px);
+  text-align: center; pointer-events: none;
+}
+.studio-zones { position: absolute; top: 12px; left: 12px; max-width: calc(100% - 24px); }
+.studio-gaze {
+  position: absolute; top: 12px; right: 12px; max-width: min(420px, calc(100% - 24px));
+  flex-direction: column; align-items: flex-start; gap: 6px; font-size: 14px;
+}
+.studio-gaze-row { display: flex; align-items: center; gap: 8px; }
+.studio-gaze-row i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.studio-gaze small { max-width: 300px; }
+.studio-rings { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.studio-rings span { grid-area: 1 / 1; border: 1px solid; border-radius: 50%; }
+
+.studio-sheet {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px;
+  background: color-mix(in srgb, var(--c-bg) 72%, transparent);
+}
+.studio-sheet > .card { width: min(640px, 100%); max-height: 100%; overflow-y: auto; }
+
+@media (max-width: 820px) {
+  .studio-chip { padding: 0 10px; font-size: 14px; }
+  .studio-dock .panel { padding: 8px; gap: 6px; }
+}
+@media (max-width: 760px) {
+  .studio-wide { display: none; }
+  .studio-title { font-size: 20px; }
+}
+@media (max-width: 600px) {
+  .studio-rail { width: 62px; }
+  .studio-tool { width: 52px; }
+  .studio-dock { padding-left: 8px; padding-right: 8px; }
+}
