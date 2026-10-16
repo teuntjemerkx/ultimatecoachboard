@@ -204,7 +204,7 @@ final class VideoImportModel {
             let camera = calibration.camera.scaled(toWidth: Double(size.width), height: Double(size.height))
             let observations = VideoPipeline.observations(frames, ball: ball, camera: camera)
             let people = frames.map(\.people.count), posed = frames.map { $0.people.filter { !$0.keypoints.isEmpty }.count }
-            report = String(format: "calibration %@ rms %.2f px, camera %.1f m up %.1f m back, fovY %.1f deg; %d frames, people per frame %d-%d (with pose %d-%d), detections on court %d, ball points %d",
+            report = (VideoVision.poseUnavailable ? "body pose unavailable, boxes only; " : "") + String(format: "calibration %@ rms %.2f px, camera %.1f m up %.1f m back, fovY %.1f deg; %d frames, people per frame %d-%d (with pose %d-%d), detections on court %d, ball points %d",
                             calibration.quality.rawValue, calibration.rmsError, camera.center.y, camera.center.z, camera.fovY * 180 / .pi,
                             frames.count, people.min() ?? 0, people.max() ?? 0, posed.min() ?? 0, posed.max() ?? 0,
                             observations.reduce(0) { $0 + $1.detections.count }, ball.count)

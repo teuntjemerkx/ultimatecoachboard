@@ -42,6 +42,9 @@ struct VisionFrame {
 /// Reads a clip with AVFoundation and runs Vision on it: body pose and person boxes on sampled frames, ball
 /// trajectories on every frame, person segmentation and frames for the clean plate.
 enum VideoVision {
+    /// Set when the body pose model could not run (people were placed from their boxes only).
+    static var poseUnavailable = false
+
     struct Clip {
         var asset: AVURLAsset
         var duration: Double
@@ -109,7 +112,12 @@ enum VideoVision {
         let pose = VNDetectHumanBodyPoseRequest().runsOnCPUInSimulator()
         let boxes = VNDetectHumanRectanglesRequest().runsOnCPUInSimulator()
         boxes.upperBodyOnly = false
-        try VNImageRequestHandler(cgImage: image, orientation: .up).perform([pose, boxes])
+        // Each model on its own: when the body pose model is unavailable (the Simulator) the boxes still place people.
+        let handler = VNImageRequestHandler(cgImage: image, orientation: .up)
+        let poseError: Error? = { do { try handler.perform([pose]); return nil } catch { return error } }()
+        let boxError: Error? = { do { try handler.perform([boxes]); return nil } catch { return error } }()
+        if let poseError, boxError != nil { throw poseError }
+        if poseError != nil { poseUnavailable = true }
         func px(_ p: CGPoint) -> CGPoint { CGPoint(x: p.x * size.width, y: (1 - p.y) * size.height) }
         func rect(_ r: CGRect) -> CGRect {
             CGRect(x: r.minX * size.width, y: (1 - r.maxY) * size.height, width: r.width * size.width, height: r.height * size.height)
