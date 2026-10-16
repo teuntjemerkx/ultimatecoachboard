@@ -379,12 +379,12 @@ final class LiveController {
         }
     }
 
-    /// "SET POINT ORION" / "MATCH POINT DYNAMO" for the status strip, in #FF1493 (Screen 3 states).
+    /// "Set point for Orion" / "Match point for Dynamo" for the status strip, in the ink colour (Screen 3 states).
     var pointBadge: String? {
         for side in Side.allCases {
             if let status = state.match.pointStatus(side) {
-                let name = (side == .home ? homeName : opponentName).uppercased()
-                return (status == .matchPoint ? "MATCH POINT " : "SET POINT ") + name
+                let name = side == .home ? homeName : opponentName
+                return (status == .matchPoint ? "Match point for " : "Set point for ") + name
             }
         }
         return nil
@@ -407,19 +407,33 @@ final class LiveController {
     }
 
     private func showMatchup(for token: BoardToken) {
-        let me = "\(labels[token.player] ?? "?") \(token.role) \u{00B7} \(token.position.label)"
         let opposite: [CourtPosition: CourtPosition] = [.p4: .p2, .p3: .p3, .p2: .p4]
-        if let theirPos = opposite[token.position],
-           let them = state.tokens().first(where: { $0.side == .opponent && $0.position == theirPos }) {
-            matchupCard = "\(me) faces \(labels[them.player] ?? "?") \(them.role) (their \(theirPos.label))"
+        let theirPos = opposite[token.position]
+        let them = theirPos.flatMap { pos in state.tokens().first(where: { $0.side == .opponent && $0.position == pos }) }
+        if ThemeStore.shared.advanced {
+            let me = "\(labels[token.player] ?? "?") \(token.role) \u{00B7} \(token.position.label)"
+            if let theirPos, let them {
+                matchupCard = "\(me) faces \(labels[them.player] ?? "?") \(them.role) (their \(theirPos.label))"
+            } else {
+                matchupCard = "\(me) \u{00B7} back row"
+            }
+        } else if let them {
+            matchupCard = "\(plainName(token)) faces \(plainName(them))"
         } else {
-            matchupCard = "\(me) \u{00B7} back row"
+            matchupCard = "\(plainName(token)) is in the back row"
         }
         cardTask?.cancel()
         cardTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             if !Task.isCancelled { self?.matchupCard = nil }
         }
+    }
+
+    /// "#8 (Outside 1)" for the Simple matchup card, or the role alone when the number is unknown.
+    private func plainName(_ token: BoardToken) -> String {
+        let role = PlainWords.role(token.role)
+        guard let label = labels[token.player], Int(label) != nil else { return role }
+        return "#\(label) (\(role))"
     }
 
     // MARK: - Board scene
