@@ -21,6 +21,7 @@ struct LiveView: View {
                     VStack(spacing: 0) {
                         StatusStrip(controller: controller, showCorrection: $showCorrection)
                         BoardView(controller: controller)
+                            .overlay { RouteChips(controller: controller).allowsHitTesting(false) }
                     }
                     if !gripRight { Rail(controller: controller, onExit: onExit) }
                 }
@@ -202,6 +203,9 @@ struct Rail: View {
         VStack(spacing: 8) {
             railButton("RING", "circle.dashed") { controller.resetTokens() }
             railButton(controller.attacksVisible ? "LINES" : "LINES OFF", "arrow.up.right") { controller.attacksVisible.toggle() }
+            railButton(controller.routesVisible ? "ROUTES" : "ROUTES OFF", "point.topleft.down.to.point.bottomright.curvepath") {
+                controller.routesVisible.toggle()
+            }
             railButton(soundOn ? "SOUND" : "SILENT", soundOn ? "speaker.wave.2" : "speaker.slash") { soundOn.toggle() }
             Spacer()
             railButton("EXIT", "xmark") { controller.close(); onExit() }
@@ -221,6 +225,25 @@ struct Rail: View {
             .frame(width: Tokens.targetLivePrimary, height: Tokens.targetLivePrimary)
         }
         .foregroundStyle(Tokens.white.color)
+    }
+}
+
+/// "LATE 0.4 s" chips at the end of late routes (Section 2.6), in board coordinates.
+struct RouteChips: View {
+    let controller: LiveController
+
+    var body: some View {
+        if controller.routesVisible, controller.state.context == .live {
+            let geometry = controller.geometry
+            ForEach(controller.routePlan.filter(\.late)) { r in
+                Text(String(format: "LATE %.1f s", -(r.slack ?? 0)))
+                    .font(.system(size: 12, weight: .heavy).width(.expanded))
+                    .padding(.horizontal, 8).frame(height: 24)
+                    .background(Tokens.accent.color, in: Capsule())
+                    .foregroundStyle(Tokens.canvasBase.color)
+                    .position(geometry.toView(r.to, side: .home))
+            }
+        }
     }
 }
 

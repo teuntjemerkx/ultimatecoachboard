@@ -149,13 +149,15 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Sideline") {
+                Section {
                     Picker("Grip side", selection: $gripRight) {
                         Text("Left hand").tag(false)
                         Text("Right hand").tag(true)
                     }
                     .pickerStyle(.segmented)
                     Toggle("Feedback click", isOn: $soundOn)
+                } header: {
+                    Text("Sideline")
                 } footer: {
                     Text("The Thumb Cluster and Start buttons sit on the grip side; the rail docks on the other edge. The edge pulse always confirms actions; the click is optional.")
                 }

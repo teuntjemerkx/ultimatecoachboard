@@ -27,6 +27,10 @@ final class AppModel {
     init() {
         lastSetup = Self.loadSetup()
         refreshArchive()
+        if DemoMode.screen != nil {
+            lastSetup = DemoMode.setup
+            DemoMode.apply(to: self)
+        }
     }
 
     func refreshArchive() {

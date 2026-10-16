@@ -150,7 +150,7 @@ struct MatchSetupView: View {
         }
         .buttonStyle(.plain)
         .draggable(player?.id.uuidString ?? "")
-        .dropDestination(for: String.self) { items, _ in dropped(items, at: index) }
+        .dropDestination(for: String.self) { items, _ in return dropped(items, at: index) }
         .accessibilityLabel("\(pos.label), \(player.map { "number \($0.jersey)" } ?? "empty"), \(roles[pos] ?? "")")
     }
 
@@ -169,7 +169,7 @@ struct MatchSetupView: View {
                                                              lineWidth: armed == .slot(-1) ? 3 : 1))
         }
         .buttonStyle(.plain)
-        .dropDestination(for: String.self) { items, _ in dropped(items, at: -1) }
+        .dropDestination(for: String.self) { items, _ in return dropped(items, at: -1) }
     }
 
     private var rosterStrip: some View {

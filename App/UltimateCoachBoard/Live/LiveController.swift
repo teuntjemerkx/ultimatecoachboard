@@ -18,6 +18,8 @@ final class LiveController {
     var homeOnLeft = true
     var playerFacingFlip = false
     var attacksVisible = true
+    /// ROUTES on the rail: the home team's routes after the serve, checked against the timing model (Section 2.6).
+    var routesVisible = false
     var boardSize: CGSize = .zero
     var geometry: BoardGeometry {
         BoardGeometry(size: boardSize, homeOnLeft: homeOnLeft, playerFacingFlip: playerFacingFlip)
@@ -271,6 +273,10 @@ final class LiveController {
                                       label: labels[t.player] ?? t.role, isLibero: t.isLibero, isServer: t.isServer,
                                       selected: dragging.map { $0.side == t.side && $0.position == t.position } ?? false))
         }
+        if routesVisible && state.context == .live {
+            scene.routes = routePlan.map { BoardScene.Route(a: CourtFrame.world($0.from, of: .home),
+                                                            b: CourtFrame.world($0.to, of: .home), late: $0.late) }
+        }
         if attacksVisible {
             let lines = state.scoutLines.suffix(6)
             for (i, line) in lines.enumerated() {
@@ -316,6 +322,41 @@ final class LiveController {
             scene.ink = state.ink.dropFirst(panicInkStart).map(\.points)
         }
         return scene
+    }
+
+    // MARK: - Routes
+
+    struct PlannedRoute: Identifiable {
+        var id: CourtPosition
+        var from: LocalPoint
+        var to: LocalPoint
+        var late: Bool
+        var slack: Double?
+    }
+
+    /// The home team's routes from where its players stand now: receive routes with their timing, or the
+    /// serving team's switches to base. Dragging a token re-times its route at once.
+    var routePlan: [PlannedRoute] {
+        let template = state.template
+        let phase = state.phase(for: .home)
+        guard var formation = template.formation(for: state.match, side: .home, phase: phase) else { return [] }
+        var current: [CourtPosition: LocalPoint] = [:]
+        for t in state.tokens() where t.side == .home { current[t.position] = t.point }
+        for i in formation.players.indices {
+            if let pos = formation.players[i].courtPosition, let p = current[pos] { formation.players[i].anchor = [p.l, p.d] }
+        }
+        if phase == "receive" {
+            let checks = RouteTiming.check(formation, targets: template.routeTargets)
+            return checks.compactMap { c in
+                guard let pos = CourtPosition(rawValue: c.position), let from = current[pos],
+                      let dest = template.routeTargets[c.route] else { return nil }
+                return PlannedRoute(id: pos, from: from, to: LocalPoint(dest), late: c.isLate, slack: c.slack)
+            }
+        }
+        return formation.players.compactMap { p in
+            guard let pos = p.courtPosition, let from = current[pos], let to = p.switchTo, to.count == 2 else { return nil }
+            return PlannedRoute(id: pos, from: from, to: LocalPoint(to), late: false, slack: nil)
+        }
     }
 
     // MARK: - Status

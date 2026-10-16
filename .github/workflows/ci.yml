@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches-ignore: [ci-screenshots]
   pull_request:
   workflow_dispatch:
 
@@ -19,6 +20,8 @@ jobs:
   app-ios:
     name: Core tests and iPad app build (macOS, Xcode 26)
     runs-on: macos-26
+    permissions:
+      contents: write      # publishes Simulator screenshots to the ci-screenshots branch
     steps:
       - uses: actions/checkout@v5
       - name: Tools
@@ -34,12 +37,25 @@ jobs:
       - name: Generate the Xcode project
         working-directory: App
         run: xcodegen
+      - name: Pick an iPad simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)["devices"]
+          ipads = [x for rt, xs in d.items() if "iOS" in rt for x in xs if x["name"].startswith("iPad")]
+          pick = [x for x in ipads if "13-inch" in x["name"]] or ipads
+          print(pick[-1]["udid"] if pick else "")')
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
       - name: Build for the iOS Simulator
         working-directory: App
+        env:
+          UDID: ${{ steps.sim.outputs.udid }}
         run: |
           set -o pipefail
+          if [ -n "$UDID" ]; then DEST="id=$UDID"; else DEST="generic/platform=iOS Simulator"; fi
           xcodebuild -project UltimateCoachBoard.xcodeproj -scheme UltimateCoachBoard \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination "$DEST" -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO build 2>&1 | tee ../app-build.log | xcbeautify --renderer github-actions
       - name: Report raw errors
         if: failure()
@@ -47,3 +63,32 @@ jobs:
           cat core-test.log app-build.log 2>/dev/null \
             | grep -E 'error:|error: |ld: |Undefined symbol|failed' | sort -u | head -40 \
             | while IFS= read -r line; do echo "::error::${line:0:900}"; done
+      - name: Screenshots in demo mode
+        if: steps.sim.outputs.udid != ''
+        env:
+          UDID: ${{ steps.sim.outputs.udid }}
+        run: |
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          APP=$(find App/build/Build/Products -maxdepth 2 -name 'UltimateCoachBoard.app' | head -1)
+          xcrun simctl install "$UDID" "$APP"
+          mkdir -p shots
+          for s in launcher setup live setbreak log; do
+            xcrun simctl launch --terminate-running-process "$UDID" app.ultimatecoachboard.ipad -demoScreen "$s"
+            sleep 10
+            xcrun simctl io "$UDID" screenshot "shots/$s.png"
+          done
+          ls -la shots
+      - name: Publish screenshots to the ci-screenshots branch
+        if: steps.sim.outputs.udid != '' && github.ref == 'refs/heads/main'
+        working-directory: shots
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Simulator screenshots of ${GITHUB_SHA} (demo mode; overwritten on every push to main)." > README.md
+          git init -q -b ci-screenshots
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -q -m "Screenshots for ${GITHUB_SHA}"
+          git push -f -q "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-screenshots

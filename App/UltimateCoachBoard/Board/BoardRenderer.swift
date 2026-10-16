@@ -65,14 +65,22 @@ struct BoardScene: Equatable {
         }
     }
 
+    /// A planned route after the serve: a receive route checked by the timing model, or a serve-team switch.
+    struct Route: Equatable {
+        var a: FloorPoint
+        var b: FloorPoint
+        var late: Bool
+    }
+
     var tokens: [Token] = []
+    var routes: [Route] = []
     var scoutLines: [(FloorPoint, FloorPoint, Double)] = []      // origin, landing, opacity
     var tethers: [Tether] = []
     var ink: [[FloorPoint]] = []
     var envelope: (FloorPoint, FloorPoint)?                      // two opposite corners in world metres
 
     static func == (l: BoardScene, r: BoardScene) -> Bool {
-        l.tokens == r.tokens && l.tethers == r.tethers && l.ink == r.ink
+        l.tokens == r.tokens && l.routes == r.routes && l.tethers == r.tethers && l.ink == r.ink
             && l.scoutLines.count == r.scoutLines.count
             && zip(l.scoutLines, r.scoutLines).allSatisfy { $0.0 == $1.0 && $0.1 == $1.1 && $0.2 == $1.2 }
             && l.envelope?.0 == r.envelope?.0 && l.envelope?.1 == r.envelope?.1
@@ -250,18 +258,18 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
         }
 
         var overlays: [SegmentInstance] = []
+        // Routes (Section 2.6): dashed when on time, solid pink when late.
+        for route in scene.routes {
+            let color = route.late ? Tokens.accent : Tokens.white.withAlpha(0.55)
+            overlays.append(segment(route.a, route.b, width: route.late ? 3 : 2, color: color,
+                                    dash: route.late ? 0 : 7, gap: route.late ? 0 : 6))
+            overlays += arrowhead(from: route.a, to: route.b, width: route.late ? 3 : 2, color: color, size: 0.3)
+        }
         // Micro-Scouting vectors with arrowheads.
         for (o, t, opacity) in scene.scoutLines {
             let color = Tokens.accent.withAlpha(opacity)
             overlays.append(segment(o, t, width: 3, color: color))
-            let dx = t.x - o.x, dz = t.z - o.z
-            let len = max((dx * dx + dz * dz).squareRoot(), 1e-6)
-            let ux = dx / len, uz = dz / len
-            let back = 0.45, wing = 0.25
-            for s in [-1.0, 1.0] {
-                let wp = FloorPoint(x: t.x - ux * back + (-uz) * wing * s, z: t.z - uz * back + ux * wing * s)
-                overlays.append(segment(t, wp, width: 3, color: color))
-            }
+            overlays += arrowhead(from: o, to: t, width: 3, color: color, size: 0.45)
         }
         // Overlap tethers (Section 3.4.4).
         for tether in scene.tethers {
@@ -280,6 +288,16 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
             for i in 1..<stroke.count { overlays.append(segment(stroke[i - 1], stroke[i], width: 4, color: Tokens.accentActive)) }
         }
         return (court, overlays)
+    }
+
+    private func arrowhead(from o: FloorPoint, to t: FloorPoint, width: CGFloat, color: RGBA, size: Double) -> [SegmentInstance] {
+        let dx = t.x - o.x, dz = t.z - o.z
+        let len = max((dx * dx + dz * dz).squareRoot(), 1e-6)
+        let ux = dx / len, uz = dz / len
+        let wing = size * 0.55
+        return [-1.0, 1.0].map { s in
+            segment(t, FloorPoint(x: t.x - ux * size + (-uz) * wing * s, z: t.z - uz * size + ux * wing * s), width: width, color: color)
+        }
     }
 
     private func buildTokens(now: CFTimeInterval) -> ([TokenInstance], [GlyphInstance]) {
