@@ -33,6 +33,8 @@ struct RootView: View {
                 LiveView(controller: controller, onExit: { model.backToLauncher() })
             case .matchLog(let summary):
                 MatchLogView(summary: summary, onClose: { model.backToLauncher() }, onResume: { model.resume($0) })
+            case .studio(let controller):
+                StudioView(controller: controller, onExit: { model.backToLauncher() })
             }
         }
         .sheet(isPresented: $model.showSettings) { SettingsView() }

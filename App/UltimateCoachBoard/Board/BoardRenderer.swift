@@ -31,6 +31,35 @@ struct GlyphInstance {
     var color: SIMD4<Float>
 }
 
+/// One zone for the floor pass; must match `ZoneGPU` in Shaders.metal byte for byte (112 bytes).
+struct ZoneGPU {
+    var kind: UInt32
+    var pattern: UInt32
+    var vertexOffset: UInt32
+    var vertexCount: UInt32
+    var toLocal0: SIMD4<Float>
+    var toLocal1: SIMD4<Float>
+    var params: SIMD4<Float>
+    var color: SIMD4<Float>
+    var spacing: Float
+    var lineWidth: Float
+    var angle: Float
+    var glow: Float
+    var dashed: UInt32
+    var selected: UInt32
+    var tint: UInt32
+    var pad: UInt32 = 0
+}
+
+struct FloorUniforms {
+    var viewSize: SIMD2<Float>
+    var center: SIMD2<Float>
+    var scale: Float
+    var flipped: UInt32
+    var zoneCount: UInt32
+    var pad: UInt32 = 0
+}
+
 struct HatchInstance {
     var center: SIMD2<Float>
     var halfSize: SIMD2<Float>
@@ -74,6 +103,11 @@ struct BoardScene: Equatable {
 
     var tokens: [Token] = []
     var routes: [Route] = []
+    /// Tactical zones (Section 3.5), drawn in the floor pass under the tokens.
+    var zones: [Zone] = []
+    var selectedZone: UUID?
+    /// Brief highlights of what a zone snapped to.
+    var highlights: [Route] = []
     var scoutLines: [(FloorPoint, FloorPoint, Double)] = []      // origin, landing, opacity
     var tethers: [Tether] = []
     var ink: [[FloorPoint]] = []
@@ -81,6 +115,7 @@ struct BoardScene: Equatable {
 
     static func == (l: BoardScene, r: BoardScene) -> Bool {
         l.tokens == r.tokens && l.routes == r.routes && l.tethers == r.tethers && l.ink == r.ink
+            && l.zones == r.zones && l.selectedZone == r.selectedZone && l.highlights == r.highlights
             && l.scoutLines.count == r.scoutLines.count
             && zip(l.scoutLines, r.scoutLines).allSatisfy { $0.0 == $1.0 && $0.1 == $1.1 && $0.2 == $1.2 }
             && l.envelope?.0 == r.envelope?.0 && l.envelope?.1 == r.envelope?.1
@@ -96,6 +131,7 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
     private var tokenPipeline: MTLRenderPipelineState!
     private var glyphPipeline: MTLRenderPipelineState!
     private var hatchPipeline: MTLRenderPipelineState!
+    private var zonePipeline: MTLRenderPipelineState!
     private let atlas: GlyphAtlas?
 
     var geometry = BoardGeometry(size: .zero)
@@ -110,6 +146,7 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
     weak var view: MTKView?
 
     init?(view: MTKView) {
+        assert(MemoryLayout<ZoneGPU>.stride == 112 && MemoryLayout<FloorUniforms>.stride == 32, "must match Shaders.metal")
         guard let device = view.device ?? MTLCreateSystemDefaultDevice(), let queue = device.makeCommandQueue() else { return nil }
         self.device = device
         self.queue = queue
@@ -148,7 +185,8 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
         tokenPipeline = make("tokenVertex", "tokenFragment")
         glyphPipeline = make("glyphVertex", "glyphFragment")
         hatchPipeline = make("hatchVertex", "hatchFragment")
-        return segmentPipeline != nil && tokenPipeline != nil && glyphPipeline != nil && hatchPipeline != nil
+        zonePipeline = make("floorVertex", "zoneFragment")
+        return segmentPipeline != nil && tokenPipeline != nil && glyphPipeline != nil && hatchPipeline != nil && zonePipeline != nil
     }
 
     func requestRedraw() { view?.setNeedsDisplay() }
@@ -216,6 +254,7 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
         }
 
         encode(court, pipeline: segmentPipeline)
+        encodeZones(enc)
         encode(hatches, pipeline: hatchPipeline)
         encode(overlays, pipeline: segmentPipeline)
         encode(tokens, pipeline: tokenPipeline)
@@ -223,6 +262,63 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
         enc.endEncoding()
         cmd.present(drawable)
         cmd.commit()
+    }
+
+    /// The zone floor pass: one full-view quad whose fragments evaluate every zone (Section 3.5.4).
+    private func encodeZones(_ enc: MTLRenderCommandEncoder) {
+        guard !scene.zones.isEmpty else { return }
+        var gpu: [ZoneGPU] = []
+        var verts: [SIMD2<Float>] = []
+        for zone in scene.zones {
+            var z = ZoneGPU(kind: 0, pattern: 0, vertexOffset: 0, vertexCount: 0, toLocal0: .zero, toLocal1: .zero,
+                            params: .zero, color: SIMD4(1, 1, 1, Float(zone.style.opacity)),
+                            spacing: Float(zone.style.spacing), lineWidth: Float(zone.style.lineWidth),
+                            angle: Float(zone.style.angle), glow: Float(zone.style.glow),
+                            dashed: zone.style.edge == .dashed ? 1 : 0, selected: zone.id == scene.selectedZone ? 1 : 0,
+                            tint: zone.style.tint == .pink ? 0 : 1)
+            switch zone.style.pattern {
+            case .crossHatch: z.pattern = 0
+            case .diagonal: z.pattern = 1
+            case .dots: z.pattern = 2
+            case .glowFill: z.pattern = 3
+            case .outline: z.pattern = 4
+            }
+            func frame(_ c: FloorPoint, _ a: Double) {
+                let co = cos(a), si = sin(a)
+                z.toLocal0 = SIMD4(Float(co), Float(si), Float(-(co * c.x + si * c.z)), 0)
+                z.toLocal1 = SIMD4(Float(-si), Float(co), Float(si * c.x - co * c.z), 0)
+            }
+            switch zone.geometry {
+            case let .rect(c, hw, hd, a):
+                z.kind = 0; frame(c, a); z.params = SIMD4(Float(hw), Float(hd), 0, 0)
+            case let .circle(c, r):
+                z.kind = 1; frame(c, 0); z.params = SIMD4(Float(r), 0, 0, 0)
+            case let .ellipse(c, a, b, ang):
+                z.kind = 2; frame(c, ang); z.params = SIMD4(Float(a), Float(b), 0, 0)
+            case .polygon, .freeform:
+                let outline = zone.outline
+                guard outline.count >= 3 else { continue }
+                z.kind = 3
+                z.vertexOffset = UInt32(verts.count)
+                z.vertexCount = UInt32(outline.count)
+                verts += outline.map { SIMD2(Float($0.x), Float($0.z)) }
+            }
+            gpu.append(z)
+        }
+        guard !gpu.isEmpty else { return }
+        if verts.isEmpty { verts = [.zero] }
+        var u = FloorUniforms(viewSize: SIMD2(Float(geometry.size.width), Float(geometry.size.height)),
+                              center: SIMD2(Float(geometry.center.x), Float(geometry.center.y)),
+                              scale: Float(geometry.scale), flipped: geometry.isFlipped ? 1 : 0, zoneCount: UInt32(gpu.count))
+        guard let zoneBuffer = gpu.withUnsafeBytes({ device.makeBuffer(bytes: $0.baseAddress!, length: $0.count, options: .storageModeShared) }),
+              let vertexBuffer = verts.withUnsafeBytes({ device.makeBuffer(bytes: $0.baseAddress!, length: $0.count, options: .storageModeShared) })
+        else { return }
+        enc.setRenderPipelineState(zonePipeline)
+        enc.setVertexBytes(&u, length: MemoryLayout<FloorUniforms>.stride, index: 1)
+        enc.setFragmentBuffer(zoneBuffer, offset: 0, index: 0)
+        enc.setFragmentBytes(&u, length: MemoryLayout<FloorUniforms>.stride, index: 1)
+        enc.setFragmentBuffer(vertexBuffer, offset: 0, index: 2)
+        enc.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
     }
 
     // MARK: - Scene to instances
@@ -259,6 +355,10 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
         }
 
         var overlays: [SegmentInstance] = []
+        // Snap highlights: the line, cell edge or point a zone snapped to.
+        for h in scene.highlights {
+            overlays.append(segment(h.a, h.b, width: 3, color: Tokens.white.withAlpha(0.9)))
+        }
         // Routes (Section 2.6): dashed when on time, solid pink when late.
         for route in scene.routes {
             let color = route.late ? Tokens.accent : Tokens.white.withAlpha(0.55)

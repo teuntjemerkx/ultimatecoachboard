@@ -41,7 +41,7 @@ struct LauncherView: View {
                     }
                 }
                 tile(title: "TRAINING", subtitle: "Drill Architect \u{2014} phase 2", enabled: false, action: {}) { EmptyView() }
-                tile(title: "STUDIO", subtitle: "2D/3D analysis \u{2014} phase 2", enabled: false, action: {}) { EmptyView() }
+                tile(title: "STUDIO", subtitle: "Scenes, zones and hatching (2D)", enabled: true, action: model.openStudio) { EmptyView() }
             }
             if let resumable = model.resumable {
                 Button { model.resume(resumable.url) } label: {

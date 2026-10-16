@@ -82,8 +82,9 @@ Verification/              Python references that generated and verified the num
 | Match journal and crash recovery (B3) | `Journal/Journal.swift`, `Services/JournalPipe.swift` | Implemented; launcher resumes unfinished matches |
 | Exact undo / redo (2.2) | `Store/LiveStore.swift` | Implemented, tested |
 | Smart Geometry recognizer (3.5.3) | `Geometry/SmartGeometry.swift` | Implemented and tested; the Zone tool UI arrives in Phase 2 |
+| Zone & Hatching engine, 2D (3.5) | `Zones/`, `Board/Shaders.metal` `zoneFragment`, `Studio/` | Exact SDFs, Smart Geometry with court-aware snapping, tags with default styles, cross-hatch/diagonal/dots/glow/outline with anti-moiré; Studio (Screen 8, 2D) with the W3 strip, alternative chip, undo, scenes saved as JSON |
 | 2D Metal board (3.2) | `Board/` | Court, zone grid, SDF tokens, signed-distance-field numbers, vectors, routes, tethers, ink, hatched envelope |
 | Eyes-free feedback (1.6) | `Services/Haptics.swift`, `EdgePulse` | Edge pulse, optional click, Pencil Pro path-completed haptic |
 
 Not yet in this slice: multi-channel (MSDF) glyphs (numbers use a single-channel distance field), Desk Link, the `.coachboard` package (the log exports the raw journal), the EDR/P3 colour
-pipeline and Sideline Boost. Phase 2 starts with the 3D renderer and the Zone & Hatching engine.
+pipeline and Sideline Boost. Phase 2 has started with the Zone & Hatching engine in 2D; next are the 3D renderer, avatars, walls and cylinders, POV and zone keyframes.

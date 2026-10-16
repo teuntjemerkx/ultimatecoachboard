@@ -12,6 +12,7 @@ final class AppModel {
         case roster
         case live(LiveController)
         case matchLog(MatchSummary)
+        case studio(StudioController)
     }
 
     var screen: Screen = .launcher
@@ -43,6 +44,27 @@ final class AppModel {
     func newMatch() { screen = .setup }
 
     func openRoster() { screen = .roster }
+
+    /// Studio opens the most recent scene, or a new one with the last lineup's numbers on the home formation.
+    func openStudio() {
+        if let latest = SceneStore.list().first {
+            screen = .studio(StudioController(scene: latest))
+            return
+        }
+        // The scene shows R1 (setter in P1); the setup's lineup started with the setter in P_s, so the player
+        // for R1's P_i stood in P_((i - 1 + s - 1) mod 6 + 1) of the setup.
+        var labels: [CourtPosition: String] = [:]
+        if let setup = lastSetup {
+            let s = setup.system.hasSetter ? setup.setterPosition : 1
+            for i in 1...6 {
+                let j = (i - 1 + s - 1) % 6
+                if let slot = setup.homeSlots[j], let pos = CourtPosition(rawValue: i) { labels[pos] = String(slot.jersey) }
+            }
+        }
+        let scene = SceneStore.newScene(system: lastSetup?.system ?? .fiveOneOutside, labels: labels)
+        SceneStore.save(scene)
+        screen = .studio(StudioController(scene: scene))
+    }
 
     func start(_ setup: MatchSetupData) {
         Self.saveSetup(setup)

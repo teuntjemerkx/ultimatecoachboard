@@ -46,6 +46,18 @@ enum DemoMode {
             codeRally(c, winner: .home)
             if let t = c.state.tokens().first(where: { $0.side == .home && $0.position == .p4 }) { c.openSkillPad(for: t) }
             model.screen = .live(c)
+        case "studio":
+            var scene = SceneStore.newScene(labels: [.p1: "8", .p2: "12", .p3: "4", .p4: "9", .p5: "14", .p6: "2"])
+            scene.title = "Tip coverage vs Dynamo R3"
+            let c = StudioController(scene: scene)
+            // Zones built from synthetic hand strokes through the real recognizer and snapping.
+            let seam = CourtFrame.world(LocalPoint(l: 1.5, d: 4.5), of: .opponent)
+            demoZone(c, loop(FloorPoint(x: seam.x + 0.1, z: seam.z - 0.1), 1.2), tag: .tipAlert)
+            demoZone(c, box(FloorPoint(x: 1.6, z: 6.1), FloorPoint(x: 4.4, z: 8.8)), tag: .noFly)
+            demoZone(c, loop(FloorPoint(x: -3.0, z: -7.4), 1.0, squash: 0.55), tag: .serveTarget)
+            demoZone(c, loop(FloorPoint(x: 0.0, z: 4.6), 1.1, squash: 0.8), tag: .freeBall, forced: .freeform)
+            c.tool = .zone
+            model.screen = .studio(c)
         case "setbreak":
             guard let c = try? LiveController(setup: setup) else { return }
             playSet(c)
@@ -80,6 +92,43 @@ enum DemoMode {
             c.swipe(winner: i % 3 == 2 ? .opponent : .home)
             i += 1
         }
+    }
+
+    @MainActor
+    private static func demoZone(_ c: StudioController, _ stroke: [FloorPoint], tag: ZoneTag, forced: ShapeKind? = nil) {
+        c.setTag(tag)
+        c.setShape(forced)
+        c.tool = .zone
+        c.boardSize = CGSize(width: 1100, height: 700)
+        // Feed the stroke through the same path a finger takes.
+        let g = c.geometry
+        for (i, p) in stroke.enumerated() {
+            c.pan(i == 0 ? .began : .changed, at: g.toView(p))
+        }
+        if let last = stroke.last { c.pan(.ended, at: g.toView(last)) }
+        c.tap(at: .zero)                                   // deselect, so the next zone uses fresh defaults
+    }
+
+    private static func loop(_ c: FloorPoint, _ r: Double, squash: Double = 1) -> [FloorPoint] {
+        (0..<90).map { i -> FloorPoint in
+            let a = Double(i) / 89 * 2 * .pi * 1.04
+            let rr = r * (1 + 0.02 * sin(3 * a + 1))
+            return FloorPoint(x: c.x + rr * cos(a), z: c.z + rr * squash * sin(a))
+        }
+    }
+
+    private static func box(_ lo: FloorPoint, _ hi: FloorPoint) -> [FloorPoint] {
+        let corners = [lo, FloorPoint(x: hi.x, z: lo.z), hi, FloorPoint(x: lo.x, z: hi.z), lo]
+        var out: [FloorPoint] = []
+        for k in 0..<4 {
+            let a = corners[k], b = corners[k + 1]
+            for t in 0..<20 {
+                let f = Double(t) / 20
+                out.append(FloorPoint(x: a.x + (b.x - a.x) * f + 0.03 * sin(Double(t)), z: a.z + (b.z - a.z) * f))
+            }
+        }
+        out.append(FloorPoint(x: lo.x + 0.05, z: lo.z + 0.1))
+        return out
     }
 
     /// One coded rally: serve, reception, set and attack, then the swipe.

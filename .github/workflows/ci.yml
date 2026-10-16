@@ -73,7 +73,7 @@ jobs:
           APP=$(find App/build/Build/Products -maxdepth 2 -name 'UltimateCoachBoard.app' | head -1)
           xcrun simctl install "$UDID" "$APP"
           mkdir -p shots
-          for s in launcher setup live advanced setbreak log; do
+          for s in launcher setup live advanced setbreak log studio; do
             xcrun simctl launch --terminate-running-process "$UDID" app.ultimatecoachboard.ipad -demoScreen "$s"
             sleep 10
             xcrun simctl io "$UDID" screenshot "shots/$s.png"

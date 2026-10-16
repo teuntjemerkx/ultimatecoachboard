@@ -12,6 +12,9 @@ final class BoardMTKView: MTKView {
     var onDragEnded: (() -> Void)?
     var onInk: (([CGPoint]) -> Void)?
     var onResize: ((CGSize) -> Void)?
+    /// Every step of a one-finger pan (Studio: drawing zones and ink, moving tokens and zones).
+    enum PanPhase { case began, changed, ended, cancelled }
+    var onPanEvent: ((PanPhase, CGPoint) -> Void)?
 
     /// In Panic the one-finger pan draws; elsewhere it is disabled so taps stay instant.
     var drawingEnabled = false {
@@ -93,19 +96,23 @@ final class BoardMTKView: MTKView {
     }
 
     @objc private func handleInk(_ g: UIPanGestureRecognizer) {
+        let p = g.location(in: self)
         switch g.state {
         case .began:
-            inkPoints = [g.location(in: self)]
+            inkPoints = [p]
+            onPanEvent?(.began, p)
         case .changed:
-            inkPoints.append(g.location(in: self))
+            inkPoints.append(p)
+            onPanEvent?(.changed, p)
         case .ended:
-            let end = g.location(in: self)
-            inkPoints.append(end)
+            inkPoints.append(p)
             onInk?(inkPoints)
+            onPanEvent?(.ended, p)
             inkPoints = []
-            canvasFeedback.pathCompleted(at: end)
+            canvasFeedback.pathCompleted(at: p)
         default:
             inkPoints = []
+            onPanEvent?(.cancelled, p)
         }
     }
 }

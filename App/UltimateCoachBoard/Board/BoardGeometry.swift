@@ -12,6 +12,8 @@ struct BoardGeometry: Equatable {
     var playerFacingFlip: Bool = false
 
     private var flipped: Bool { homeOnLeft == playerFacingFlip }
+    /// For shaders that map view points back to the court (the zone floor pass).
+    var isFlipped: Bool { flipped }
 
     var scale: CGFloat {
         let m = margin * 2

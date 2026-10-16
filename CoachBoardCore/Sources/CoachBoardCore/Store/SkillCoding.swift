@@ -82,7 +82,8 @@ public enum SkillPredictor {
     public static func next(side: Side, isServer: Bool, isFrontRow: Bool, role: String?,
                             serving: Side, codesThisRally: [SkillCode]) -> Skill {
         if isServer && codesThisRally.isEmpty { return .serve }
-        guard let last = codesThisRally.last else { return side == serving ? .serve : .reception }
+        // Before any code: the receiving team receives; the serving team's other players defend next.
+        guard let last = codesThisRally.last else { return side == serving ? (isFrontRow ? .block : .dig) : .reception }
         let isSetter = role?.hasPrefix("S") ?? false
         if last.side == side {
             switch last.skill {

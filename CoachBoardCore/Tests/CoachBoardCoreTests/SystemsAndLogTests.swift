@@ -271,6 +271,8 @@ final class SkillCodingTests: XCTestCase {
                                            serving: .home, codesThisRally: []), .serve)
         XCTAssertEqual(SkillPredictor.next(side: .home, isServer: false, isFrontRow: false, role: "OH1",
                                            serving: .opponent, codesThisRally: []), .reception)
+        XCTAssertEqual(SkillPredictor.next(side: .home, isServer: false, isFrontRow: true, role: "MB2",
+                                           serving: .home, codesThisRally: []), .block)
         let received = [code(.opponent, .serve), code(.home, .reception)]
         XCTAssertEqual(SkillPredictor.next(side: .home, isServer: false, isFrontRow: true, role: "S",
                                            serving: .opponent, codesThisRally: received), .set)
