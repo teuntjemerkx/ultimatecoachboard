@@ -5,6 +5,7 @@ import { persist } from "../store/db";
 import { useNav } from "../store/nav";
 import { netHeight, useSettings } from "../store/settings";
 import { Bar } from "../ui/Bar";
+import { Choice } from "../ui/Choice";
 import { Icon } from "../ui/Icon";
 import { grabFrame, openClip, type Clip } from "./clip";
 import { buildRally, loadDetector } from "./pipeline";
@@ -13,10 +14,27 @@ import "./video.css";
 
 type Step = { name: "choose" } | { name: "mark" } | { name: "building" } | { name: "failed"; message: string };
 
+/**
+ * What the coach marks: the court's four corners, or our half only (our two corners and where the net meets the
+ * sidelines on the floor), for a camera low behind our end line that sees their end line squeezed behind the net.
+ */
+type MarkView = "court" | "half";
+
 interface Corner {
-  label: "US" | "THEM";
+  label: "US" | "THEM" | "NET";
   ours: boolean;
   point: ImagePoint;
+}
+
+const markViewKey = "video.markView";
+
+/** The view chosen last on this device (a camera usually stands in the same place). */
+function storedMarkView(): MarkView {
+  try {
+    return localStorage.getItem(markViewKey) === "half" ? "half" : "court";
+  } catch {
+    return "court";
+  }
 }
 
 /** The court's lines and the net's top edge, split into short pieces (the court as the calibrated camera sees it). */
@@ -31,8 +49,19 @@ export function courtSegments(net: number): [V3, V3][] {
     [a.add(b.sub(a).mul(k / 6)), a.add(b.sub(a).mul((k + 1) / 6))]));
 }
 
-/** Starting dots in a typical end-line view: their end line narrow and high, ours wide and low. */
-function defaultCorners(w: number, h: number): Corner[] {
+/**
+ * Starting dots in a typical end-line view: their end line narrow and high, ours wide and low; for our half, the net
+ * across the middle and our corners near the bottom.
+ */
+function defaultCorners(w: number, h: number, view: MarkView = "court"): Corner[] {
+  if (view === "half") {
+    return [
+      { label: "NET", ours: false, point: { x: w * 0.2, y: h * 0.7 } },
+      { label: "NET", ours: false, point: { x: w * 0.8, y: h * 0.7 } },
+      { label: "US", ours: true, point: { x: w * 0.95, y: h * 0.93 } },
+      { label: "US", ours: true, point: { x: w * 0.05, y: h * 0.93 } },
+    ];
+  }
   return [
     { label: "THEM", ours: false, point: { x: w * 0.36, y: h * 0.3 } },
     { label: "THEM", ours: false, point: { x: w * 0.64, y: h * 0.3 } },
@@ -58,6 +87,7 @@ export function VideoImport() {
   const [file, setFile] = useState<File | null>(null);
   const [start, setStart] = useState(0);
   const [corners, setCorners] = useState<Corner[]>([]);
+  const [view, setView] = useState<MarkView>(storedMarkView);
   const [progress, setProgress] = useState({ fraction: 0, stage: "" });
   const [stillVersion, setStillVersion] = useState(0);
   const stillRef = useRef<HTMLCanvasElement | null>(null);
@@ -71,9 +101,11 @@ export function VideoImport() {
   const size = clip ? { w: clip.width, h: clip.height } : { w: 1, h: 1 };
   const calibration: CalibrationResult | undefined = useMemo(() => {
     if (!clip || corners.length !== 4) return undefined;
-    const ours = corners.filter((c) => c.ours).map((c) => c.point), theirs = corners.filter((c) => !c.ours).map((c) => c.point);
-    return CourtCalibration.solveCorners(ours, theirs, clip.width, clip.height);
-  }, [clip, corners]);
+    const ours = corners.filter((c) => c.ours).map((c) => c.point), others = corners.filter((c) => !c.ours).map((c) => c.point);
+    return view === "half"
+      ? CourtCalibration.solveNearHalf(ours, others, "home", clip.width, clip.height)
+      : CourtCalibration.solveCorners(ours, others, clip.width, clip.height);
+  }, [clip, corners, view]);
   const fit = calibration?.quality === "good" ? "good" : calibration?.quality === "rough" ? "rough" : "unknown";
   const canBuild = calibration !== undefined && fit !== "unknown";
   const courtLines = useMemo(() => {
@@ -106,7 +138,7 @@ export function VideoImport() {
       setClip(c);
       setStart(0);
       await grabStill(c, 0.2);
-      setCorners(defaultCorners(c.width, c.height));
+      setCorners(defaultCorners(c.width, c.height, view));
       setStep({ name: "mark" });
       // Start loading the models while the coach marks the court.
       void loadDetector().catch(() => undefined);
@@ -115,6 +147,15 @@ export function VideoImport() {
     } finally {
       setLoading(false);
     }
+  };
+
+  /** Switches what the coach marks; the US dots stay where they are. */
+  const changeView = (v: MarkView) => {
+    if (!clip || v === view) return;
+    setView(v);
+    try { localStorage.setItem(markViewKey, v); } catch { /* private browsing: the choice lasts this visit */ }
+    const fresh = defaultCorners(clip.width, clip.height, v);
+    setCorners((cs) => fresh.map((c, i) => (c.ours && cs[i]?.ours ? { ...c, point: cs[i].point } : c)));
   };
 
   // A new start time shows the still there (after the slider rests briefly).
@@ -166,8 +207,19 @@ export function VideoImport() {
       {step.name === "mark" && clip && (
         <div className="video-mark">
           <div className="video-mark-head">
-            <strong>Drag the dots onto the court's four corners</strong>
-            <span className="muted">Put US on the two corners of your end line and THEM on theirs. The court lines show how well it fits.</span>
+            <Choice label="What the video shows" value={view} onChange={changeView}
+                    options={[{ value: "court", title: "Whole court" }, { value: "half", title: "Our half" }]} />
+            {view === "court" ? (
+              <>
+                <strong>Drag the dots onto the court's four corners</strong>
+                <span className="muted">Put US on the two corners of your end line and THEM on theirs. The court lines show how well it fits.</span>
+              </>
+            ) : (
+              <>
+                <strong>Drag the dots onto your half</strong>
+                <span className="muted">Put US on the two corners of your end line and NET where the net meets each sideline on the floor, straight below the antenna. For a camera low behind your end line.</span>
+              </>
+            )}
           </div>
           <MarkStill still={stillRef.current} version={stillVersion} size={size} corners={corners} lines={courtLines}
                      onMove={(i, p) => setCorners((cs) => cs.map((c, k) => (k === i ? { ...c, point: p } : c)))} />
@@ -367,9 +419,9 @@ function MarkStill({ still, version, size, corners, lines, onMove }: {
           {lines.map(([a, b], k) => <line key={k} x1={a.x} y1={a.y} x2={b.x} y2={b.y} vectorEffect="non-scaling-stroke" />)}
         </svg>
         {corners.map((c, i) => (
-          <button key={i} className={`video-dot ${c.ours ? "home" : "opponent"}${drag?.i === i ? " dragging" : ""}`}
+          <button key={i} className={`video-dot ${c.ours ? "home" : c.label === "NET" ? "net" : "opponent"}${drag?.i === i ? " dragging" : ""}`}
                   style={{ left: `${(c.point.x / size.w) * 100}%`, top: `${(c.point.y / size.h) * 100}%` }}
-                  onPointerDown={down(i)} aria-label={`${c.label} corner`}>
+                  onPointerDown={down(i)} aria-label={c.label === "NET" ? "NET point" : `${c.label} corner`}>
             <span className="video-dot-label">{c.label}</span>
           </button>
         ))}

@@ -44,11 +44,13 @@ describe("Video to 3D ball sampling", () => {
   });
 
   it("tells a repeated frame from a new one", () => {
-    const a = new Uint8ClampedArray(4 * 100).fill(120);
-    const b = a.slice();
-    b[40] = 128;
+    const a = new Uint8ClampedArray(4 * 10000).fill(120);
+    // A repeat after a re-encode: a few levels of noise everywhere.
+    const b = a.map((v, i) => v + ((i * 7919) % 9) - 4);
+    expect(sameFrame(a, a.slice())).toBe(true);
     expect(sameFrame(a, b)).toBe(true);
-    for (let i = 0; i < 40; i += 4) b[i] = 140;
+    // A player moved: a patch of 100 pixels changes.
+    for (let i = 0; i < 400; i += 4) b[i] = 160;
     expect(sameFrame(a, b)).toBe(false);
   });
 });

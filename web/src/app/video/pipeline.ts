@@ -172,16 +172,21 @@ export function samplePlan(start: number, end: number, rate = 10, between = 2): 
 
 /**
  * Whether two small copies of frames show the same picture: a clip with fewer frames per second than are sampled
- * (an old camera, a 25 fps export, a GIF) gives the same frame for several times. A new frame always differs by more
- * than sensor and compression noise somewhere.
+ * (an old camera, a 25 fps export, a GIF) gives the same frame for several times. A repeat is identical, or after a
+ * re-encode (a 25 fps clip saved at 30) differs by compression noise of a few levels; a new frame differs by more than
+ * 8 levels in about one pixel in a hundred or more (the players move), so the line is drawn at one in two thousand.
  */
 export function sameFrame(a: Uint8ClampedArray, b: Uint8ClampedArray): boolean {
   if (a.length !== b.length) return false;
+  const limit = a.length / 4 / 2000;
   let differ = 0;
   for (let i = 0; i < a.length; i += 4) {
-    if (Math.abs(a[i] - b[i]) > 3 || Math.abs(a[i + 1] - b[i + 1]) > 3 || Math.abs(a[i + 2] - b[i + 2]) > 3) differ += 1;
+    if (Math.abs(a[i] - b[i]) > 8 || Math.abs(a[i + 1] - b[i + 1]) > 8 || Math.abs(a[i + 2] - b[i + 2]) > 8) {
+      differ += 1;
+      if (differ > limit) return false;
+    }
   }
-  return differ <= 2;
+  return true;
 }
 
 /** A worker job: posts the request and resolves with its final reply (progress replies go to `onProgress`). */

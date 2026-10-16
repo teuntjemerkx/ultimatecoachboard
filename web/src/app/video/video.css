@@ -37,6 +37,7 @@
 .video-mark-head { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
 .video-mark-head strong { font: 800 22px/1.15 var(--font-athletic); text-transform: uppercase; letter-spacing: 0.04em; }
 .video-mark-head .muted { font-size: 15px; }
+.video-mark-head .choice { width: min(360px, 100%); margin-bottom: 6px; }
 .video-mark-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .video-mark-foot .spacer { flex: 1; }
 .video-badge { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
@@ -58,6 +59,7 @@
 .video-dot::after { content: ""; position: absolute; left: 25px; top: 25px; width: 6px; height: 6px; border-radius: 50%; background: var(--dot); }
 .video-dot.home { --dot: var(--c-home); }
 .video-dot.opponent { --dot: var(--c-opponent); }
+.video-dot.net { --dot: var(--c-band); }
 .video-dot.dragging { cursor: grabbing; }
 .video-dot-label {
   position: absolute; left: 50%; top: -6px; transform: translateX(-50%); padding: 2px 6px; border-radius: 999px;
