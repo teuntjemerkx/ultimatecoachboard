@@ -2,31 +2,23 @@ import SwiftUI
 import SwiftData
 import CoachBoardCore
 
-/// Screen 1 (Appendix C2): a header with the day and the team, one big primary action, the modes as an adaptive grid
-/// that uses the whole width in either orientation, and recent sessions below.
+/// Screen 1 (Appendix C2): a header with the day, one big primary action, the tools as an adaptive grid that uses
+/// the whole width in either orientation, and recent matches below. Simple shows the essentials in plain words;
+/// Advanced adds the expert descriptions and the upcoming Training tile.
 struct LauncherView: View {
     @Bindable var model: AppModel
     @Query private var players: [Player]
 
     private var hasRoster: Bool { !players.isEmpty }
     private var canQuickStart: Bool { model.lastSetup?.homeSlots.allSatisfy({ $0 != nil }) == true }
+    private var advanced: Bool { ThemeStore.shared.advanced }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 32) {
                 header
                 primaryCard
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 250), spacing: 18)], spacing: 18) {
-                    tile(title: "Match", subtitle: hasRoster || model.lastSetup != nil ? "Lineup, rotations and live scouting"
-                                                                                           : "Add your team first \u{2014} 30 seconds",
-                         symbol: "sportscourt", enabled: true, action: hasRoster || model.lastSetup != nil ? model.newMatch : model.openRoster)
-                    tile(title: "Studio", subtitle: "Scenes in 2D and 3D, zones, POV and the ball", symbol: "cube.transparent",
-                         enabled: true, action: model.openStudio)
-                    tile(title: "Roster", subtitle: hasRoster ? "\(players.count) players" : "Jersey-only quick add",
-                         symbol: "person.3", enabled: true, action: model.openRoster)
-                    tile(title: "Training", subtitle: "Drill Architect \u{2014} coming next", symbol: "figure.volleyball",
-                         enabled: false, action: {})
-                }
+                tiles
                 if !model.recents.isEmpty { recentsStrip }
             }
             .padding(.horizontal, 32)
@@ -39,119 +31,133 @@ struct LauncherView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)).uppercased())
-                    .font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
+                Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                    .font(.themed(17, .semibold))
+                    .foregroundStyle(Tokens.textSecondary.color)
                 Text("Coach Board").font(.themed(40, .heavy))
             }
             Spacer()
-            iconButton("gearshape", label: "Settings") { model.showSettings = true }
+            Button { model.showSettings = true } label: {
+                Label("Settings", systemImage: "gearshape")
+            }
+            .buttonStyle(CoachButtonStyle(kind: .secondary, minHeight: Tokens.targetStandard + 4))
         }
     }
 
     /// The one thing most visits are for: start (or resume) a match.
     private var primaryCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
             if let resumable = model.resumable {
-                Text("MATCH IN PROGRESS").font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
-                Text("\(resumable.title) \u{00B7} \(resumable.scoreLine)").font(.themed(26, .bold))
-                primaryButton("Resume", symbol: "play.fill") { model.resume(resumable.url) }
+                cardHeading("Match in progress", title: resumable.title, detail: resumable.scoreLine)
+                Button { model.resume(resumable.url) } label: {
+                    Label("Resume match", systemImage: "play.fill")
+                }
+                .buttonStyle(CoachButtonStyle())
             } else if canQuickStart {
-                Text("READY WHEN YOU ARE").font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
-                Text("Same lineup as last time").font(.themed(26, .bold))
+                cardHeading("Ready to play", title: "Same lineup as last time", detail: nil)
                 HStack(spacing: 12) {
-                    primaryButton("Quick match", symbol: "bolt.fill") { model.quickMatch() }
-                    secondaryButton("New lineup") { model.newMatch() }
+                    Button { model.quickMatch() } label: {
+                        Label("Start match", systemImage: "play.fill")
+                    }
+                    .buttonStyle(CoachButtonStyle())
+                    Button("Change lineup") { model.newMatch() }
+                        .buttonStyle(CoachButtonStyle(kind: .secondary))
                 }
             } else {
-                Text("GET STARTED").font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
-                Text(hasRoster ? "Set up your first match" : "Add your team, then start a match").font(.themed(26, .bold))
-                primaryButton(hasRoster ? "New match" : "Add players", symbol: hasRoster ? "plus" : "person.badge.plus") {
-                    hasRoster ? model.newMatch() : model.openRoster()
+                cardHeading("Get started", title: hasRoster ? "Set up your first match" : "Add your players, then start a match",
+                            detail: nil)
+                Button { hasRoster ? model.newMatch() : model.openRoster() } label: {
+                    Label(hasRoster ? "New match" : "Add players", systemImage: hasRoster ? "plus" : "person.badge.plus")
                 }
+                .buttonStyle(CoachButtonStyle())
             }
         }
-        .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Tokens.surface.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius * 1.4))
-        .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius * 1.4).stroke(Tokens.hairline.color))
+        .coachCard(padding: 28)
     }
 
-    private func primaryButton(_ title: String, symbol: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: symbol)
-                .font(.themed(18, .bold))
-                .padding(.horizontal, 26).frame(minHeight: Tokens.targetLivePrimary)
-                .background(Tokens.accent.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
-                .foregroundStyle(Tokens.onAccent.color)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func secondaryButton(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title).font(.themed(17, .semibold))
-                .padding(.horizontal, 22).frame(minHeight: Tokens.targetLivePrimary)
-                .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.text.withAlpha(0.35).color, lineWidth: 1.5))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var recentsStrip: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("RECENT").font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 14) {
-                    ForEach(model.recents.prefix(8)) { s in
-                        RecentCard(summary: s)
-                            .onTapGesture { model.open(s) }
-                            .contextMenu {
-                                ShareLink(item: s.url) { Label("Share journal", systemImage: "square.and.arrow.up") }
-                                Button(role: .destructive) { model.delete(s) } label: {
-                                    Label("Move to Recently Deleted", systemImage: "trash")
-                                }
-                            }
-                    }
-                }
+    private func cardHeading(_ label: String, title: String, detail: String?) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label).font(.groupTitle).foregroundStyle(Tokens.textSecondary.color)
+            Text(title).font(.themed(28, .bold)).lineLimit(2)
+            if let detail, !detail.isEmpty {
+                Text(detail).font(.themed(20, .semibold).monospacedDigit()).foregroundStyle(Tokens.textSecondary.color)
             }
         }
     }
 
-    private func iconButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol).font(.themed(22, .semibold))
-                .frame(width: Tokens.targetStandard + 8, height: Tokens.targetStandard + 8)
-                .background(Tokens.surface.color, in: Circle())
-                .overlay(Circle().stroke(Tokens.hairline.color))
+    // MARK: - Tools
+
+    private var tiles: some View {
+        let ready = hasRoster || model.lastSetup != nil
+        return LazyVGrid(columns: [GridItem(.adaptive(minimum: advanced ? 230 : 300), spacing: 18)], spacing: 18) {
+            tile(title: "Match",
+                 subtitle: ready ? (advanced ? "Lineup, rotations and live scouting" : "Pick your lineup and keep score")
+                                 : (advanced ? "Add your team first \u{2014} 30 seconds" : "Add your players first"),
+                 symbol: "sportscourt", enabled: true, action: ready ? model.newMatch : model.openRoster)
+            tile(title: "Studio",
+                 subtitle: advanced ? "Scenes in 2D and 3D, zones, POV and the ball" : "Draw plays on a 2D or 3D court",
+                 symbol: "cube.transparent", enabled: true, action: model.openStudio)
+            tile(title: "Players",
+                 subtitle: hasRoster ? "\(players.count) players" : (advanced ? "Jersey-only quick add" : "Add your players by number"),
+                 symbol: "person.3", enabled: true, action: model.openRoster)
+            if advanced {
+                tile(title: "Training", subtitle: "Drill Architect \u{2014} coming soon", symbol: "figure.volleyball",
+                     enabled: false, action: {})
+            }
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
     }
 
     private func tile(title: String, subtitle: String, symbol: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 8) {
                 Image(systemName: symbol).font(.themed(30, .semibold))
                     .foregroundStyle(enabled ? Tokens.home.color : Tokens.textSecondary.color)
-                Spacer(minLength: 0)
+                Spacer(minLength: 12)
                 Text(title).font(.themed(24, .bold))
-                Text(subtitle).font(.themed(15, .regular)).foregroundStyle(Tokens.textSecondary.color)
+                Text(subtitle).font(.themed(17, .regular)).foregroundStyle(Tokens.textSecondary.color)
                     .lineLimit(2, reservesSpace: true)
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
-            .background(Tokens.surface.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius * 1.4))
-            .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius * 1.4).stroke(Tokens.hairline.color))
+            .frame(maxWidth: .infinity, minHeight: 150, alignment: .topLeading)
+            .coachCard(padding: 22)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
         .opacity(enabled ? 1 : 0.55)
     }
+
+    // MARK: - Recent matches
+
+    private var recentsStrip: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Recent matches").font(.groupTitle).foregroundStyle(Tokens.textSecondary.color)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 14) {
+                    ForEach(model.recents.prefix(8)) { s in
+                        RecentCard(summary: s)
+                            .onTapGesture { model.open(s) }
+                            .contextMenu {
+                                ShareLink(item: s.url) { Label("Share match file", systemImage: "square.and.arrow.up") }
+                                Button(role: .destructive) { model.delete(s) } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            if advanced {
+                Text("Touch and hold a match to share or delete it.")
+                    .font(.themed(15, .regular)).foregroundStyle(Tokens.textSecondary.color)
+            }
+        }
+    }
 }
 
-/// A 160 × 110 pt recent-session card with a mini-court thumbnail.
+/// A recent-match card with a mini-court thumbnail and the sets score.
 struct RecentCard: View {
     let summary: MatchSummary
 
@@ -167,24 +173,28 @@ struct RecentCard: View {
                     ctx.stroke(net, with: .color(Tokens.text.withAlpha(0.7).color), lineWidth: 1)
                 }
                 Text("\(summary.setsHome) : \(summary.setsOpponent)")
-                    .font(.themed(20, .bold).monospacedDigit())
+                    .font(.themed(24, .bold).monospacedDigit())
             }
-            .frame(height: 50)
-            Text(summary.title).font(.themed(12, .semibold)).lineLimit(1)
-            Text(summary.finished ? summary.date.formatted(date: .abbreviated, time: .omitted) : "In progress · \(summary.scoreLine)")
-                .font(.system(size: 11)).foregroundStyle(summary.finished ? Tokens.textSecondary.color : Tokens.accent.color)
+            .frame(height: 56)
+            Text(summary.title).font(.themed(15, .semibold)).lineLimit(1)
+            Text(summary.finished ? summary.date.formatted(date: .abbreviated, time: .omitted) : "In progress \u{00B7} \(summary.scoreLine)")
+                .font(.themed(14, .medium))
+                .foregroundStyle(summary.finished ? Tokens.textSecondary.color : Tokens.accent.color)
                 .lineLimit(1)
         }
-        .padding(10)
-        .frame(width: 160, height: 110, alignment: .topLeading)
-        .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: Tokens.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: Tokens.cornerRadius).stroke(Tokens.hairline.color))
+        .padding(12)
+        .frame(width: 200, height: 132, alignment: .topLeading)
+        .background(Tokens.surface.color, in: RoundedRectangle(cornerRadius: Tokens.radiusCard))
+        .overlay(RoundedRectangle(cornerRadius: Tokens.radiusCard).stroke(Tokens.hairline.color))
         .foregroundStyle(Tokens.text.color)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
     }
 }
 
-/// Screen 23: appearance (template and court orientation), grip side and the optional feedback click.
+/// Screen 23: the coach level (Simple or Advanced), appearance (template and court orientation), grip side and
+/// the optional feedback click.
 struct SettingsView: View {
     @AppStorage("gripRight") private var gripRight = true
     @AppStorage("feedbackSound") private var soundOn = false
@@ -192,8 +202,22 @@ struct SettingsView: View {
     private let store = ThemeStore.shared
 
     var body: some View {
+        let advanced = store.advanced
         NavigationStack {
             Form {
+                Section {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ChoiceBar(options: [(value: false, title: "Simple"), (value: true, title: "Advanced")],
+                                  selection: Binding(get: { store.advanced }, set: { store.setAdvanced($0) }))
+                        Text(advanced ? "All tools and detailed stats." : "The essentials, in plain words.")
+                            .font(.scaled(.body))
+                            .foregroundStyle(Tokens.textSecondary.color)
+                    }
+                    .padding(.vertical, 6)
+                } header: {
+                    sectionHeader("Coach level")
+                }
+                .listRowBackground(Tokens.surface.color)
                 Section {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 14)], spacing: 14) {
                         ForEach(Theme.all) { theme in
@@ -201,31 +225,52 @@ struct SettingsView: View {
                         }
                     }
                     .padding(.vertical, 6)
-                    Picker("Court", selection: Binding(get: { store.courtOrientation }, set: { store.setCourtOrientation($0) })) {
-                        ForEach(CourtOrientation.allCases) { Text($0.title).tag($0) }
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Court on screen").font(.scaled(.body, .semibold))
+                        ChoiceBar(options: CourtOrientation.allCases.map { (value: $0, title: $0.title) },
+                                  selection: Binding(get: { store.courtOrientation }, set: { store.setCourtOrientation($0) }))
                     }
-                    .pickerStyle(.segmented)
+                    .padding(.vertical, 6)
                 } header: {
-                    Text("Appearance")
+                    sectionHeader("Appearance")
                 } footer: {
-                    Text("Sports hall is recommended for live use: in a lit hall dark text on a light background reads best, and blue against orange stays distinct with colour blindness. \"Fill the screen\" stands the court upright when the iPad is held upright.")
+                    Text(advanced
+                         ? "Sports hall is recommended for live use: it reads best under hall lights and stays clear with colour blindness. \"Fill the screen\" stands the court upright when you hold the iPad upright."
+                         : "Sports hall reads best in a bright gym.")
+                        .font(.scaled(.subheadline))
                 }
+                .listRowBackground(Tokens.surface.color)
                 Section {
-                    Picker("Grip side", selection: $gripRight) {
-                        Text("Left hand").tag(false)
-                        Text("Right hand").tag(true)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Hand that holds the iPad").font(.scaled(.body, .semibold))
+                        ChoiceBar(options: [(value: false, title: "Left hand"), (value: true, title: "Right hand")],
+                                  selection: $gripRight)
                     }
-                    .pickerStyle(.segmented)
-                    Toggle("Feedback click", isOn: $soundOn)
+                    .padding(.vertical, 6)
+                    Toggle("Click sound", isOn: $soundOn)
+                        .font(.scaled(.body))
+                        .frame(minHeight: Tokens.targetStandard)
                 } header: {
-                    Text("Sideline")
+                    sectionHeader("During a match")
                 } footer: {
-                    Text("The Thumb Cluster and Start buttons sit on the grip side; the rail docks on the other edge. The edge pulse always confirms actions; the click is optional.")
+                    Text(advanced
+                         ? "The Thumb Cluster and Start buttons sit on the side of the hand that holds the iPad; the rail docks on the other edge. The screen edge always pulses to confirm an action; the click is optional."
+                         : "The big buttons sit on that side, so your thumb reaches them. The screen edge always pulses to confirm; the click is optional.")
+                        .font(.scaled(.subheadline))
                 }
+                .listRowBackground(Tokens.surface.color)
             }
+            .scrollContentBackground(.hidden)
+            .background(Tokens.background.color)
+            .textCase(nil)
+            .foregroundStyle(Tokens.text.color)
             .navigationTitle("Settings")
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
+    }
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title).font(.groupTitle).foregroundStyle(Tokens.textSecondary.color)
     }
 }
 
@@ -263,21 +308,25 @@ struct ThemeCard: View {
                 .frame(height: 96)
                 .clipShape(RoundedRectangle(cornerRadius: theme.cornerRadius))
                 HStack(spacing: 6) {
-                    Text(theme.name).font(.system(size: 16, weight: .bold, design: theme.fontDesign).width(theme.fontWidth))
+                    Text(theme.name).font(.system(size: 17, weight: .bold, design: theme.fontDesign).width(theme.fontWidth))
                     if theme.recommended {
-                        Text("RECOMMENDED").font(.system(size: 10, weight: .bold))
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Color.accentColor.opacity(0.15), in: Capsule())
+                        Text("Recommended").font(.themed(13, .bold))
+                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .background(Tokens.accent.withAlpha(0.15).color, in: Capsule())
                     }
                     Spacer()
-                    if selected { Image(systemName: "checkmark.circle.fill").font(.system(size: 18)) }
+                    if selected {
+                        Image(systemName: "checkmark.circle.fill").font(.system(size: 22)).foregroundStyle(Tokens.accent.color)
+                    }
                 }
-                Text(theme.summary).font(.system(size: 12)).foregroundStyle(.secondary)
+                Text(theme.summary).font(.themed(15, .regular)).foregroundStyle(Tokens.textSecondary.color)
                     .lineLimit(3, reservesSpace: true)
             }
-            .padding(10)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemGroupedBackground)))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(selected ? Color.accentColor : Color.clear, lineWidth: 2.5))
+            .foregroundStyle(Tokens.text.color)
+            .padding(12)
+            .background(Tokens.background.color, in: RoundedRectangle(cornerRadius: Tokens.radiusCard))
+            .overlay(RoundedRectangle(cornerRadius: Tokens.radiusCard)
+                .stroke(selected ? Tokens.accent.color : Tokens.hairline.color, lineWidth: selected ? 3 : 1))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

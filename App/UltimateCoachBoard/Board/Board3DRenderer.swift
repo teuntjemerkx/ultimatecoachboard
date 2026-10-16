@@ -767,12 +767,19 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         for ray in scene.gaze {
             let team = Tokens.team(ray.side)
             let dir = (ray.to - ray.from).normalized
-            let start = ray.from + dir * 0.12           // out of the head
+            // Out of the head; seen from the viewer's own eyes the first 1.2 m would fill the screen, so it is left out.
+            let near = (eye - ray.from).length < 0.6 ? 1.2 : 0.12
+            let length = (ray.to - ray.from).length
+            guard length > near + 0.1 else { continue }
+            let start = ray.from + dir * near
             if ray.visible || ray.occlusion == nil {
                 if let r = billboard(start, ray.to, width: 0.035, eye: eye, color: team.withAlpha(0.9)) { q.append(r) }
-            } else if let o = ray.occlusion {
-                if let r = billboard(start, o, width: 0.035, eye: eye, color: team.withAlpha(0.9)) { q.append(r) }
+            } else if let occlusion = ray.occlusion {
+                let blockedEarly = (occlusion - ray.from).dot(dir) < near
+                let o = blockedEarly ? start : occlusion
+                if !blockedEarly, let r = billboard(start, o, width: 0.035, eye: eye, color: team.withAlpha(0.9)) { q.append(r) }
                 if let r = billboard(o, ray.to, width: 0.035, eye: eye, color: red, pattern: 4) { q.append(r) }
+                if blockedEarly { continue }
                 // An X at the first occlusion.
                 let toEye = (eye - o).normalized
                 let ref = abs(toEye.y) < 0.9 ? V3.up : V3(1, 0, 0)

@@ -114,8 +114,8 @@ enum Biometrics {
     static let stature = 1.20...2.25
 
     static func problem(stature: Double?, standing: Double?, spike: Double?, block: Double?) -> String? {
-        if let stature, !Self.stature.contains(stature) { return "Stature runs from 1.20 to 2.25 m." }
-        if let stature, let standing, standing < stature { return "Standing reach cannot be below stature." }
+        if let stature, !Self.stature.contains(stature) { return "Height must be between 1.20 and 2.25 m." }
+        if let stature, let standing, standing < stature { return "Standing reach can't be lower than height." }
         if let standing, let spike, spike < standing { return "Spike reach cannot be below standing reach." }
         if let standing, let block, block < standing { return "Block reach cannot be below standing reach." }
         if let spike, spike > 4.0 { return "Spike reach above 4.00 m is not plausible." }
