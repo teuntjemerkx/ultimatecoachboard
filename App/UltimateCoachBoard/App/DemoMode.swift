@@ -28,7 +28,7 @@ enum DemoMode {
     @MainActor
     static func apply(to model: AppModel) {
         guard let screen else { return }
-        forceLandscape()
+        note("demo screen \(screen)")
         switch screen {
         case "setup":
             model.screen = .setup
@@ -87,11 +87,30 @@ enum DemoMode {
         c.tap(at: landing)
     }
 
-    private static func forceLandscape() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            for case let scene as UIWindowScene in UIApplication.shared.connectedScenes {
-                scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) { _ in }
+    /// Turns the window to landscape once the scene is active (the Simulator boots in portrait).
+    @MainActor
+    static func prepareWindow() async {
+        guard screen != nil else { return }
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        for case let scene as UIWindowScene in UIApplication.shared.connectedScenes {
+            scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) { error in
+                note("rotation refused: \(error.localizedDescription)")
             }
+        }
+    }
+
+    /// Appends a line to Documents/demo-diagnostics.txt, which CI publishes next to the screenshots.
+    static func note(_ line: String) {
+        guard screen != nil,
+              let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        let url = dir.appendingPathComponent("demo-diagnostics.txt")
+        let data = Data((line + "\n").utf8)
+        if let h = try? FileHandle(forWritingTo: url) {
+            _ = try? h.seekToEnd()
+            try? h.write(contentsOf: data)
+            try? h.close()
+        } else {
+            try? data.write(to: url)
         }
     }
 }

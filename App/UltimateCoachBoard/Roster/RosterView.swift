@@ -47,6 +47,8 @@ struct RosterView: View {
                     .onDelete(perform: delete)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Tokens.canvasBase.color)
             .navigationTitle("Roster")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { teamSwitcher }

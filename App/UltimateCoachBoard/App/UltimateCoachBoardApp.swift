@@ -36,6 +36,7 @@ struct RootView: View {
             }
         }
         .sheet(isPresented: $model.showSettings) { SettingsView() }
+        .task { await DemoMode.prepareWindow() }
         .alert("Something went wrong", isPresented: Binding(get: { model.errorMessage != nil },
                                                              set: { if !$0 { model.errorMessage = nil } })) {
             Button("OK", role: .cancel) {}

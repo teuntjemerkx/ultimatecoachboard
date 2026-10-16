@@ -82,6 +82,8 @@ struct MatchSetupView: View {
                 if gripRight { settingsColumn }
             }
             .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .background(Tokens.canvasBase.color)
             .navigationTitle("Match setup")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel", action: onCancel) }

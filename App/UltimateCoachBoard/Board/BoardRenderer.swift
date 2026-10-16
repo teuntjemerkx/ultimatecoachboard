@@ -114,6 +114,7 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
         self.device = device
         self.queue = queue
         self.atlas = GlyphAtlas(device: device)
+        DemoMode.note(atlas.map { "glyph atlas \($0.texture.width)x\($0.texture.height), \($0.glyphs.count) glyphs" } ?? "glyph atlas unavailable")
         super.init()
         self.view = view
         view.device = device
@@ -323,7 +324,7 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
             }
             if let atlas {
                 glyphs += atlas.layout(t.label, center: CGPoint(x: CGFloat(c.x), y: CGFloat(c.y)),
-                                       height: radius * 1.05, color: Tokens.white.simd)
+                                       height: radius * 1.45, color: Tokens.white.simd)
             }
         }
         return (tokens, glyphs)

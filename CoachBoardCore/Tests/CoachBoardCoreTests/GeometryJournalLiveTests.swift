@@ -244,3 +244,34 @@ final class LiveStateTests: XCTestCase {
         XCTAssertEqual(s.ink.count, 1)
     }
 }
+
+final class SignedDistanceTests: XCTestCase {
+    func testExactAgainstBruteForce() {
+        var rng = SplitMix64(seed: 7)
+        let w = 23, h = 17
+        let mask = (0..<(w * h)).map { _ in Double(rng.next() % 1000) / 1000 < 0.08 }
+        let fast = SignedDistance.squaredDistance(feature: mask, width: w, height: h)
+        for y in 0..<h {
+            for x in 0..<w {
+                var best = Float.infinity
+                for yy in 0..<h { for xx in 0..<w where mask[yy * w + xx] {
+                    best = min(best, Float((x - xx) * (x - xx) + (y - yy) * (y - yy)))
+                } }
+                XCTAssertEqual(fast[y * w + x], best, "(\(x), \(y))")
+            }
+        }
+    }
+
+    func testFieldOfADisc() {
+        let w = 64, h = 64
+        let coverage: [UInt8] = (0..<(w * h)).map { i in
+            let x = Double(i % w) - 31.5, y = Double(i / w) - 31.5
+            return (x * x + y * y).squareRoot() < 16 ? 255 : 0
+        }
+        let sdf = SignedDistance.field(coverage: coverage, width: w, height: h, spread: 8)
+        XCTAssertEqual(sdf[32 * w + 32], 255)                 // deep inside saturates
+        XCTAssertEqual(sdf[0], 0)                             // far outside saturates
+        let edge = Int(sdf[32 * w + 32 + 16])                 // just outside the rim
+        XCTAssertTrue((100...135).contains(edge), "edge value \(edge)")
+    }
+}

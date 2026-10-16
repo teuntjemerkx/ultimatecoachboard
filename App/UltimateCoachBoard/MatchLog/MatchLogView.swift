@@ -45,6 +45,7 @@ struct MatchLogView: View {
                 Rectangle().fill(Tokens.hairline.color).frame(width: 1)
                 boardPane
             }
+            .background(Tokens.canvasBase.color)
             .navigationTitle(summary.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -96,6 +97,7 @@ struct MatchLogView: View {
                     ForEach(sets[n] ?? []) { row in
                         LogRowView(row: row, labels: labels)
                             .tag(row.rally.seq)
+                            .listRowBackground(row.rally.seq == selected ? Tokens.accent.withAlpha(0.16).color : Color.clear)
                             .swipeActions(edge: .trailing) {
                                 Button("Note") { noteText = ""; noteTarget = row }.tint(Tokens.accent.color)
                             }

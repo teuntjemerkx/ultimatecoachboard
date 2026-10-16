@@ -165,9 +165,12 @@ vertex GlyphOut glyphVertex(uint vid [[vertex_id]], uint iid [[instance_id]],
     return o;
 }
 
+// Signed distance field glyphs: 0.5 is the edge; fwidth keeps the antialiased band one pixel wide at any scale.
 fragment float4 glyphFragment(GlyphOut in [[stage_in]], texture2d<float> atlas [[texture(0)]]) {
-    constexpr sampler s(filter::linear, mip_filter::linear, address::clamp_to_edge);
-    float coverage = atlas.sample(s, in.uv).a;
+    constexpr sampler s(filter::linear, address::clamp_to_edge);
+    float d = atlas.sample(s, in.uv).r;
+    float w = max(fwidth(d) * 0.75, 1e-4);
+    float coverage = smoothstep(0.5 - w, 0.5 + w, d);
     float a = in.color.a * coverage;
     return float4(in.color.rgb * a, a);
 }
