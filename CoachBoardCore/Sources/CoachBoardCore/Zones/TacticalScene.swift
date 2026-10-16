@@ -7,14 +7,26 @@ public struct SceneToken: Codable, Hashable, Sendable, Identifiable {
     public var label: String
     public var role: String
     public var point: FloorPoint
+    /// 3D avatar posture; nil uses the default (ready on court, standing behind the end line).
+    public var posture: Posture?
+    /// Stature in metres for the 3D avatar; nil uses 1.90 m.
+    public var stature: Double?
 
-    public init(id: UUID = UUID(), side: Side, label: String, role: String, point: FloorPoint) {
+    public init(id: UUID = UUID(), side: Side, label: String, role: String, point: FloorPoint,
+                posture: Posture? = nil, stature: Double? = nil) {
         self.id = id
         self.side = side
         self.label = label
         self.role = role
         self.point = point
+        self.posture = posture
+        self.stature = stature
     }
+
+    public var effectivePosture: Posture { posture ?? (abs(point.z) > 9 ? .standing : .ready) }
+
+    /// Facing the net: home players face -Z, opponents +Z (radians from +Z toward +X).
+    public var facing: Double { side == .home ? .pi : 0 }
 }
 
 /// A manual scene for the Analysis Canvas (Screen 8): tokens, zones and ink, all in world metres.
@@ -121,6 +133,10 @@ public struct SceneEditor: Sendable {
 
     public mutating func move(zone id: UUID, by dx: Double, _ dz: Double) {
         edit { s in if let i = s.zones.firstIndex(where: { $0.id == id }) { s.zones[i] = s.zones[i].translated(by: dx, dz) } }
+    }
+
+    public mutating func setPosture(_ posture: Posture?, token id: UUID) {
+        edit { s in if let i = s.tokens.firstIndex(where: { $0.id == id }) { s.tokens[i].posture = posture } }
     }
 
     public mutating func addInk(_ stroke: InkStroke) { edit { $0.ink.append(stroke) } }

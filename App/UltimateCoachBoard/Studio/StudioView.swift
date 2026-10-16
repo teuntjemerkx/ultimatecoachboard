@@ -16,10 +16,21 @@ struct StudioView: View {
             VStack(spacing: 0) {
                 topBar
                 ZStack(alignment: .topLeading) {
-                    StudioBoardView(controller: controller)
-                        .overlay { AlternativeChip(controller: controller) }
+                    if controller.view3D {
+                        Studio3DBoardView(controller: controller)
+                    } else {
+                        StudioBoardView(controller: controller)
+                            .overlay { AlternativeChip(controller: controller) }
+                    }
                     if controller.tool == .zone || controller.selectedZone != nil {
                         ZoneStrip(controller: controller).padding(12)
+                    }
+                    if controller.view3D && controller.selectedTokenValue != nil {
+                        VStack {
+                            Spacer()
+                            PostureStrip(controller: controller).padding(.bottom, 16)
+                        }
+                        .frame(maxWidth: .infinity)
                     }
                     if controller.scene.zones.isEmpty && controller.scene.ink.isEmpty {
                         VStack {
@@ -55,6 +66,13 @@ struct StudioView: View {
                 .font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
             Spacer()
             Toggle("Snap", isOn: $controller.snapping).toggleStyle(.button).font(.sectionLabel)
+            if controller.view3D {
+                Button("BENCH VIEW") { controller.resetCamera() }.font(.sectionLabel)
+            }
+            Button(controller.view3D ? "2D" : "3D") { controller.toggle3D() }
+                .font(.sectionLabel)
+                .disabled(controller.exiting3D)
+                .accessibilityLabel(controller.view3D ? "Back to the 2D board" : "Show the board in 3D")
             Button("SWITCH ENDS") { controller.homeOnLeft.toggle() }.font(.sectionLabel)
             Button("SCENES") { showScenes = true }.font(.sectionLabel)
         }
@@ -296,5 +314,149 @@ struct StudioBoardView: UIViewRepresentable {
         renderer.geometry = geometry
         renderer.scene = controller.boardScene
         renderer.requestRedraw()
+    }
+}
+
+/// The 3D board wired to the Studio (Section 3.2): taps pick avatars by their body, one-finger pans draw and drag
+/// on the floor through the touch ray, two fingers orbit and pinch. Entering flies down from the top-down view
+/// with a dolly-zoom; leaving flies back up before the 2D board takes over.
+struct Studio3DBoardView: UIViewRepresentable {
+    let controller: StudioController
+
+    final class Coordinator {
+        var renderer: Board3DRenderer?
+        var introduced = false
+        var exiting = false
+        var homeOnLeft = true
+        var resetCount = 0
+        /// A one-finger pan that started on empty floor with the select tool orbits instead of editing.
+        var orbiting = false
+        var lastPan: CGPoint = .zero
+        var lastFloor: FloorPoint?
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> BoardMTKView {
+        let view = BoardMTKView(frame: .zero, device: MTLCreateSystemDefaultDevice())
+        let coordinator = context.coordinator
+        coordinator.renderer = Board3DRenderer(view: view)
+        coordinator.homeOnLeft = controller.homeOnLeft
+        coordinator.resetCount = controller.cameraResetCount
+        let c = controller
+        view.drawingEnabled = true
+        view.orbitEnabled = true
+        view.accessibilityLabel = "Volleyball court in 3D"
+        view.onTap = { p in
+            guard let r = coordinator.renderer else { return }
+            if let id = r.player(at: p) {
+                c.tap(world: r.scene.players.first { $0.id == id }?.point ?? FloorPoint(x: 0, z: 0), token: id)
+            } else if let w = r.floorPoint(at: p) {
+                c.tap(world: w, token: nil)
+            } else {
+                c.selectToken(nil)
+            }
+        }
+        view.onUndo = { c.undo() }
+        view.onRedo = { c.redo() }
+        view.onPanEvent = { phase, p in
+            guard let r = coordinator.renderer else { return }
+            let w = r.floorPoint(at: p)
+            switch phase {
+            case .began:
+                let token = r.player(at: p)
+                guard let w, c.panWouldEdit(world: w, token: token) else {
+                    coordinator.orbiting = true
+                    coordinator.lastPan = p
+                    return
+                }
+                coordinator.orbiting = false
+                coordinator.lastFloor = w
+                c.pan(.began, world: w, token: token)
+            case .changed:
+                if coordinator.orbiting {
+                    let d = CGPoint(x: p.x - coordinator.lastPan.x, y: p.y - coordinator.lastPan.y)
+                    coordinator.lastPan = p
+                    Self.orbit(r, by: d)
+                } else if let w {
+                    coordinator.lastFloor = w
+                    c.pan(.changed, world: w, token: nil)
+                }
+            case .ended, .cancelled:
+                if !coordinator.orbiting, let last = w ?? coordinator.lastFloor { c.pan(phase, world: last, token: nil) }
+                coordinator.orbiting = false
+                coordinator.lastFloor = nil
+            }
+        }
+        view.onOrbit = { d in if let r = coordinator.renderer { Self.orbit(r, by: d) } }
+        view.onPinch = { s in
+            guard let r = coordinator.renderer else { return }
+            r.setCamera(r.camera.orbited(dHeading: 0, dPitch: 0, zoom: Double(s)))
+        }
+        view.onResize = { size in
+            guard size.width > 0, let r = coordinator.renderer else { return }
+            let aspect = Double(size.width / size.height)
+            if !coordinator.introduced {
+                coordinator.introduced = true
+                r.setCamera(.topDown(aspect: aspect, homeOnLeft: c.homeOnLeft))
+                r.animateCamera(to: .bench(aspect: aspect, homeOnLeft: c.homeOnLeft))
+            }
+        }
+        return view
+    }
+
+    /// Horizontal drag turns around the court, vertical drag tilts (about 0.35 degree per point).
+    static func orbit(_ r: Board3DRenderer, by d: CGPoint) {
+        r.setCamera(r.camera.orbited(dHeading: -Double(d.x) * 0.006, dPitch: Double(d.y) * 0.005, zoom: 1))
+    }
+
+    func updateUIView(_ view: BoardMTKView, context: Context) {
+        let coordinator = context.coordinator
+        guard let renderer = coordinator.renderer else { return }
+        renderer.scene = controller.scene3D
+        renderer.requestRedraw()
+        let aspect = renderer.aspect
+        let c = controller
+        if controller.exiting3D && !coordinator.exiting {
+            coordinator.exiting = true
+            renderer.animateCamera(to: .topDown(aspect: aspect, homeOnLeft: controller.homeOnLeft), duration: 0.8) {
+                DispatchQueue.main.async { c.finishExit3D() }
+            }
+        } else if coordinator.homeOnLeft != controller.homeOnLeft || coordinator.resetCount != controller.cameraResetCount {
+            coordinator.homeOnLeft = controller.homeOnLeft
+            coordinator.resetCount = controller.cameraResetCount
+            renderer.animateCamera(to: .bench(aspect: aspect, homeOnLeft: controller.homeOnLeft))
+        }
+    }
+}
+
+/// Posture chips for the selected player in 3D (Section 5.2's library).
+struct PostureStrip: View {
+    let controller: StudioController
+
+    var body: some View {
+        if let token = controller.selectedTokenValue {
+            HStack(spacing: 6) {
+                Text("#\(token.label) POSTURE").font(.system(size: 10, weight: .semibold).width(.expanded))
+                    .foregroundStyle(Tokens.textSecondary.color)
+                chip("AUTO", on: token.posture == nil) { controller.setPosture(nil) }
+                ForEach(Posture.allCases, id: \.self) { p in
+                    chip(p.rawValue.uppercased(), on: token.posture == p) { controller.setPosture(p) }
+                }
+            }
+            .padding(10)
+            .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Tokens.accent.withAlpha(0.5).color))
+        }
+    }
+
+    private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).font(.system(size: 11, weight: .bold).width(.expanded))
+                .padding(.horizontal, 8).frame(minHeight: 36)
+                .background(on ? Tokens.accent.color : Tokens.canvasBase.color, in: RoundedRectangle(cornerRadius: 4))
+                .foregroundStyle(on ? Tokens.canvasBase.color : Tokens.white.color)
+        }
+        .buttonStyle(.plain)
     }
 }

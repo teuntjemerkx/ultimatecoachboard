@@ -51,6 +51,52 @@ struct ZoneGPU {
     var pad: UInt32 = 0
 }
 
+extension ZoneGPU {
+    /// Packs zones for the floor pass (shared by the 2D and 3D boards): one record per zone, polygon outlines
+    /// in a separate vertex buffer. Outlines outside 3...256 vertices are skipped.
+    static func pack(_ zones: [Zone], selected: UUID?) -> ([ZoneGPU], [SIMD2<Float>]) {
+        var gpu: [ZoneGPU] = []
+        var verts: [SIMD2<Float>] = []
+        for zone in zones {
+            var z = ZoneGPU(kind: 0, pattern: 0, vertexOffset: 0, vertexCount: 0, toLocal0: .zero, toLocal1: .zero,
+                            params: .zero, color: SIMD4(1, 1, 1, Float(zone.style.opacity)),
+                            spacing: Float(zone.style.spacing), lineWidth: Float(zone.style.lineWidth),
+                            angle: Float(zone.style.angle), glow: Float(zone.style.glow),
+                            dashed: zone.style.edge == .dashed ? 1 : 0, selected: zone.id == selected ? 1 : 0,
+                            tint: zone.style.tint == .pink ? 0 : 1)
+            switch zone.style.pattern {
+            case .crossHatch: z.pattern = 0
+            case .diagonal: z.pattern = 1
+            case .dots: z.pattern = 2
+            case .glowFill: z.pattern = 3
+            case .outline: z.pattern = 4
+            }
+            func frame(_ c: FloorPoint, _ a: Double) {
+                let co = cos(a), si = sin(a)
+                z.toLocal0 = SIMD4(Float(co), Float(si), Float(-(co * c.x + si * c.z)), 0)
+                z.toLocal1 = SIMD4(Float(-si), Float(co), Float(si * c.x - co * c.z), 0)
+            }
+            switch zone.geometry {
+            case let .rect(c, hw, hd, a):
+                z.kind = 0; frame(c, a); z.params = SIMD4(Float(hw), Float(hd), 0, 0)
+            case let .circle(c, r):
+                z.kind = 1; frame(c, 0); z.params = SIMD4(Float(r), 0, 0, 0)
+            case let .ellipse(c, a, b, ang):
+                z.kind = 2; frame(c, ang); z.params = SIMD4(Float(a), Float(b), 0, 0)
+            case .polygon, .freeform:
+                let outline = zone.outline
+                guard (3...256).contains(outline.count) else { continue }
+                z.kind = 3
+                z.vertexOffset = UInt32(verts.count)
+                z.vertexCount = UInt32(outline.count)
+                verts += outline.map { SIMD2(Float($0.x), Float($0.z)) }
+            }
+            gpu.append(z)
+        }
+        return (gpu, verts)
+    }
+}
+
 struct FloorUniforms {
     var viewSize: SIMD2<Float>
     var center: SIMD2<Float>
@@ -268,44 +314,7 @@ final class BoardRenderer: NSObject, MTKViewDelegate {
     /// The zone floor pass: one full-view quad whose fragments evaluate every zone (Section 3.5.4).
     private func encodeZones(_ enc: MTLRenderCommandEncoder) {
         guard !scene.zones.isEmpty else { return }
-        var gpu: [ZoneGPU] = []
-        var verts: [SIMD2<Float>] = []
-        for zone in scene.zones {
-            var z = ZoneGPU(kind: 0, pattern: 0, vertexOffset: 0, vertexCount: 0, toLocal0: .zero, toLocal1: .zero,
-                            params: .zero, color: SIMD4(1, 1, 1, Float(zone.style.opacity)),
-                            spacing: Float(zone.style.spacing), lineWidth: Float(zone.style.lineWidth),
-                            angle: Float(zone.style.angle), glow: Float(zone.style.glow),
-                            dashed: zone.style.edge == .dashed ? 1 : 0, selected: zone.id == scene.selectedZone ? 1 : 0,
-                            tint: zone.style.tint == .pink ? 0 : 1)
-            switch zone.style.pattern {
-            case .crossHatch: z.pattern = 0
-            case .diagonal: z.pattern = 1
-            case .dots: z.pattern = 2
-            case .glowFill: z.pattern = 3
-            case .outline: z.pattern = 4
-            }
-            func frame(_ c: FloorPoint, _ a: Double) {
-                let co = cos(a), si = sin(a)
-                z.toLocal0 = SIMD4(Float(co), Float(si), Float(-(co * c.x + si * c.z)), 0)
-                z.toLocal1 = SIMD4(Float(-si), Float(co), Float(si * c.x - co * c.z), 0)
-            }
-            switch zone.geometry {
-            case let .rect(c, hw, hd, a):
-                z.kind = 0; frame(c, a); z.params = SIMD4(Float(hw), Float(hd), 0, 0)
-            case let .circle(c, r):
-                z.kind = 1; frame(c, 0); z.params = SIMD4(Float(r), 0, 0, 0)
-            case let .ellipse(c, a, b, ang):
-                z.kind = 2; frame(c, ang); z.params = SIMD4(Float(a), Float(b), 0, 0)
-            case .polygon, .freeform:
-                let outline = zone.outline
-                guard (3...256).contains(outline.count) else { continue }
-                z.kind = 3
-                z.vertexOffset = UInt32(verts.count)
-                z.vertexCount = UInt32(outline.count)
-                verts += outline.map { SIMD2(Float($0.x), Float($0.z)) }
-            }
-            gpu.append(z)
-        }
+        var (gpu, verts) = ZoneGPU.pack(scene.zones, selected: scene.selectedZone)
         guard !gpu.isEmpty else { return }
         if verts.isEmpty { verts = [.zero] }
         if !loggedZonePass {

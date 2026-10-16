@@ -1,7 +1,7 @@
 import UIKit
 import CoachBoardCore
 
-/// Launch-argument demo states (`-demoScreen launcher|setup|live|setbreak|log`) so CI can capture screenshots of
+/// Launch-argument demo states (`-demoScreen launcher|setup|live|advanced|setbreak|log|studio|studio3d`) so CI can capture screenshots of
 /// real screens in the Simulator. Only reachable through launch arguments; never shown to a coach.
 enum DemoMode {
     static var screen: String? {
@@ -46,7 +46,7 @@ enum DemoMode {
             codeRally(c, winner: .home)
             if let t = c.state.tokens().first(where: { $0.side == .home && $0.position == .p4 }) { c.openSkillPad(for: t) }
             model.screen = .live(c)
-        case "studio":
+        case "studio", "studio3d":
             var scene = SceneStore.newScene(labels: [.p1: "8", .p2: "12", .p3: "4", .p4: "9", .p5: "14", .p6: "2"])
             scene.title = "Tip coverage vs Dynamo R3"
             let c = StudioController(scene: scene)
@@ -59,6 +59,23 @@ enum DemoMode {
             demoZone(c, loop(FloorPoint(x: 0.0, z: 4.6), 1.1, squash: 0.8), tag: .freeBall, forced: .freeform)
             note("studio: \(c.scene.zones.count) zones: " + c.scene.zones.map { "\($0.semantic.tag.rawValue) \($0.geometry)" }.joined(separator: " | "))
             c.tool = .zone
+            if screen == "studio3d" {
+                // Opponent front row up at the net, home passers low, one player selected to show the posture strip.
+                for t in c.scene.tokens {
+                    if t.side == .opponent && abs(t.point.z) < 3.5 {
+                        c.selectToken(t.id)
+                        c.setPosture(.block)
+                    } else if t.side == .home && ["OH1", "OH2", "L"].contains(t.role) {
+                        c.selectToken(t.id)
+                        c.setPosture(.pass)
+                    }
+                }
+                c.selectToken(c.scene.tokens.first { $0.side == .home && $0.role == "S" }?.id)
+                c.setPosture(.set)
+                c.tool = .select
+                c.toggle3D()
+                note("studio3d: postures " + c.scene.tokens.map { "\($0.label):\($0.effectivePosture.rawValue)" }.joined(separator: " "))
+            }
             model.screen = .studio(c)
         case "setbreak":
             guard let c = try? LiveController(setup: setup) else { return }

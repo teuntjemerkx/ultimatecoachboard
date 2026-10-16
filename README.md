@@ -8,7 +8,8 @@ the domain core as a tested Swift package, and an iPad app slice that runs a liv
 - **Everything builds, and the core tests pass.** CI (`.github/workflows/ci.yml`) runs on every push:
   `CoachBoardCore` with Swift 6.1 on Linux and with Xcode 26 on macOS, and the iPad app built for the iOS
   Simulator on a macOS runner, shaders included. Compiler errors and test failures show up as annotations on the run.
-- **Screenshots.** CI launches the app in the Simulator in demo mode (`-demoScreen launcher|setup|live|setbreak|log`)
+- **Screenshots.** CI launches the app in the Simulator in demo mode
+  (`-demoScreen launcher|setup|live|advanced|setbreak|log|studio|studio3d`)
   and publishes the screenshots to the `ci-screenshots` branch on every push to `main`.
 - **The app runs in the Simulator, not yet on a real iPad.** The CI screenshots show the screens rendering; touch
   gestures, Apple Pencil, the edge pulse in a loud hall and performance still need a session on a device.
@@ -83,8 +84,10 @@ Verification/              Python references that generated and verified the num
 | Exact undo / redo (2.2) | `Store/LiveStore.swift` | Implemented, tested |
 | Smart Geometry recognizer (3.5.3) | `Geometry/SmartGeometry.swift` | Implemented and tested; the Zone tool UI arrives in Phase 2 |
 | Zone & Hatching engine, 2D (3.5) | `Zones/`, `Board/Shaders.metal` `zoneFragment`, `Studio/` | Exact SDFs, Smart Geometry with court-aware snapping, tags with default styles, cross-hatch/diagonal/dots/glow/outline with anti-moiré; Studio (Screen 8, 2D) with the W3 strip, alternative chip, undo, scenes saved as JSON |
+| 3D board (3.2, 5.2) | `Spatial/` (camera, skeleton, postures, skinning), `Board/Board3DRenderer.swift`, `Board/Shaders3D.metal` | One orbit camera for 2D and 3D with a dolly-zoom between them; 4x MSAA with depth; the floor pass shares the zone shader with 2D; net with mesh, tape, antennas and posts; 17-joint avatars sized by stature with dual-quaternion skinning and eight postures; zone walls and cylinders fading with height; labels above the heads. In the Studio: the 3D toggle, two-finger orbit and pinch, drawing and dragging on the floor through the touch ray, posture chips |
 | 2D Metal board (3.2) | `Board/` | Court, zone grid, SDF tokens, signed-distance-field numbers, vectors, routes, tethers, ink, hatched envelope |
 | Eyes-free feedback (1.6) | `Services/Haptics.swift`, `EdgePulse` | Edge pulse, optional click, Pencil Pro path-completed haptic |
 
 Not yet in this slice: multi-channel (MSDF) glyphs (numbers use a single-channel distance field), Desk Link, the `.coachboard` package (the log exports the raw journal), the EDR/P3 colour
-pipeline and Sideline Boost. Phase 2 has started with the Zone & Hatching engine in 2D; next are the 3D renderer, avatars, walls and cylinders, POV and zone keyframes.
+pipeline and Sideline Boost. Phase 2 so far: the Zone & Hatching engine and the 3D board in the Studio; next are POV
+with gaze and field-of-view bands, zone keyframes per phase, ball flight and the Drill Architect.

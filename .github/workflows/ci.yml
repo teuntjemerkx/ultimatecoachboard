@@ -76,7 +76,7 @@ jobs:
           APP=$(find App/build/Build/Products -maxdepth 2 -name 'UltimateCoachBoard.app' | head -1)
           xcrun simctl install "$UDID" "$APP"
           mkdir -p shots
-          for s in launcher setup live advanced setbreak log studio; do
+          for s in launcher setup live advanced setbreak log studio studio3d; do
             if limit 60 xcrun simctl launch --terminate-running-process "$UDID" app.ultimatecoachboard.ipad -demoScreen "$s"; then
               sleep 10
               limit 30 xcrun simctl io "$UDID" screenshot "shots/$s.png" || echo "$s: screenshot timed out" >> shots/ci-log.txt

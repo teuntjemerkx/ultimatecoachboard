@@ -32,7 +32,7 @@ public struct BoardCamera: Hashable, Sendable {
     public var view: Mat4 { Mat4.lookAt(eye: eye, target: target, up: upVector) }
 
     /// Near and far planes bracketing the court and its surroundings at this distance.
-    public var depthRange: (near: Double, far: Double) { (max(0.05, distance - 40), distance + 40) }
+    public var depthRange: (near: Double, far: Double) { (max(0.25, distance - 40), distance + 40) }
 
     public func projection(aspect: Double) -> Mat4 {
         Mat4.perspective(fovY: fovY, aspect: aspect, near: depthRange.near, far: depthRange.far)

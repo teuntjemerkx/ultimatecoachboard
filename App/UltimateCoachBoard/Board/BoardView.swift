@@ -3,7 +3,7 @@ import MetalKit
 import CoachBoardCore
 
 /// The court canvas: an MTKView with the gesture grammar of Section 1.5.
-final class BoardMTKView: MTKView {
+final class BoardMTKView: MTKView, UIGestureRecognizerDelegate {
     var onTap: ((CGPoint) -> Void)?
     var onUndo: (() -> Void)?
     var onRedo: (() -> Void)?
@@ -15,6 +15,16 @@ final class BoardMTKView: MTKView {
     /// Every step of a one-finger pan (Studio: drawing zones and ink, moving tokens and zones).
     enum PanPhase { case began, changed, ended, cancelled }
     var onPanEvent: ((PanPhase, CGPoint) -> Void)?
+    /// 3D: two-finger pan orbits (translation delta in points), pinch dollies (scale delta).
+    var onOrbit: ((CGPoint) -> Void)?
+    var onPinch: ((CGFloat) -> Void)?
+
+    var orbitEnabled = false {
+        didSet {
+            orbitPan.isEnabled = orbitEnabled
+            pinch.isEnabled = orbitEnabled
+        }
+    }
 
     /// In Panic the one-finger pan draws; elsewhere it is disabled so taps stay instant.
     var drawingEnabled = false {
@@ -47,6 +57,20 @@ final class BoardMTKView: MTKView {
         g.isEnabled = false
         return g
     }()
+    private lazy var orbitPan: UIPanGestureRecognizer = {
+        let g = UIPanGestureRecognizer(target: self, action: #selector(handleOrbit(_:)))
+        g.minimumNumberOfTouches = 2
+        g.maximumNumberOfTouches = 2
+        g.isEnabled = false
+        g.delegate = self
+        return g
+    }()
+    private lazy var pinch: UIPinchGestureRecognizer = {
+        let g = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
+        g.isEnabled = false
+        g.delegate = self
+        return g
+    }()
     private var inkPoints: [CGPoint] = []
     /// Apple Pencil Pro is the only haptic device an iPad coach holds; a completed ink stroke is confirmed on it.
     private lazy var canvasFeedback = UICanvasFeedbackGenerator(view: self)
@@ -65,7 +89,7 @@ final class BoardMTKView: MTKView {
 
     private func configure() {
         isMultipleTouchEnabled = true
-        for g in [tap, twoFingerTap, threeFingerTap, longPress, inkPan] as [UIGestureRecognizer] { addGestureRecognizer(g) }
+        for g in [tap, twoFingerTap, threeFingerTap, longPress, inkPan, orbitPan, pinch] as [UIGestureRecognizer] { addGestureRecognizer(g) }
         tap.require(toFail: twoFingerTap)
         accessibilityLabel = "Volleyball court"
     }
@@ -81,6 +105,23 @@ final class BoardMTKView: MTKView {
     @objc private func handleTap(_ g: UITapGestureRecognizer) { onTap?(g.location(in: self)) }
     @objc private func handleUndo(_ g: UITapGestureRecognizer) { onUndo?() }
     @objc private func handleRedo(_ g: UITapGestureRecognizer) { onRedo?() }
+
+    @objc private func handleOrbit(_ g: UIPanGestureRecognizer) {
+        guard g.state == .changed else { return }
+        onOrbit?(g.translation(in: self))
+        g.setTranslation(.zero, in: self)
+    }
+
+    @objc private func handlePinch(_ g: UIPinchGestureRecognizer) {
+        guard g.state == .changed else { return }
+        onPinch?(g.scale)
+        g.scale = 1
+    }
+
+    /// Orbit and pinch run together, so a two-finger gesture can turn and zoom at once.
+    func gestureRecognizer(_ g: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+        (g === orbitPan && other === pinch) || (g === pinch && other === orbitPan)
+    }
 
     @objc private func handleLongPress(_ g: UILongPressGestureRecognizer) {
         let p = g.location(in: self)

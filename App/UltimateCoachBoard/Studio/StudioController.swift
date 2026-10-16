@@ -87,6 +87,39 @@ final class StudioController {
         editor = SceneEditor(scene: scene)
     }
 
+    // MARK: - 2D / 3D
+
+    /// The board shows the 3D view; leaving it first flies the camera back to the top-down view.
+    private(set) var view3D = false
+    private(set) var exiting3D = false
+    /// Bumped to fly the 3D camera back to the bench view.
+    private(set) var cameraResetCount = 0
+
+    func toggle3D() {
+        if view3D { exiting3D = true } else { view3D = true }
+    }
+
+    func finishExit3D() {
+        exiting3D = false
+        view3D = false
+    }
+
+    func resetCamera() { cameraResetCount += 1 }
+
+    var selectedTokenValue: SceneToken? { selectedToken.flatMap { id in scene.tokens.first { $0.id == id } } }
+
+    /// Sets the selected player's 3D posture; nil returns to the automatic one.
+    func setPosture(_ posture: Posture?) {
+        guard let id = selectedToken else { return }
+        editor.setPosture(posture, token: id)
+        scheduleSave()
+    }
+
+    func selectToken(_ id: UUID?) {
+        selectedToken = id
+        if id != nil { selectedZone = nil }
+    }
+
     var selectedZoneValue: Zone? { selectedZone.flatMap { id in scene.zones.first { $0.id == id } } }
 
     /// The style the strip shows: the selected zone's, or the defaults.
@@ -107,12 +140,15 @@ final class StudioController {
         return best?.0
     }
 
-    func tap(at p: CGPoint) {
+    func tap(at p: CGPoint) { tap(world: world(p), token: tokenHit(p)?.id) }
+
+    /// A tap on the floor at `w`, or on a player (2D: the token under the finger; 3D: the avatar's body).
+    func tap(world w: FloorPoint, token: UUID?) {
         alternative = nil
-        if let t = tokenHit(p) {
-            selectedToken = t.id
+        if let token {
+            selectedToken = token
             selectedZone = nil
-        } else if let z = editor.zone(at: world(p)) {
+        } else if let z = editor.zone(at: w) {
             selectedZone = z.id
             selectedToken = nil
         } else {
@@ -122,14 +158,23 @@ final class StudioController {
     }
 
     func pan(_ phase: BoardMTKView.PanPhase, at p: CGPoint) {
-        let w = world(p)
+        pan(phase, world: world(p), token: phase == .began ? tokenHit(p)?.id : nil)
+    }
+
+    /// Whether a one-finger pan starting here would move something (in 3D an empty select pan orbits instead).
+    func panWouldEdit(world w: FloorPoint, token: UUID?) -> Bool {
+        tool != .select || token != nil || editor.zone(at: w) != nil
+    }
+
+    /// One step of a one-finger pan on the floor; `token` is the player under the finger when it began.
+    func pan(_ phase: BoardMTKView.PanPhase, world w: FloorPoint, token: UUID?) {
         switch phase {
         case .began:
             alternative = nil
             if tool == .select {
-                if let t = tokenHit(p) {
-                    dragTarget = .token(t.id)
-                    selectedToken = t.id
+                if let token {
+                    dragTarget = .token(token)
+                    selectedToken = token
                     selectedZone = nil
                 } else if let z = editor.zone(at: w) {
                     dragTarget = .zone(z.id)
@@ -335,6 +380,33 @@ final class StudioController {
         s.selectedZone = selectedZone
         s.ink = scene.ink.map(\.points) + (liveStroke.count > 1 ? [liveStroke] : [])
         s.highlights = highlights
+        return s
+    }
+
+    /// Default stature by role when a token has none (metres): liberos shortest, middles tallest.
+    static func defaultStature(role: String) -> Double {
+        switch role {
+        case "L": return 1.80
+        case "S", "S1", "S2": return 1.90
+        case "MB", "MB1", "MB2", "M", "M1", "M2": return 2.02
+        default: return 1.95
+        }
+    }
+
+    var scene3D: Scene3D {
+        let flat = boardScene
+        var s = Scene3D()
+        s.players = scene.tokens.map { t in
+            var moved = t
+            if let shown = flat.tokens.first(where: { $0.id == t.id }) { moved.point = shown.point }
+            return Scene3D.Player(id: t.id, side: t.side, point: moved.point, label: t.label, posture: moved.effectivePosture,
+                                  facing: t.facing, stature: t.stature ?? Self.defaultStature(role: t.role),
+                                  isLibero: t.role == "L", selected: t.id == selectedToken)
+        }
+        s.zones = flat.zones
+        s.selectedZone = flat.selectedZone
+        s.ink = flat.ink
+        s.highlights = flat.highlights
         return s
     }
 }
