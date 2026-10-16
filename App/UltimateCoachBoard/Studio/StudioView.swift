@@ -432,8 +432,14 @@ struct Studio3DBoardView: UIViewRepresentable {
             let aspect = Double(size.width / size.height)
             if !coordinator.introduced {
                 coordinator.introduced = true
-                r.setCamera(.topDown(aspect: aspect, homeOnLeft: c.homeOnLeft))
-                r.animateCamera(to: .bench(aspect: aspect, homeOnLeft: c.homeOnLeft))
+                if c.povPlayer != nil {
+                    // Opened straight into a POV: the orbit rests at the bench, the camera flies into the player's eyes.
+                    r.setCamera(.bench(aspect: aspect, homeOnLeft: c.homeOnLeft))
+                    r.flyToPOV()
+                } else {
+                    r.setCamera(.topDown(aspect: aspect, homeOnLeft: c.homeOnLeft))
+                    r.animateCamera(to: .bench(aspect: aspect, homeOnLeft: c.homeOnLeft))
+                }
             }
         }
         return view
@@ -468,9 +474,13 @@ struct Studio3DBoardView: UIViewRepresentable {
     }
 }
 
-/// Posture chips for the selected player in 3D (Section 5.2's library).
+/// Posture chips for the selected player in 3D (Section 5.2's library), in rally order.
 struct PostureStrip: View {
     let controller: StudioController
+
+    static let order: [Posture] = [.standing, .readyHigh, .ready, .lowDefence, .pass, .angledPass, .overheadPass, .dig, .sprawl,
+                                   .set, .backSet, .jumpSet, .approach, .armCock, .attack, .quickAttack, .landing,
+                                   .blockReady, .block, .blockLanding, .floatServe, .jumpServe, .cover, .reach]
 
     var body: some View {
         if let token = controller.selectedTokenValue {
@@ -478,10 +488,15 @@ struct PostureStrip: View {
                 Text("#\(token.label) POSTURE").font(.system(size: 10, weight: .semibold).width(.expanded))
                     .foregroundStyle(Tokens.textSecondary.color)
                 let explicit = controller.selectedExplicitPosture
-                chip("AUTO", on: explicit == nil) { controller.setPosture(nil) }
-                ForEach(Posture.allCases, id: \.self) { p in
-                    chip(p.rawValue.uppercased(), on: explicit == p) { controller.setPosture(p) }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        chip("AUTO", on: explicit == nil) { controller.setPosture(nil) }
+                        ForEach(Self.order, id: \.self) { p in
+                            chip(p.title, on: explicit == p) { controller.setPosture(p) }
+                        }
+                    }
                 }
+                .frame(maxWidth: 760)
             }
             .padding(10)
             .background(Tokens.canvasRaised.withAlpha(0.96).color, in: RoundedRectangle(cornerRadius: 8))

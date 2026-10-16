@@ -662,7 +662,7 @@ final class StudioController {
         var s = Scene3D()
         s.players = f.tokens.map { t in
             let point = flat.tokens.first { $0.id == t.id }?.point ?? t.point
-            return Scene3D.Player(id: t.id, side: t.side, point: point, label: t.label,
+            return Scene3D.Player(id: t.id, side: t.side, point: point, label: t.label, role: t.role,
                                   posture: t.posture ?? SceneToken.automaticPosture(at: point), blend: f.postureBlends[t.id],
                                   facing: t.facing, stature: t.effectiveStature,
                                   isLibero: t.role == "L", selected: t.id == selectedToken)

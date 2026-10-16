@@ -131,7 +131,8 @@ struct AvatarVertex {
 };
 
 struct AvatarInstance {
-    float4 color;
+    float4 color;       // jersey
+    float4 rim;         // team colour of the fresnel rim
     uint dqOffset;      // first joint of this avatar in the dual-quaternion buffer
     uint selected;
     uint hideHead;      // POV: cull the viewer's own head and neck (Section 5.1)
@@ -143,6 +144,8 @@ struct AvatarOut {
     float3 world;
     float3 normal;
     float4 color;
+    float4 rim;
+    uint material [[flat]];
     uint selected [[flat]];
 };
 
@@ -170,6 +173,8 @@ vertex AvatarOut avatarVertex(uint vid [[vertex_id]], uint iid [[instance_id]],
     o.normal = nn + 2.0 * cross(r.xyz, cross(r.xyz, nn) + r.w * nn);
     o.position = u.viewProjection * float4(o.world, 1.0);
     o.color = a.color;
+    o.rim = a.rim;
+    o.material = uint(v.normal.w + 0.5);
     o.selected = a.selected;
     // Joints 3 and 4 are the neck and head: outside the clip volume, so their triangles vanish.
     if (a.hideHead != 0 && (j0 == 3 || j0 == 4)) o.position = float4(2.0, 2.0, 2.0, 1.0);
@@ -182,9 +187,60 @@ fragment float4 avatarFragment(AvatarOut in [[stage_in]], constant Scene3DUnifor
     float3 v = normalize(u.eye.xyz - in.world);
     float diffuse = max(dot(n, l), 0.0);
     float rim = pow(1.0 - max(dot(n, v), 0.0), 3.0);
-    float3 base = in.color.rgb;
-    float3 col = base * (u.light.w + 0.7 * diffuse) + base * rim * (in.selected != 0 ? 1.4 : 0.6);
+    // Materials: 0 skin, 1 jersey (team colour), 2 shorts, 3 knee pads, 4 shoes, 5 hair, 6 socks.
+    float3 base;
+    switch (in.material) {
+        case 1: base = in.color.rgb; break;
+        case 2: base = float3(0.067, 0.094, 0.227); break;
+        case 3: base = float3(0.118, 0.153, 0.322); break;
+        case 4: base = float3(0.91, 0.925, 0.96); break;
+        case 5: base = float3(0.043, 0.063, 0.141); break;
+        case 6: base = float3(0.85, 0.87, 0.92); break;
+        default: base = float3(0.42, 0.47, 0.60); break;
+    }
+    // A soft wrap term keeps the shadow side readable on a dark floor.
+    float wrap = saturate((dot(n, l) + 0.35) / 1.35);
+    float3 col = base * (u.light.w + 0.8 * wrap) + in.rim.rgb * rim * (in.selected != 0 ? 1.2 : 0.45);
     return float4(col, 1.0);
+}
+
+// MARK: - Decals: SDF glyphs on world-space quads (jersey numbers).
+
+struct Decal3D {
+    float4 origin;
+    float4 edgeU;
+    float4 edgeV;
+    float2 uvOrigin;
+    float2 uvSize;
+    float4 color;
+};
+
+struct DecalOut {
+    float4 position [[position]];
+    float2 uv;
+    float4 color;
+};
+
+vertex DecalOut decalVertex(uint vid [[vertex_id]], uint iid [[instance_id]],
+                            const device Decal3D *decals [[buffer(0)]],
+                            constant Scene3DUniforms &u [[buffer(1)]]) {
+    Decal3D d = decals[iid];
+    float2 c = float2(vid & 1, vid >> 1);
+    float3 p = d.origin.xyz + d.edgeU.xyz * c.x + d.edgeV.xyz * c.y;
+    DecalOut o;
+    o.position = u.viewProjection * float4(p, 1.0);
+    // Atlas rows run top-down; the quad's v runs up.
+    o.uv = d.uvOrigin + float2(c.x, 1.0 - c.y) * d.uvSize;
+    o.color = d.color;
+    return o;
+}
+
+fragment float4 decalFragment(DecalOut in [[stage_in]], texture2d<float> atlas [[texture(0)]]) {
+    constexpr sampler s(filter::linear, address::clamp_to_edge);
+    float d = atlas.sample(s, in.uv).r;
+    float w = max(fwidth(d) * 0.75, 1e-4);
+    float a = in.color.a * smoothstep(0.5 - w, 0.5 + w, d);
+    return float4(in.color.rgb * a, a);
 }
 
 // MARK: - Zone walls and cylinders (Section 3.5.5): opacity falls with height, a bright line on top, additive.

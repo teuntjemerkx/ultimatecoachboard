@@ -37,8 +37,8 @@ extension SceneFrame {
         tokens.map { t in
             let s = SkeletonModel(BodyMetrics(stature: t.effectiveStature))
             let posture = t.posture ?? SceneToken.automaticPosture(at: t.point)
-            let joints = postureBlends[t.id].map { s.pose($0, position: t.point, facing: t.facing) }
-                ?? s.pose(posture, position: t.point, facing: t.facing)
+            let joints = postureBlends[t.id].map { s.pose($0, position: t.point, facing: t.facing, role: t.role) }
+                ?? s.pose(posture, position: t.point, facing: t.facing, role: t.role)
             return PosedPlayer(token: t, skeleton: s, joints: joints)
         }
     }

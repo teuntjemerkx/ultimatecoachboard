@@ -64,7 +64,7 @@ enum DemoMode {
                 for t in c.scene.tokens {
                     if t.side == .opponent && abs(t.point.z) < 3.5 {
                         c.selectToken(t.id)
-                        c.setPosture(.block)
+                        c.setPosture(.blockReady)
                     } else if t.side == .home && ["OH1", "OH2", "L"].contains(t.role) {
                         c.selectToken(t.id)
                         c.setPosture(.pass)
@@ -74,6 +74,15 @@ enum DemoMode {
                 c.setPosture(.set)
             }
             demoTimeline(c)
+            if screen == "studio3d" || screen == "pov" {
+                // At the attack the opposing front row is in the air at block peak.
+                c.scrub(to: 3)
+                for t in c.scene.tokens where t.side == .opponent && abs(t.point.z) < 3.5 {
+                    c.selectToken(t.id)
+                    c.setPosture(.block)
+                }
+                c.selectToken(nil)
+            }
             // Between SET and ATTACK: players on their way, the tip zone half-way from circle to rectangle.
             c.scrub(to: 2.2)
             note("timeline at 2.2: morphs \(c.frame.morphs.count), posture blends \(c.frame.postureBlends.count), "

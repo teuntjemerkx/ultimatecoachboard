@@ -27,12 +27,25 @@ struct AvatarVertexGPU {
 }
 
 struct AvatarInstanceGPU {
+    /// Jersey colour.
     var color: SIMD4<Float>
+    /// Team colour of the fresnel rim (Section 3.2).
+    var rim: SIMD4<Float>
     var dqOffset: UInt32
     var selected: UInt32
     /// POV: the viewer's own head and neck are culled (Section 5.1).
     var hideHead: UInt32 = 0
     var pad1: UInt32 = 0
+}
+
+/// A textured quad in the world: jersey numbers on the chest and back.
+struct Decal3D {
+    var origin: SIMD4<Float>
+    var edgeU: SIMD4<Float>
+    var edgeV: SIMD4<Float>
+    var uvOrigin: SIMD2<Float>
+    var uvSize: SIMD2<Float>
+    var color: SIMD4<Float>
 }
 
 struct WallVertexGPU {
@@ -47,6 +60,8 @@ struct Scene3D: Equatable {
         var side: Side
         var point: FloorPoint
         var label: String
+        /// Template role ("S", "OH1", "MB2", "L"...): picks the research posture variant of the position.
+        var role: String
         var posture: Posture
         /// Between keyframes: the posture blend (joints slerp), which overrides `posture`.
         var blend: PostureBlend?
@@ -119,6 +134,9 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
     private var avatarPipeline: MTLRenderPipelineState!
     private var wallPipeline: MTLRenderPipelineState!
     private var glyphPipeline: MTLRenderPipelineState!
+    private var decalPipeline: MTLRenderPipelineState!
+    /// Posed players of the last frame, for the jersey-number decals.
+    private var posedPlayers: [(player: Scene3D.Player, joints: [Rigid], stature: Double)] = []
     private var depthWrite: MTLDepthStencilState!
     private var depthTestOnly: MTLDepthStencilState!
     private var depthOff: MTLDepthStencilState!
@@ -147,7 +165,8 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
 
     init?(view: MTKView) {
         assert(MemoryLayout<Scene3DUniforms>.stride == 128 && MemoryLayout<Quad3D>.stride == 80 && MemoryLayout<AvatarVertexGPU>.stride == 48
-               && MemoryLayout<AvatarInstanceGPU>.stride == 32 && MemoryLayout<WallVertexGPU>.stride == 32, "must match Shaders3D.metal")
+               && MemoryLayout<AvatarInstanceGPU>.stride == 48 && MemoryLayout<WallVertexGPU>.stride == 32
+               && MemoryLayout<Decal3D>.stride == 80, "must match Shaders3D.metal")
         guard let device = view.device ?? MTLCreateSystemDefaultDevice(), let queue = device.makeCommandQueue() else { return nil }
         self.device = device
         self.queue = queue
@@ -203,6 +222,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         avatarPipeline = make("avatarVertex", "avatarFragment", .none)
         wallPipeline = make("wallVertex", "wallFragment", .additive)
         glyphPipeline = make("glyphVertex", "glyphFragment", .premultiplied)
+        decalPipeline = make("decalVertex", "decalFragment", .premultiplied)
 
         func depth(_ compare: MTLCompareFunction, write: Bool) -> MTLDepthStencilState? {
             let d = MTLDepthStencilDescriptor()
@@ -213,7 +233,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         depthWrite = depth(.greater, write: true)
         depthTestOnly = depth(.greaterEqual, write: false)
         depthOff = depth(.always, write: false)
-        return [floorPipeline, quadPipeline, avatarPipeline, wallPipeline, glyphPipeline].allSatisfy { $0 != nil }
+        return [floorPipeline, quadPipeline, avatarPipeline, wallPipeline, glyphPipeline, decalPipeline].allSatisfy { $0 != nil }
             && depthWrite != nil && depthTestOnly != nil && depthOff != nil
     }
 
@@ -299,8 +319,8 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
     private func povPose() -> CameraPose? {
         guard let spec = scene.pov, let p = scene.players.first(where: { $0.id == spec.player }),
               let m = mesh(stature: p.stature) else { return nil }
-        let posed = p.blend.map { m.skeleton.pose($0, position: p.point, facing: p.facing) }
-            ?? m.skeleton.pose(p.posture, position: p.point, facing: p.facing)
+        let posed = p.blend.map { m.skeleton.pose($0, position: p.point, facing: p.facing, role: p.role) }
+            ?? m.skeleton.pose(p.posture, position: p.point, facing: p.facing, role: p.role)
         return m.skeleton.povPose(posed, aspect: aspect, yaw: spec.yaw, pitch: spec.pitch)
     }
 
@@ -399,7 +419,17 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
             enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: walls.count)
         }
 
-        // 5. Labels above the heads, always on top (screen-space SDF glyphs).
+        // 5. Jersey numbers on the backs and chests (depth-tested decals).
+        if let atlas, let db = buffer(numberDecals(atlas)) {
+            enc.setDepthStencilState(depthTestOnly)
+            enc.setRenderPipelineState(decalPipeline)
+            enc.setVertexBuffer(db, offset: 0, index: 0)
+            enc.setVertexBytes(&u, length: MemoryLayout<Scene3DUniforms>.stride, index: 1)
+            enc.setFragmentTexture(atlas.texture, index: 0)
+            enc.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: db.length / MemoryLayout<Decal3D>.stride)
+        }
+
+        // 6. Labels above the heads, always on top (screen-space SDF glyphs).
         if let atlas {
             var glyphs: [GlyphInstance] = []
             for p in scene.players where !(inPOV && p.id == scene.pov?.player) {
@@ -438,7 +468,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         let verts = mesh.positions.indices.map { i -> AvatarVertexGPU in
             let p = mesh.positions[i], n = mesh.normals[i], j = mesh.joints[i], w = mesh.weights[i]
             return AvatarVertexGPU(position: SIMD4(Float(p.x), Float(p.y), Float(p.z), 1),
-                                   normal: SIMD4(Float(n.x), Float(n.y), Float(n.z), 0),
+                                   normal: SIMD4(Float(n.x), Float(n.y), Float(n.z), Float(mesh.materials[i].rawValue)),
                                    skin: SIMD4(Float(w.0), Float(w.1), Float(j.0), Float(j.1)))
         }
         guard let vb = verts.withUnsafeBytes({ device.makeBuffer(bytes: $0.baseAddress!, length: $0.count, options: .storageModeShared) }),
@@ -453,20 +483,24 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         guard !scene.players.isEmpty else { return 0 }
         var dqs: [SIMD4<Float>] = []
         var groups: [Int: [AvatarInstanceGPU]] = [:]
+        posedPlayers = []
         for p in scene.players {
             let key = Int((p.stature * 100).rounded())
             guard let m = mesh(stature: p.stature) else { continue }
             let offset = UInt32(dqs.count / 2)
-            let posed = p.blend.map { m.skeleton.pose($0, position: p.point, facing: p.facing) }
-                ?? m.skeleton.pose(p.posture, position: p.point, facing: p.facing)
+            let posed = p.blend.map { m.skeleton.pose($0, position: p.point, facing: p.facing, role: p.role) }
+                ?? m.skeleton.pose(p.posture, position: p.point, facing: p.facing, role: p.role)
+            posedPlayers.append((p, posed, p.stature))
             for dq in m.skeleton.skin(posed) {
                 dqs.append(SIMD4(Float(dq.real.x), Float(dq.real.y), Float(dq.real.z), Float(dq.real.w)))
                 dqs.append(SIMD4(Float(dq.dual.x), Float(dq.dual.y), Float(dq.dual.z), Float(dq.dual.w)))
             }
-            let color = p.isLibero ? Tokens.white : (p.side == .home ? Tokens.accent : Tokens.opponent)
+            // The libero wears a contrasting (white) jersey; the rim keeps the team colour.
+            let team = p.side == .home ? Tokens.accent : Tokens.opponent
+            let jersey = p.isLibero ? Tokens.white : team
             let hideHead: UInt32 = inPOV && transition == nil && p.id == scene.pov?.player ? 1 : 0
-            groups[key, default: []].append(AvatarInstanceGPU(color: color.simd, dqOffset: offset, selected: p.selected ? 1 : 0,
-                                                              hideHead: hideHead))
+            groups[key, default: []].append(AvatarInstanceGPU(color: jersey.simd, rim: team.simd, dqOffset: offset,
+                                                              selected: p.selected ? 1 : 0, hideHead: hideHead))
         }
         guard let dqBuffer = dqs.withUnsafeBytes({ device.makeBuffer(bytes: $0.baseAddress!, length: $0.count, options: .storageModeShared) })
         else { return 0 }
@@ -550,6 +584,48 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         return q
     }
 
+    // MARK: - Jersey numbers
+
+    /// Numbers as flat decals on the upper back (about 20 cm tall) and the chest (about 14 cm), following the chest
+    /// joint, a few millimetres off the jersey.
+    private func numberDecals(_ atlas: GlyphAtlas) -> [Decal3D] {
+        var out: [Decal3D] = []
+        for (p, joints, h) in posedPlayers where !(inPOV && transition == nil && p.id == scene.pov?.player) {
+            let label = p.label
+            guard label.allSatisfy(\.isNumber) else { continue }
+            let chest = joints[Joint.chest.rawValue]
+            let ink = p.isLibero ? RGBA(hex: 0x11183A) : Tokens.white
+            let up = chest.rotation.rotate(V3(0, 1, 0))
+            for front in [false, true] {
+                let centre = chest.apply(front ? V3(0, -0.012 * h, 0.075 * h) : V3(0, -0.03 * h, -0.074 * h))
+                // Text runs toward the player's left on the chest and toward the player's right on the back.
+                let right = chest.rotation.rotate(V3(front ? 1 : -1, 0, 0))
+                let height = (front ? 0.075 : 0.11) * h
+                out += decalText(label, atlas: atlas, centre: centre, right: right, up: up, height: height, color: ink)
+            }
+        }
+        return out
+    }
+
+    private func decalText(_ text: String, atlas: GlyphAtlas, centre: V3, right: V3, up: V3, height: Double, color: RGBA) -> [Decal3D] {
+        let items = text.compactMap { atlas.glyphs[$0] }
+        guard !items.isEmpty else { return [] }
+        let tracking = 0.04 * height
+        let total = items.reduce(0.0) { $0 + Double($1.advance) * height } + tracking * Double(items.count - 1)
+        let margin = Double(GlyphAtlas.spread) / Double(GlyphAtlas.cell) * height
+        var x = -total / 2
+        var out: [Decal3D] = []
+        func f4(_ v: V3) -> SIMD4<Float> { SIMD4(Float(v.x), Float(v.y), Float(v.z), 1) }
+        for g in items {
+            let origin = centre + right * (x - margin) - up * (height / 2)
+            let width = Double(g.quadAspect) * height
+            out.append(Decal3D(origin: f4(origin), edgeU: f4(right * width), edgeV: f4(up * height),
+                               uvOrigin: g.uvOrigin, uvSize: g.uvSize, color: color.simd))
+            x += Double(g.advance) * height + tracking
+        }
+        return out
+    }
+
     // MARK: - Ball
 
     /// A 10.5 cm sphere drawn with the avatar pipeline: every vertex bound to one joint whose transform is the
@@ -563,7 +639,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
             for k in 0..<segments {
                 let phi = 2 * Float.pi * Float(k) / Float(segments)
                 let n = SIMD3<Float>(cos(theta) * cos(phi), sin(theta), cos(theta) * sin(phi))
-                verts.append(AvatarVertexGPU(position: SIMD4(n * r, 1), normal: SIMD4(n, 0), skin: SIMD4(1, 0, 0, 0)))
+                verts.append(AvatarVertexGPU(position: SIMD4(n * r, 1), normal: SIMD4(n, 1), skin: SIMD4(1, 0, 0, 0)))
             }
         }
         for i in 0..<rings {
@@ -586,7 +662,7 @@ final class Board3DRenderer: NSObject, MTKViewDelegate {
         let dq = DualQuat(Rigid(translation: b))
         var dqs: [SIMD4<Float>] = [SIMD4(Float(dq.real.x), Float(dq.real.y), Float(dq.real.z), Float(dq.real.w)),
                                    SIMD4(Float(dq.dual.x), Float(dq.dual.y), Float(dq.dual.z), Float(dq.dual.w))]
-        var instance = AvatarInstanceGPU(color: RGBA(hex: 0xFFE14D).simd, dqOffset: 0, selected: 1)
+        var instance = AvatarInstanceGPU(color: RGBA(hex: 0xFFE14D).simd, rim: RGBA(hex: 0xFFE14D).simd, dqOffset: 0, selected: 1)
         enc.setDepthStencilState(depthWrite)
         enc.setRenderPipelineState(avatarPipeline)
         enc.setVertexBuffer(m.vertices, offset: 0, index: 0)

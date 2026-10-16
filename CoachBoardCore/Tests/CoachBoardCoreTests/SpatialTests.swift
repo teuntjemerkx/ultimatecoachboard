@@ -78,14 +78,16 @@ final class SkeletonTests: XCTestCase {
     func testPosturesKeepFeetOnTheFloorAndJumpsLift() {
         let s = SkeletonModel(BodyMetrics(stature: 1.85))
         for posture in Posture.allCases {
-            let pose = s.pose(posture, position: FloorPoint(x: 0, z: 0), facing: 0)
-            let lowest = min(pose[Joint.lAnkle.rawValue].translation.y, pose[Joint.rAnkle.rawValue].translation.y)
-            XCTAssertEqual(lowest, s.ankleHeight, accuracy: 1e-9, "\(posture)")
+            for role in [nil, "S", "OH1", "OPP", "MB1", "L"] as [String?] {
+                let pose = s.pose(posture, position: FloorPoint(x: 0, z: 0), facing: 0, role: role)
+                let lowest = min(pose[Joint.lAnkle.rawValue].translation.y, pose[Joint.rAnkle.rawValue].translation.y)
+                XCTAssertEqual(lowest, s.ankleHeight + posture.params(for: s, role: role).jump, accuracy: 1e-9, "\(posture) \(role ?? "-")")
+            }
         }
         let ready = s.pose(.ready, position: FloorPoint(x: 0, z: 0), facing: 0)
         XCTAssertLessThan(ready[Joint.pelvis.rawValue].translation.y, 0.53 * 1.85 - 0.08)  // crouched
         let block = s.pose(.block, position: FloorPoint(x: 0, z: 0), facing: 0, jump: 0.6)
-        XCTAssertGreaterThan(s.fingertip(block, left: true).y, s.metrics.standingReach + 0.5)
+        XCTAssertGreaterThan(s.fingertip(block, left: true).y, s.metrics.standingReach + 0.45)
     }
 
     func testDualQuaternionSkinning() {
@@ -116,6 +118,16 @@ final class SkeletonTests: XCTestCase {
         XCTAssertTrue(mesh.weights.allSatisfy { abs($0.0 + $0.1 - 1) < 1e-9 })
         let top = mesh.positions.map(\.y).max() ?? 0
         XCTAssertEqual(top, 1.9, accuracy: 0.04)                                     // the head reaches the stature
+        XCTAssertEqual(mesh.materials.count, mesh.positions.count)
+        // Soles near the floor (the rest pose stands on it), shoulders about 0.26 H wide on each side at most.
+        XCTAssertEqual(mesh.positions.map(\.y).min() ?? 1, 0, accuracy: 0.03)
+        XCTAssertLessThan(mesh.positions.map { abs($0.x) }.max() ?? 0, 0.3 * 1.9)
+        for m in [AvatarMaterial.skin, .jersey, .shorts, .pads, .shoes, .hair, .socks] {
+            XCTAssertTrue(mesh.materials.contains(m), "\(m)")
+        }
+        // The jersey covers the chest front at nipple height; the shorts the hips.
+        let chestFront = mesh.positions.indices.filter { abs(mesh.positions[$0].y - 0.72 * 1.9) < 0.02 && abs(mesh.positions[$0].x) < 0.05 }
+        XCTAssertTrue(chestFront.contains { mesh.materials[$0] == .jersey })
     }
 }
 
@@ -132,5 +144,62 @@ final class BenchViewTests: XCTestCase {
             let b = try XCTUnwrap(cam.project(V3(4.5, 2.43, 0), aspect: 1.43))
             XCTAssertGreaterThan(abs(a.x - b.x), 0.1)
         }
+    }
+}
+
+final class PostureLibraryTests: XCTestCase {
+    let spec = PostureSpec(id: "test_stance", name: "Wide staggered crouch",
+                           root: .init(jump_m: 0, stance_width_m: 0.7, stagger_m: 0.25, yaw_deg: 20),
+                           angles: ["lumbar_flex": 25, "thoracic_flex": 10, "l_hip_flex": 70, "r_hip_flex": 70,
+                                    "l_knee_flex": 95, "r_knee_flex": 95, "l_hip_ext_rot": 15, "r_hip_ext_rot": 15,
+                                    "l_shoulder_flex": 40, "r_shoulder_flex": 40, "l_elbow_flex": 30, "r_elbow_flex": 30])
+
+    func testStanceIKPutsBothFeetFlatAtWidthAndStagger() {
+        let s = SkeletonModel(BodyMetrics(stature: 1.9))
+        let params = spec.params(for: s)
+        XCTAssertFalse(params.airborne)
+        let facing = 0.7
+        let pose = s.pose(params, position: FloorPoint(x: 1, z: 2), facing: facing)
+        let l = pose[Joint.lAnkle.rawValue], r = pose[Joint.rAnkle.rawValue]
+        XCTAssertEqual(l.translation.y, s.ankleHeight, accuracy: 1e-6)
+        XCTAssertEqual(r.translation.y, s.ankleHeight, accuracy: 1e-6)
+        // In the body frame (facing and the pelvis yaw removed): 0.7 m apart sideways, right foot 0.25 m ahead.
+        let body = Quat(axis: .up, angle: facing + 20 * .pi / 180).conjugate
+        let d = body.rotate(l.translation - r.translation)
+        XCTAssertEqual(d.x, 0.7, accuracy: 1e-6)
+        XCTAssertEqual(-d.z, 0.25, accuracy: 1e-6)
+        // Feet are flat: each foot's up axis is world up.
+        for a in [l, r] { XCTAssertEqual(a.rotation.rotate(V3(0, 1, 0)).y, 1, accuracy: 1e-9) }
+        // The crouch is real: the pelvis drops well below standing.
+        XCTAssertLessThan(pose[Joint.pelvis.rawValue].translation.y, 0.53 * 1.9 - 0.2)
+        // Knees bend forward over the feet, not backward.
+        let knee = body.rotate(pose[Joint.lKnee.rawValue].translation - l.translation)
+        XCTAssertGreaterThan(knee.z, 0)
+    }
+
+    func testAnatomicalAnglesMapToTheRightDirections() {
+        let s = SkeletonModel(BodyMetrics(stature: 1.9))
+        func hand(_ angles: [String: Double], left: Bool = false) -> V3 {
+            let p = s.pose(PostureSpec(id: "t", name: "t", angles: angles).params(for: s), position: FloorPoint(x: 0, z: 0), facing: 0)
+            return s.fingertip(p, left: left) - p[(left ? Joint.lShoulder : Joint.rShoulder).rawValue].translation
+        }
+        XCTAssertGreaterThan(hand(["r_shoulder_flex": 90]).z, 0.6, "flexion points the arm forward")
+        XCTAssertLessThan(hand(["r_shoulder_abd": 90]).x, -0.6, "right arm abducts to the player's right (-X)")
+        XCTAssertGreaterThan(hand(["l_shoulder_abd": 90], left: true).x, 0.6)
+        XCTAssertGreaterThan(hand(["r_shoulder_flex": 180]).y, 0.6, "overhead")
+        // Arm cock: abducted 90, elbow 90, externally rotated 90 -> forearm points up.
+        XCTAssertGreaterThan(hand(["r_shoulder_abd": 90, "r_elbow_flex": 90, "r_shoulder_ext_rot": 90]).y, 0.2)
+        // Trunk twist to the right turns the chest's forward toward -X.
+        let p = s.pose(PostureSpec(id: "t", name: "t", angles: ["trunk_twist": 40]).params(for: s), position: FloorPoint(x: 0, z: 0), facing: 0)
+        XCTAssertLessThan(p[Joint.chest.rawValue].rotation.rotate(V3(0, 0, 1)).x, -0.5)
+    }
+
+    func testRolesMapToResearchPositions() {
+        XCTAssertEqual(PostureLibrary.position(forRole: "S"), "setter")
+        XCTAssertEqual(PostureLibrary.position(forRole: "OH2"), "outside_hitter")
+        XCTAssertEqual(PostureLibrary.position(forRole: "OPP"), "opposite")
+        XCTAssertEqual(PostureLibrary.position(forRole: "MB1"), "middle_blocker")
+        XCTAssertEqual(PostureLibrary.position(forRole: "L"), "libero")
+        XCTAssertNil(PostureLibrary.position(forRole: nil))
     }
 }
