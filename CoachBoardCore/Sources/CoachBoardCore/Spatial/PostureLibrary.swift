@@ -132,9 +132,13 @@ extension PostureSpec {
     public func params(for s: SkeletonModel) -> PoseParams {
         var r: [Joint: Quat] = [:]
         let lateral = deg("trunk_lateral") / 2, twist = deg("trunk_twist") / 2
-        r[.pelvis] = Self.ry((root?.yaw_deg ?? 0) * .pi / 180)
-        r[.spine] = Self.rx(deg("lumbar_flex")) * Self.rz(lateral) * Self.ry(-twist)
-        r[.chest] = Self.rx(deg("thoracic_flex")) * Self.rz(lateral) * Self.ry(-twist)
+        // Trunk lean: the lower trunk (pelvis to the lumbar joint, 0.13 H) tilts by lumbar_flex from the hips, the
+        // upper trunk adds thoracic_flex at the lumbar joint, so the thorax leans lumbar + thoracic from vertical
+        // as the research defines it. Hip angles are measured from vertical, so they are compensated for the tilt.
+        let lumbar = deg("lumbar_flex")
+        r[.pelvis] = Self.ry((root?.yaw_deg ?? 0) * .pi / 180) * Self.rx(lumbar)
+        r[.spine] = Self.rx(deg("thoracic_flex")) * Self.rz(lateral) * Self.ry(-twist)
+        r[.chest] = Self.rz(lateral) * Self.ry(-twist)
         r[.neck] = Self.rx(deg("neck_flex") / 2)
         r[.head] = Self.rx(deg("neck_flex") / 2)
         for left in [true, false] {
@@ -143,13 +147,15 @@ extension PostureSpec {
                 * Self.ry(side * deg(p + "shoulder_ext_rot"))
             r[left ? .lElbow : .rElbow] = Self.rx(-deg(p + "elbow_flex"))
             r[left ? .lWrist : .rWrist] = Self.rx(deg(p + "wrist_ext"))
-            r[left ? .lHip : .rHip] = Self.rx(-deg(p + "hip_flex")) * Self.rz(side * deg(p + "hip_abd"))
+            r[left ? .lHip : .rHip] = Self.rx(-lumbar) * Self.rx(-deg(p + "hip_flex")) * Self.rz(side * deg(p + "hip_abd"))
                 * Self.ry(side * deg(p + "hip_ext_rot"))
             r[left ? .lKnee : .rKnee] = Self.rx(deg(p + "knee_flex"))
             r[left ? .lAnkle : .rAnkle] = Self.rx(-deg(p + "ankle_dorsi"))
         }
         var params = PoseParams(rotations: r, jump: jump)
-        if !params.airborne { s.solveStance(&params, width: root?.stance_width_m, stagger: root?.stagger_m) }
+        if !params.airborne {
+            s.solveStance(&params, width: root?.stance_width_m, stagger: root?.stagger_m, yaw: Self.ry((root?.yaw_deg ?? 0) * .pi / 180))
+        }
         return params
     }
 }
@@ -158,7 +164,7 @@ extension SkeletonModel {
     /// Two-bone IK for both legs in the body frame: the ankles move to the stance width (lateral) and stagger
     /// (right foot ahead positive) at the mean height the angles produce, and each knee keeps pointing where the
     /// angles put it. Hip and knee rotations are replaced; the rest of the posture is untouched.
-    func solveStance(_ params: inout PoseParams, width: Double?, stagger: Double?) {
+    func solveStance(_ params: inout PoseParams, width: Double?, stagger: Double?, yaw: Quat = .identity) {
         let pelvisRot = params.rotations[.pelvis] ?? .identity
         let thigh = restOffsets[Joint.lKnee.rawValue].length, shank = restOffsets[Joint.lAnkle.rawValue].length
         struct Leg { var hip: V3; var knee: V3; var ankle: V3 }
@@ -171,8 +177,8 @@ extension SkeletonModel {
             return Leg(hip: hip, knee: knee, ankle: knee + sw.rotate(V3(0, -shank, 0)))
         }
         let l = fk(true), rgt = fk(false)
-        // Targets in the pelvis frame (yaw removed), then back.
-        let inv = pelvisRot.conjugate
+        // Targets in the body's yaw frame (the stance is measured on the floor, not in the tilted pelvis), then back.
+        let inv = yaw.conjugate
         var la = inv.rotate(l.ankle), ra = inv.rotate(rgt.ankle)
         let y = (la.y + ra.y) / 2
         la.y = y
@@ -187,7 +193,7 @@ extension SkeletonModel {
             ra.z = cz + st / 2
             la.z = cz - st / 2
         }
-        for (left, leg, target) in [(true, l, pelvisRot.rotate(la)), (false, rgt, pelvisRot.rotate(ra))] {
+        for (left, leg, target) in [(true, l, yaw.rotate(la)), (false, rgt, yaw.rotate(ra))] {
             let v = target - leg.hip
             let dist = max(abs(thigh - shank) + 1e-4, min(thigh + shank - 1e-4, v.length))
             let dir = v.normalized
@@ -195,7 +201,7 @@ extension SkeletonModel {
             let sinA = (1 - cosA * cosA).squareRoot()
             // The knee keeps the side the angles gave it (forward and as far out as the hip rotation turns it).
             var pole = (leg.knee - leg.hip) - dir * (leg.knee - leg.hip).dot(dir)
-            if pole.length < 1e-6 { pole = pelvisRot.rotate(V3(0, 0, 1)) - dir * pelvisRot.rotate(V3(0, 0, 1)).dot(dir) }
+            if pole.length < 1e-6 { pole = yaw.rotate(V3(0, 0, 1)) - dir * yaw.rotate(V3(0, 0, 1)).dot(dir) }
             pole = pole.normalized
             let knee = leg.hip + dir * (thigh * cosA) + pole * (thigh * sinA)
             let ankle = leg.hip + dir * dist

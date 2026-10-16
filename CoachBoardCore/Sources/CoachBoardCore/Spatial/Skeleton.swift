@@ -129,9 +129,13 @@ public struct SkeletonModel: Hashable, Sendable {
                     * Rigid(rotation: rotation, translation: offset)
             }
         }
-        // Ground contact: the lower ankle sits at ankle height (feet on the floor); a jump lifts the body.
-        let lowest = min(world[Joint.lAnkle.rawValue].translation.y, world[Joint.rAnkle.rawValue].translation.y)
-        let lift = ankleHeight - lowest + params.jump + max(jump, 0)
+        // Ground contact: whatever is lowest rests on the floor — normally the feet (ankle at ankle height), in a
+        // collapse dig the knee pads. Hands are not supports: a pancake's palm may touch the floor, a deep crouch
+        // must not lift the feet off it. A jump lifts the body from there.
+        let h = metrics.stature
+        var clearance = min(world[Joint.lAnkle.rawValue].translation.y, world[Joint.rAnkle.rawValue].translation.y) - ankleHeight
+        for knee in [Joint.lKnee, .rKnee] { clearance = min(clearance, world[knee.rawValue].translation.y - 0.04 * h) }
+        let lift = -clearance + params.jump + max(jump, 0)
         let shift = V3(position.x, lift, position.z)
         return world.map { Rigid(rotation: $0.rotation, translation: $0.translation + shift) }
     }

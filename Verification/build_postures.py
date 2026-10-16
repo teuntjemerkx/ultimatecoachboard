@@ -15,9 +15,9 @@ OUT = os.path.join(HERE, "..", "CoachBoardCore", "Sources", "CoachBoardCore", "R
 RANGES = {
     "lumbar_flex": (-40, 70), "thoracic_flex": (-40, 50), "trunk_lateral": (-45, 45), "trunk_twist": (-70, 70),
     "neck_flex": (-60, 50),
-    "shoulder_flex": (-60, 185), "shoulder_abd": (-30, 185), "shoulder_ext_rot": (-90, 170),
+    "shoulder_flex": (-60, 185), "shoulder_abd": (-40, 185), "shoulder_ext_rot": (-90, 170),
     "elbow_flex": (0, 150), "wrist_ext": (-80, 80),
-    "hip_flex": (-30, 130), "hip_abd": (-25, 60), "hip_ext_rot": (-45, 60),
+    "hip_flex": (-50, 130), "hip_abd": (-25, 60), "hip_ext_rot": (-45, 60),
     "knee_flex": (0, 145), "ankle_dorsi": (-60, 45),
 }
 SIDED = {"shoulder_flex", "shoulder_abd", "shoulder_ext_rot", "elbow_flex", "wrist_ext",

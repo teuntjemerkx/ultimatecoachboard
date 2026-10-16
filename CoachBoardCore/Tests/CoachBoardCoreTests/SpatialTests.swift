@@ -80,8 +80,10 @@ final class SkeletonTests: XCTestCase {
         for posture in Posture.allCases {
             for role in [nil, "S", "OH1", "OPP", "MB1", "L"] as [String?] {
                 let pose = s.pose(posture, position: FloorPoint(x: 0, z: 0), facing: 0, role: role)
-                let lowest = min(pose[Joint.lAnkle.rawValue].translation.y, pose[Joint.rAnkle.rawValue].translation.y)
-                XCTAssertEqual(lowest, s.ankleHeight + posture.params(for: s, role: role).jump, accuracy: 1e-9, "\(posture) \(role ?? "-")")
+                // The lowest contact (feet or knee pads) touches the floor, or the jump lifts it.
+                var clearance = min(pose[Joint.lAnkle.rawValue].translation.y, pose[Joint.rAnkle.rawValue].translation.y) - s.ankleHeight
+                for k in [Joint.lKnee, .rKnee] { clearance = min(clearance, pose[k.rawValue].translation.y - 0.04 * 1.85) }
+                XCTAssertEqual(clearance, posture.params(for: s, role: role).jump, accuracy: 1e-9, "\(posture) \(role ?? "-")")
             }
         }
         let ready = s.pose(.ready, position: FloorPoint(x: 0, z: 0), facing: 0)

@@ -1,5 +1,679 @@
 {
  "positions": {
+  "libero": {
+   "techniques": [
+    {
+     "angles": {
+      "l_ankle_dorsi": 26.0,
+      "l_elbow_flex": 50.0,
+      "l_hip_abd": 16.0,
+      "l_hip_ext_rot": -2.0,
+      "l_hip_flex": 23.0,
+      "l_knee_flex": 50.0,
+      "l_shoulder_abd": 12.0,
+      "l_shoulder_flex": 40.0,
+      "lumbar_flex": 10.0,
+      "neck_flex": -25.0,
+      "r_ankle_dorsi": 21.0,
+      "r_elbow_flex": 50.0,
+      "r_hip_abd": 16.0,
+      "r_hip_ext_rot": -3.0,
+      "r_hip_flex": 29.0,
+      "r_knee_flex": 50.0,
+      "r_shoulder_abd": 12.0,
+      "r_shoulder_flex": 40.0,
+      "thoracic_flex": 15.0
+     },
+     "confidence": "measured (knee/hip) + estimated (rest): knee 50 deg sits between the measured start-of-pass knee angles (HS 134.8 / LS 125.6 deg included = 45 / 54 deg flexion, Ridgway & Hamilton; ~126 deg included, Kapidzic); anatomical hip flexion (thigh 23-29 + trunk 25 = 48-54 deg) matches ~46 deg thigh flexion (Ridgway) and ~125 deg trunk-thigh angle (Kapidzic). Trunk, arms, neck, stagger estimated from coaching texts. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+     "description": "Feet a little wider than the shoulders, right foot slightly ahead, knees flexed about 50 deg and kept inside the feet, hips back and the trunk inclined about 25 deg so the shoulders sit over the knees, weight on the balls of the feet. Arms relaxed and apart in front of the thighs (not yet joined), head up watching the server.",
+     "evidence": [
+      "https://ojs.ub.uni-konstanz.de/cpa/article/view/2336",
+      "https://www.iiste.org/Journals/index.php/JEP/article/view/12341",
+      "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+      "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Pass-card.pdf",
+      "https://coachesinsider.com/volleyball/passing-platform-progression-with-ron-zwerver-oregon-state-univ",
+      "https://www.slideshare.net/slideshow/voleyball-basic-techniquespptx/251484553",
+      "https://faculty.kfupm.edu.sa/PE/abuhilal/volleyball_skills.html",
+      "https://sde.ok.gov/sites/default/files/documents/files/S2.H2GLO9-12ForearmPass.docx%20%281%29.pdf",
+      "https://www.quickscores.com/downloads/ymcaatpabstfarms_Volleyball_Skill_Packet.pdf",
+      "https://web.uvic.ca/~thopper/iweb09/DaveKelsey/Site/Forearm_Pass.html",
+      "https://www.stpaul.gov/sites/default/files/Media%20Root/Parks%20%26%20Recreation/Muni%20Volleyball%20fundamentals.pdf"
+     ],
+     "id": "ready_medium",
+     "name": "Serve-receive ready stance (medium posture)",
+     "phase": "ready (server toss to serve contact)",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.08,
+      "stance_width_m": 0.6,
+      "yaw_deg": 0.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 35.0,
+      "l_elbow_flex": 70.0,
+      "l_hip_abd": 27.0,
+      "l_hip_ext_rot": -10.0,
+      "l_hip_flex": 44.0,
+      "l_knee_flex": 80.0,
+      "l_shoulder_abd": 15.0,
+      "l_shoulder_flex": 45.0,
+      "l_wrist_ext": 10.0,
+      "lumbar_flex": 15.0,
+      "neck_flex": -40.0,
+      "r_ankle_dorsi": 31.0,
+      "r_elbow_flex": 70.0,
+      "r_hip_abd": 25.0,
+      "r_hip_ext_rot": -11.0,
+      "r_hip_flex": 49.0,
+      "r_knee_flex": 80.0,
+      "r_shoulder_abd": 15.0,
+      "r_shoulder_flex": 45.0,
+      "r_wrist_ext": 10.0,
+      "thoracic_flex": 20.0
+     },
+     "confidence": "estimated: from Volleyball Canada / Volleyball Ireland defence descriptions (wider than ready, knees bent in line with toes, weight forward, arms bent in front palms up, shoulders forward) and USA Volleyball \"stopped and balanced at attacker contact\"; no measured joint angles found for the defensive base. Neck extension is large because the trunk is inclined and the hitter is above net height. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+     "description": "Wider and lower than serve receive: feet ~0.75 m apart, knees ~80 deg, trunk ~35 deg forward with the shoulders ahead of the knees, weight forward on the toes, body stopped and still at the attacker's contact. Arms bent in front of the knees, hands apart with palms up/forward; chin up, eyes on the hitter.",
+     "evidence": [
+      "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Defense_Basic_for_e_module_skill_description_copy.pdf",
+      "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Defence-card.pdf",
+      "https://betteratvolleyball.com/what-is-a-dig-in-volleyball-lessons-drills-and-techniques/",
+      "https://usavolleyball.org/resource/five-keys-to-making-more-digs/",
+      "https://usavolleyball.org/resource/five-tips-for-better-backcourt-defense/",
+      "https://usavolleyball.org/resource/keys-to-making-more-digs-on-the-beach/",
+      "https://air.unimi.it/handle/2434/422085",
+      "https://coachesinsider.com/volleyball/transition-movement-base-to-defense-with-genny-volpe-rice-univ"
+     ],
+     "id": "ready_low",
+     "name": "Defensive base (low ready)",
+     "phase": "ready (opponent attacker contact; after split step)",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.05,
+      "stance_width_m": 0.76,
+      "yaw_deg": 0.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 24.0,
+      "l_hip_abd": 16.0,
+      "l_hip_ext_rot": -2.0,
+      "l_hip_flex": 26.0,
+      "l_knee_flex": 50.0,
+      "l_shoulder_abd": -14.0,
+      "l_shoulder_ext_rot": 15.0,
+      "l_shoulder_flex": 75.0,
+      "l_wrist_ext": -10.0,
+      "lumbar_flex": 11.0,
+      "neck_flex": -12.0,
+      "r_ankle_dorsi": 16.0,
+      "r_hip_abd": 15.0,
+      "r_hip_ext_rot": -4.0,
+      "r_hip_flex": 32.0,
+      "r_knee_flex": 48.0,
+      "r_shoulder_abd": -14.0,
+      "r_shoulder_ext_rot": 15.0,
+      "r_shoulder_flex": 75.0,
+      "r_wrist_ext": -10.0,
+      "thoracic_flex": 17.0
+     },
+     "confidence": "measured (legs, platform angle) + estimated (rest): knee 48-50 deg from measured start-of-pass values (Ridgway & Hamilton HS 45 deg, Kapidzic ~54 deg); platform ~45 deg below horizontal from Wicaksono et al. (arm angle ~45 deg best) and the 40-45 deg textbook value; skilled passers project the ball at ~64 deg (Ridgway). Shoulder flexion 75 deg relative to the trunk is an estimate (Kapidzic preparatory shoulder angle median ~54 deg, Volleyball Canada \"arms ~90 deg to the torso\" at contact). shoulder_abd -14 = arms converging so the wrists meet (~0.10 m apart). The rig has no forearm-supination or wrist-deviation keys: the flat platform / thumbs-down cue is approximated by 15 deg external rotation and 10 deg wrist flexion. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+     "description": "Ball met between knees and waist on the body midline. Arms straight and joined (thumbs together, pointing down), shoulders shrugged forward so the platform reaches out; forearms about 45 deg below horizontal. Trunk ~28 deg forward, hips back, knees ~50 deg and starting to extend toward the target; arms do not swing - the legs and shoulders give the small lift. Head still, eyes on the ball at the platform.",
+     "evidence": [
+      "https://ojs.ub.uni-konstanz.de/cpa/article/view/2336",
+      "https://www.iiste.org/Journals/index.php/JEP/article/view/12341",
+      "https://avesis.omu.edu.tr/yayin/0c444ab4-ee04-402c-bbf5-1a3497fda353/voleybolcularin-manset-paslarinin-kinematik-analizi",
+      "https://www.researchgate.net/publication/346829083_Analysis_of_Superior_and_Inferior_Extremities_on_Forearm_Pass_in_Volleyball",
+      "https://prezi.com/pehj0bgfnlds/the-biomechanics-of-forearm-passing-a-volleyball/",
+      "https://prezi.com/3o6xhlud9f66/the-biomechanics-of-forearm-passing-a-volleyball/",
+      "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+      "https://www.saskvolleyball.ca/wp-content/uploads/2021/03/FORE-ARM-PASSING-Smry-Details-UPDATED-03-30-20.pdf",
+      "https://web.uvic.ca/~thopper/WEB/452/Units_2007/Taryn_Colton/On-the-Ball%20Skills.html",
+      "https://sde.ok.gov/sites/default/files/documents/files/S2.H2GLO9-12ForearmPass.docx%20%281%29.pdf",
+      "https://discover.sportsengineplay.com/video/volleyball/passing-drills-train-proper-technique-and-eliminate-bad-habits/",
+      "https://www.dickssportinggoods.com/protips/sports-and-activities/volleyball/volleyball-offense-how-to-create-a-strong-platform"
+     ],
+     "id": "pass_platform",
+     "name": "Forearm pass (serve reception) - ball on the midline",
+     "phase": "contact",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.1,
+      "stance_width_m": 0.6,
+      "yaw_deg": 0.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 22.0,
+      "l_hip_abd": 29.0,
+      "l_hip_ext_rot": -7.0,
+      "l_hip_flex": 23.0,
+      "l_knee_flex": 45.0,
+      "l_shoulder_abd": -31.0,
+      "l_shoulder_ext_rot": 20.0,
+      "l_shoulder_flex": 58.0,
+      "l_wrist_ext": -10.0,
+      "lumbar_flex": 10.0,
+      "neck_flex": -12.0,
+      "r_ankle_dorsi": 21.0,
+      "r_hip_abd": 20.0,
+      "r_hip_ext_rot": 3.0,
+      "r_hip_flex": 37.0,
+      "r_knee_flex": 60.0,
+      "r_shoulder_abd": -4.0,
+      "r_shoulder_ext_rot": 20.0,
+      "r_shoulder_flex": 58.0,
+      "r_wrist_ext": -10.0,
+      "thoracic_flex": 12.0,
+      "trunk_lateral": 15.0,
+      "trunk_twist": 12.0
+     },
+     "confidence": "estimated: \"drop the ball-side shoulder / angle the platform to the target\" is a coaching cue; no measured angles found. Arm angles were solved so the wrists meet ~0.25 m right of the pelvis centre at hip height; in the simplified model the platform normal then points ~10-20 deg right of straight ahead and ~30 deg above horizontal (suits a zone-5/6 receiver passing to a setter at right front). Leg geometry includes a ~0.10 m pelvis shift over the right foot. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+     "description": "Ball outside the right hip: the passer has stepped right and loads the right leg (knee ~60 deg, pelvis shifted over the right foot) while the left leg is longer and pushes. The right (ball-side) shoulder is dropped by a ~15 deg side bend and the chest turns slightly right so both straight, joined arms reach out to the right front; the tilted shoulder line tilts the platform so it faces the target instead of deflecting the ball sideways. Head and eyes stay on the ball.",
+     "evidence": [
+      "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+      "https://www.saskvolleyball.ca/wp-content/uploads/2021/03/FORE-ARM-PASSING-Smry-Details-UPDATED-03-30-20.pdf",
+      "https://www.dickssportinggoods.com/protips/sports-and-activities/volleyball/volleyball-offense-how-to-create-a-strong-platform",
+      "https://coachesinsider.com/volleyball/passing-platform-progression-with-ron-zwerver-oregon-state-univ",
+      "https://discover.sportsengineplay.com/video/volleyball/passing-drills-train-proper-technique-and-eliminate-bad-habits/",
+      "https://prezi.com/pehj0bgfnlds/the-biomechanics-of-forearm-passing-a-volleyball/"
+     ],
+     "id": "pass_platform_angled",
+     "name": "Forearm pass outside the midline (angled platform, ball outside right hip)",
+     "phase": "contact",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.1,
+      "stance_width_m": 0.78,
+      "yaw_deg": 0.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 25.0,
+      "l_elbow_flex": 98.0,
+      "l_hip_abd": 11.0,
+      "l_hip_ext_rot": 3.0,
+      "l_hip_flex": 12.0,
+      "l_knee_flex": 38.0,
+      "l_shoulder_abd": 15.0,
+      "l_shoulder_ext_rot": -38.0,
+      "l_shoulder_flex": 120.0,
+      "l_wrist_ext": 60.0,
+      "lumbar_flex": 3.0,
+      "neck_flex": -40.0,
+      "r_ankle_dorsi": 16.0,
+      "r_elbow_flex": 98.0,
+      "r_hip_abd": 10.0,
+      "r_hip_ext_rot": 1.0,
+      "r_hip_flex": 24.0,
+      "r_knee_flex": 40.0,
+      "r_shoulder_abd": 15.0,
+      "r_shoulder_ext_rot": -38.0,
+      "r_shoulder_flex": 120.0,
+      "r_wrist_ext": 60.0,
+      "thoracic_flex": 5.0
+     },
+     "confidence": "estimated: no numeric overhead-pass data could be retrieved (the Sports Biomechanics 2019 overhead-pass study was found by title only). Values come from standard setting technique and were solved so the wrists sit ~0.22 m apart, ~0.30 m above shoulder level and ~0.20 m in front of the shoulders, elbows ~0.27 m out. NOTE: with the flex->abd->rotation order the inward-pointing forearms need NEGATIVE shoulder_ext_rot (-38); a rig using another Euler order will need its own value for the same hand position. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+     "description": "Used on high float serves arriving at head height: body square to the target, right foot slightly ahead, knees ~40 deg and extending, trunk almost upright. Hands form a window ~15 cm above and in front of the forehead, elbows out at about chin height, wrists cocked back; head tilted back, looking up through the hands.",
+     "evidence": [
+      "https://doi.org/10.1080/14763141.2019.1609072",
+      "https://pure.jbnu.ac.kr/en/publications/the-contribution-of-upper-or-lower-extremity-of-male-athletes-dif/",
+      "https://coachingvb.com/libero-in-volleyball-rules-role-rotations-skills/"
+     ],
+     "id": "overhead_pass",
+     "name": "Overhead (hand) reception of a float serve",
+     "phase": "contact",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.15,
+      "stance_width_m": 0.45,
+      "yaw_deg": 0.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 39.0,
+      "l_hip_abd": 30.0,
+      "l_hip_ext_rot": -12.0,
+      "l_hip_flex": 48.0,
+      "l_knee_flex": 88.0,
+      "l_shoulder_abd": -14.0,
+      "l_shoulder_ext_rot": 15.0,
+      "l_shoulder_flex": 85.0,
+      "l_wrist_ext": -10.0,
+      "lumbar_flex": 18.0,
+      "neck_flex": -30.0,
+      "r_ankle_dorsi": 31.0,
+      "r_hip_abd": 26.0,
+      "r_hip_ext_rot": -14.0,
+      "r_hip_flex": 59.0,
+      "r_knee_flex": 90.0,
+      "r_shoulder_abd": -14.0,
+      "r_shoulder_ext_rot": 15.0,
+      "r_shoulder_flex": 85.0,
+      "r_wrist_ext": -10.0,
+      "thoracic_flex": 22.0
+     },
+     "confidence": "estimated: Volleyball Ireland/Canada contact description (shoulders over knees, arms in front, follow through), Gimmillaro \"keep arms out, don't swing\", feet ~2x shoulder width (betteratvolleyball). The Diyala study only reports that hip angle at contact differed between moving and stationary defence (no usable value). Forearms ~45 deg below horizontal, wrists ~0.6 m above the floor. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+     "description": "From the defensive base the defender stays low (knees ~90 deg, hips ~0.6 m high), shoulders over the knees (trunk ~40 deg), arms straight and joined in front, platform at knee-thigh height and angled up so the ball rebounds high toward the middle of the court. Arms do not swing; the body follows through toward the target after contact. Eyes on the ball.",
+     "evidence": [
+      "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Defence-card.pdf",
+      "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Defense_Basic_for_e_module_skill_description_copy.pdf",
+      "https://betteratvolleyball.com/what-is-a-dig-in-volleyball-lessons-drills-and-techniques/",
+      "https://coachesinsider.com/volleyball/crossover-step-dig-drill-with-brian-gimmillaro",
+      "https://pessj.uodiyala.edu.iq/index.php/1/article/download/2035/1344/2188",
+      "https://air.unimi.it/handle/2434/422085",
+      "https://usavolleyball.org/wp-content/uploads/2020/11/Dig-2-Heffernan.pdf",
+      "https://doaj.org/article/c75b974f3ebc4aebb86448eef6976f19",
+      "https://coachesinsider.com/volleyball/transition-movement-base-to-defense-with-genny-volpe-rice-univ"
+     ],
+     "id": "dig_low",
+     "name": "Dig of a hard-driven attack (low platform)",
+     "phase": "contact",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.1,
+      "stance_width_m": 0.76,
+      "yaw_deg": 0.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": -30.0,
+      "l_hip_abd": 6.0,
+      "l_hip_flex": -45.0,
+      "l_knee_flex": 37.0,
+      "l_shoulder_abd": -12.0,
+      "l_shoulder_ext_rot": 15.0,
+      "l_shoulder_flex": 100.0,
+      "l_wrist_ext": -10.0,
+      "lumbar_flex": 30.0,
+      "neck_flex": -40.0,
+      "r_ankle_dorsi": 20.0,
+      "r_hip_abd": 8.0,
+      "r_hip_flex": 85.0,
+      "r_knee_flex": 105.0,
+      "r_shoulder_abd": -12.0,
+      "r_shoulder_ext_rot": 15.0,
+      "r_shoulder_flex": 100.0,
+      "r_wrist_ext": -10.0,
+      "thoracic_flex": 40.0
+     },
+     "confidence": "estimated: IMG Academy sprawl progression (kneeling -> low lunge -> deep lunge finishing to the floor with the platform together) and Volleyball World definition (lunge forward to a ball near the ground in front). Because the schema pelvis is upright, part of the real anterior pelvic tilt is carried by lumbar_flex and hip_flex (anatomical front-hip flexion is lower than hip_flex + trunk lean suggests). Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles. Rear toes touch the floor (within ~2 cm).",
+     "description": "Right leg lunges far forward (foot ~1 m ahead of the left), front knee ~105 deg, hips ~0.5 m off the floor; the left leg trails long behind on its toes. The trunk is almost horizontal (~70 deg lean) with both straight arms reaching ahead, platform ~0.2 m above the floor; neck extended to keep the eyes on the ball. Next instant the chest slides forward onto the floor.",
+     "evidence": [
+      "https://plus.imgacademy.com/resources/videos/volleyball-defense-drill-sprawl-progression",
+      "https://es.volleyballworld.com/blogs/learn-the-vital-techniques-of-volleyball",
+      "https://betteratvolleyball.com/what-is-a-dig-in-volleyball-lessons-drills-and-techniques/",
+      "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Defence-card.pdf"
+     ],
+     "id": "dig_sprawl",
+     "name": "Sprawl dig (long lunge to a ball near the floor)",
+     "phase": "contact",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 1.0,
+      "stance_width_m": 0.3,
+      "yaw_deg": 0.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 30.0,
+      "l_hip_abd": 14.0,
+      "l_hip_flex": 30.0,
+      "l_knee_flex": 133.0,
+      "l_shoulder_abd": -14.0,
+      "l_shoulder_ext_rot": 15.0,
+      "l_shoulder_flex": 92.0,
+      "l_wrist_ext": -10.0,
+      "lumbar_flex": 15.0,
+      "neck_flex": -25.0,
+      "r_ankle_dorsi": 30.0,
+      "r_hip_abd": 14.0,
+      "r_hip_flex": 30.0,
+      "r_knee_flex": 133.0,
+      "r_shoulder_abd": -14.0,
+      "r_shoulder_ext_rot": 15.0,
+      "r_shoulder_flex": 92.0,
+      "r_wrist_ext": -10.0,
+      "thoracic_flex": 20.0
+     },
+     "confidence": "estimated: The Art of Coaching Volleyball (Dani Busboom Kelly, Nebraska) collapse-dig description - lower onto the knees fast and get the platform under the ball. Knees are the floor contact here, not the feet (the avatar must be grounded on the knees: hip joint ~0.42 m, ankles ~0.12 m above the floor). Wrists ~0.5 m high.",
+     "description": "For a hard ball too fast to move to: the legs collapse straight down so both knees hit the floor almost at once (knees ~133 deg, toes tucked, hips ~0.4 m high), trunk ~35 deg forward, straight joined arms low in front of the knees with the platform under the ball. The body then sits/rolls back to absorb.",
+     "evidence": [
+      "https://www.theartofcoachingvolleyball.com/floor-work-for-defenders-the-collapse-dig/",
+      "https://es.volleyballworld.com/blogs/learn-the-vital-techniques-of-volleyball",
+      "https://betteratvolleyball.com/what-is-a-dig-in-volleyball-lessons-drills-and-techniques/"
+     ],
+     "id": "dig_collapse",
+     "name": "Collapse dig (drop to the knees under a fast low ball)",
+     "phase": "contact",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.0,
+      "stance_width_m": 0.3,
+      "yaw_deg": 0.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": -30.0,
+      "l_elbow_flex": 40.0,
+      "l_hip_abd": 6.0,
+      "l_hip_flex": -48.0,
+      "l_knee_flex": 40.0,
+      "l_shoulder_abd": 35.0,
+      "l_shoulder_flex": 30.0,
+      "lumbar_flex": 32.0,
+      "neck_flex": -45.0,
+      "r_ankle_dorsi": 23.0,
+      "r_hip_abd": 8.0,
+      "r_hip_flex": 92.0,
+      "r_knee_flex": 115.0,
+      "r_shoulder_abd": 6.0,
+      "r_shoulder_ext_rot": -80.0,
+      "r_shoulder_flex": 113.0,
+      "r_wrist_ext": 50.0,
+      "thoracic_flex": 45.0,
+      "trunk_twist": -15.0
+     },
+     "confidence": "estimated: pancake descriptions (hand down before the ball arrives; used when moving forward, as a one-arm lunge or at the end of a dive). Solved so the right wrist is ~0.03 m above the floor ~0.85 m in front of the pelvis; ext_rot -80 turns the palm to face the floor, wrist_ext 50 lays the hand flat. A full horizontal dive cannot be expressed with an upright-pelvis root, so the lunge version is given. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+     "description": "Last-resort play when the ball cannot be reached with a platform: from a long right-leg lunge the right arm shoots forward and the hand is laid flat, palm down, on the floor before the ball lands so it rebounds off the back of the hand. Trunk nearly horizontal (~77 deg) and turned slightly left to lengthen the right arm; left arm out for balance; rear leg long on its toes.",
+     "evidence": [
+      "https://volleyballmag.com/?p=65211",
+      "https://es.volleyballworld.com/blogs/learn-the-vital-techniques-of-volleyball",
+      "https://www.sportplan.net/sketches/Volleyball/openSketch/5271661",
+      "https://web.uvic.ca/~thopper/Unitplan452/netwall2000/Kate%20&%20Darryl/Pages/Block%20Plan/Pancake%20Game.html",
+      "https://www.youth.inc/learn/youth-inc-recommends-top-five-resources-to-master-the-art-of-digging-in-volleyball",
+      "https://betteratvolleyball.com/what-is-a-dig-in-volleyball-lessons-drills-and-techniques/"
+     ],
+     "id": "dig_pancake",
+     "name": "Pancake (hand flat on the floor at the end of a lunge/dive)",
+     "phase": "contact",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 1.0,
+      "stance_width_m": 0.29,
+      "yaw_deg": 0.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 31.0,
+      "l_elbow_flex": 95.0,
+      "l_hip_abd": 13.0,
+      "l_hip_ext_rot": 5.0,
+      "l_hip_flex": 13.0,
+      "l_knee_flex": 45.0,
+      "l_shoulder_abd": 15.0,
+      "l_shoulder_ext_rot": -39.0,
+      "l_shoulder_flex": 122.0,
+      "l_wrist_ext": 65.0,
+      "lumbar_flex": 2.0,
+      "neck_flex": -40.0,
+      "r_ankle_dorsi": 19.0,
+      "r_elbow_flex": 95.0,
+      "r_hip_abd": 11.0,
+      "r_hip_flex": 30.0,
+      "r_knee_flex": 50.0,
+      "r_shoulder_abd": 15.0,
+      "r_shoulder_ext_rot": -39.0,
+      "r_shoulder_flex": 122.0,
+      "r_wrist_ext": 65.0,
+      "thoracic_flex": 3.0
+     },
+     "confidence": "estimated: rule context from NFHS/MPSSAA rule texts and coaching pages; the longer back-court set relies more on the legs (JBNU study title: lower-extremity contribution changes as overhead-pass distance increases). Arm angles solved for the same hand window as overhead_pass (negative ext_rot is an Euler-order artefact, see overhead_pass). Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+     "description": "Libero sets a teammate's attack with the hands only from behind the attack line (a hand set from on/in front of the line may not be attacked above net height). Body turned to face the target (here the left-side hitter, pelvis ~40 deg left), right foot ahead, knees ~50 deg driving up because the set travels far, trunk upright, hands above the forehead, elbows out, wrists cocked, head back.",
+     "evidence": [
+      "https://www.whsaa.org/Officials/updates/NFHS_Libero_Exchange_Rules.pdf",
+      "https://www.mpssaa.org/wp-content/uploads/2026/07/Volleyball-10-22-25Rev.pdf",
+      "https://coachingvb.com/libero-in-volleyball-rules-role-rotations-skills/",
+      "https://cyberpost.co/can-liberos-overhand-set/",
+      "https://pure.jbnu.ac.kr/en/publications/the-contribution-of-upper-or-lower-extremity-of-male-athletes-dif/",
+      "https://doi.org/10.1080/14763141.2019.1609072"
+     ],
+     "id": "libero_overhead_set",
+     "name": "Libero overhead (hand) set from behind the 3 m line",
+     "phase": "contact",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.2,
+      "stance_width_m": 0.45,
+      "yaw_deg": 40.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 29.0,
+      "l_hip_abd": 15.0,
+      "l_hip_ext_rot": 2.0,
+      "l_hip_flex": 12.0,
+      "l_knee_flex": 42.0,
+      "l_shoulder_abd": -14.0,
+      "l_shoulder_ext_rot": 15.0,
+      "l_shoulder_flex": 80.0,
+      "l_wrist_ext": -10.0,
+      "lumbar_flex": 8.0,
+      "neck_flex": -20.0,
+      "r_ankle_dorsi": 17.0,
+      "r_hip_abd": 14.0,
+      "r_hip_ext_rot": -2.0,
+      "r_hip_flex": 28.0,
+      "r_knee_flex": 45.0,
+      "r_shoulder_abd": -14.0,
+      "r_shoulder_ext_rot": 15.0,
+      "r_shoulder_flex": 80.0,
+      "r_wrist_ext": -10.0,
+      "thoracic_flex": 10.0
+     },
+     "confidence": "estimated: coaching sources say a libero near/inside the front zone should bump-set by default; platform held further from the body for a higher ball (Dick's); skilled passers keep the upper arms below horizontal in the follow-through (Ridgway & Hamilton). Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+     "description": "When the libero is in the front zone or the ball is too low to hand-set, she bump-sets: square to the target (pelvis ~35 deg left toward the left-side hitter), right foot ahead, knees ~45 deg extending, trunk ~18 deg forward, straight joined arms only ~28 deg below horizontal so the platform faces up for a high, hittable arc; the arms rise only slightly and stop below shoulder height.",
+     "evidence": [
+      "https://cyberpost.co/can-liberos-overhand-set/",
+      "https://coachingvb.com/libero-in-volleyball-rules-role-rotations-skills/",
+      "https://www.whsaa.org/Officials/updates/NFHS_Libero_Exchange_Rules.pdf",
+      "https://www.dickssportinggoods.com/protips/sports-and-activities/volleyball/volleyball-offense-how-to-create-a-strong-platform",
+      "https://ojs.ub.uni-konstanz.de/cpa/article/view/2336",
+      "https://prezi.com/pehj0bgfnlds/the-biomechanics-of-forearm-passing-a-volleyball/"
+     ],
+     "id": "libero_forearm_set",
+     "name": "Libero forearm (bump) set to the hitter",
+     "phase": "contact",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.2,
+      "stance_width_m": 0.55,
+      "yaw_deg": 35.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 41.0,
+      "l_elbow_flex": 25.0,
+      "l_hip_abd": 34.0,
+      "l_hip_ext_rot": -7.0,
+      "l_hip_flex": 44.0,
+      "l_knee_flex": 88.0,
+      "l_shoulder_abd": 20.0,
+      "l_shoulder_flex": 50.0,
+      "lumbar_flex": 10.0,
+      "neck_flex": -40.0,
+      "r_ankle_dorsi": 32.0,
+      "r_elbow_flex": 25.0,
+      "r_hip_abd": 30.0,
+      "r_hip_ext_rot": -11.0,
+      "r_hip_flex": 57.0,
+      "r_knee_flex": 90.0,
+      "r_shoulder_abd": 20.0,
+      "r_shoulder_flex": 50.0,
+      "thoracic_flex": 15.0
+     },
+     "confidence": "estimated: no source with numeric cover posture was found; built from the low defensive base (Volleyball Canada/Ireland) with a more upright trunk and raised gaze because the ball comes off the block from above. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+     "description": "Libero is close behind the hitter, very low (knees ~90 deg, hips ~0.6 m), feet wide, trunk fairly upright (~25 deg) so the head is up watching the block above; hands low and out in front, palms up, ready to play a ball rebounding off the block.",
+     "evidence": [
+      "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Defense_Basic_for_e_module_skill_description_copy.pdf",
+      "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Defence-card.pdf",
+      "https://betteratvolleyball.com/what-is-a-dig-in-volleyball-lessons-drills-and-techniques/",
+      "https://coachesinsider.com/volleyball/transition-movement-base-to-defense-with-genny-volpe-rice-univ"
+     ],
+     "id": "cover",
+     "name": "Hitter coverage (low behind the attacker)",
+     "phase": "ready (own attacker contact)",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.12,
+      "stance_width_m": 0.76,
+      "yaw_deg": 0.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 17.0,
+      "l_elbow_flex": 60.0,
+      "l_hip_abd": 14.0,
+      "l_hip_ext_rot": 2.0,
+      "l_hip_flex": 13.0,
+      "l_knee_flex": 30.0,
+      "l_shoulder_abd": 10.0,
+      "l_shoulder_flex": 30.0,
+      "lumbar_flex": 6.0,
+      "neck_flex": -15.0,
+      "r_ankle_dorsi": 11.0,
+      "r_elbow_flex": 60.0,
+      "r_hip_abd": 14.0,
+      "r_hip_ext_rot": 1.0,
+      "r_hip_flex": 18.0,
+      "r_knee_flex": 30.0,
+      "r_shoulder_abd": 10.0,
+      "r_shoulder_flex": 30.0,
+      "thoracic_flex": 8.0
+     },
+     "confidence": "estimated: higher variant of the Volleyball Canada / Ireland ready position. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+     "description": "Higher, relaxed version of the receive stance once the opponent can only send an easy ball: feet about shoulder width, knees ~30 deg, trunk ~14 deg forward, arms loosely in front, eyes on the ball; the libero calls the free ball and gets ready to pass it to the setter.",
+     "evidence": [
+      "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+      "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Pass-card.pdf",
+      "https://www.stpaul.gov/sites/default/files/Media%20Root/Parks%20%26%20Recreation/Muni%20Volleyball%20fundamentals.pdf"
+     ],
+     "id": "free_ball_ready",
+     "name": "Free-ball ready (expecting an easy ball)",
+     "phase": "ready",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.08,
+      "stance_width_m": 0.55,
+      "yaw_deg": 0.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 10.0,
+      "l_elbow_flex": 80.0,
+      "l_hip_abd": -3.0,
+      "l_hip_flex": 35.0,
+      "l_knee_flex": 45.0,
+      "l_shoulder_flex": -20.0,
+      "lumbar_flex": 7.0,
+      "neck_flex": -15.0,
+      "r_ankle_dorsi": -20.0,
+      "r_elbow_flex": 80.0,
+      "r_hip_abd": 3.0,
+      "r_hip_flex": -15.0,
+      "r_knee_flex": 30.0,
+      "r_shoulder_flex": 40.0,
+      "thoracic_flex": 8.0,
+      "trunk_twist": -30.0
+     },
+     "confidence": "estimated: crossover footwork described in the USA Volleyball BCAP dig drill (crossover footwork to a cut shot) and Gimmillaro crossover-step dig drill; \"be in position early and stopped\" (Volpe, USA Volleyball). Right heel raised (ankle ~0.13 m high, ball of foot on the floor). Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+     "description": "Moving more than a step or two (e.g. from serve-receive or cover to the defensive spot) the libero runs with a crossover: hips turned ~60 deg toward the direction of travel (right), left foot crossing in front of the right, right foot pushing off on the ball of the foot; shoulders twisted back toward the net, body still medium-low, eyes on the ball. Short distances use a shuffle instead, ending in a split step.",
+     "evidence": [
+      "https://usavolleyball.org/wp-content/uploads/2020/11/Dig-2-Heffernan.pdf",
+      "https://coachesinsider.com/volleyball/crossover-step-dig-drill-with-brian-gimmillaro",
+      "https://coachesinsider.com/volleyball/transition-movement-base-to-defense-with-genny-volpe-rice-univ",
+      "https://usavolleyball.org/resource/five-tips-for-better-backcourt-defense/"
+     ],
+     "id": "transition",
+     "name": "Transition move (crossover step into the defensive spot)",
+     "phase": "movement (mid crossover step)",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": -0.59,
+      "stance_width_m": 0.18,
+      "yaw_deg": -60.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 23.0,
+      "l_elbow_flex": 70.0,
+      "l_hip_abd": 16.0,
+      "l_hip_ext_rot": -1.0,
+      "l_hip_flex": 22.0,
+      "l_knee_flex": 45.0,
+      "l_shoulder_abd": 15.0,
+      "l_shoulder_ext_rot": -49.0,
+      "l_shoulder_flex": 122.0,
+      "l_wrist_ext": 40.0,
+      "lumbar_flex": 3.0,
+      "neck_flex": -35.0,
+      "r_ankle_dorsi": 19.0,
+      "r_elbow_flex": 70.0,
+      "r_hip_abd": 16.0,
+      "r_hip_ext_rot": -2.0,
+      "r_hip_flex": 25.0,
+      "r_knee_flex": 45.0,
+      "r_shoulder_abd": 15.0,
+      "r_shoulder_ext_rot": -49.0,
+      "r_shoulder_flex": 122.0,
+      "r_wrist_ext": 40.0,
+      "thoracic_flex": 4.0
+     },
+     "confidence": "estimated (low confidence): overhead defence is recorded as a distinct floor-defence technique (European Journal of Human Movement 2019) but no description with body angles was found; values derived from the overhead-pass hand window moved further forward (wrists ~0.33 m in front of the shoulders). Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+     "description": "Hard attack arriving at face/head height: the libero keeps the feet, stays fairly upright with knees ~45 deg and plays the ball with firm open hands in front of and just above the face, elbows bent ~70 deg, wrists firm, chin up.",
+     "evidence": [
+      "https://doaj.org/article/c75b974f3ebc4aebb86448eef6976f19",
+      "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Defence-card.pdf"
+     ],
+     "id": "dig_overhead",
+     "name": "Overhead dig (hands up to a hard ball at head height)",
+     "phase": "contact",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.05,
+      "stance_width_m": 0.6,
+      "yaw_deg": 0.0
+     }
+    }
+   ],
+   "traits": {
+    "block_reach_m": {
+     "elite_men": 3.05,
+     "elite_women": 2.68,
+     "youth_women_u16": 2.45
+    },
+    "build_notes": "Liberos are the shortest and lightest players on every level studied (Palao et al. 2014; Marques 2009; Italian, VNL, Slovenian, Serbian and junior studies). STATURE (measured/reported): elite men ~1.85 m (London 2012 liberos 184.8 cm, range 180-190; Okano & Tanigawa 186.7 +/- 8.0 cm; a blog average of ~181 cm); elite women ~1.70 m (USA WNT libero 168.9 cm; Palao reference teams 1.69-1.75 m at 63-66 kg; blog ~169 cm); youth girls ~1.64 m (young female liberos 163.8 +/- 6.2 cm - exact age band of that sample not confirmed, used as the U16 value). REACHES ARE ESTIMATED: standing reach = ~1.32 x stature; spike/block reach are nominal for a libero (she may not attack above the net or block) and were set from standing reach + typical jumps, cross-checked with individual elite-men libero profiles of about 3.10-3.30 m spike / 2.90-3.21 m block and a men sample of unconfirmed (clearly sub-elite) level with liberos of 1.74 m (2.85 / 2.76 m). Exact libero means of Palao et al. could not be retrieved. BUILD: compact, light, low centre of mass, proportionally strong legs (Portuguese junior liberos had the best CMJ), agility and flexibility emphasised (Serbian U17 study); less upper-body mass than middles/opposites. GEAR: jersey of a clearly contrasting colour to the rest of the team (FIVB Official Volleyball Rules, Rule 19 - cited from prior knowledge, not re-verified in this session; no URL), same shorts as the team; knee pads are near-universal for liberos because of constant floor work (sprawls, collapses, pancakes) - common practice, not from a measured source; often long sleeves or elbow sleeves; low-cut indoor court shoes. The libero cannot serve under FIVB rules (some other rule sets allow it), attack above net height, block or rotate to the front row.",
+    "spike_reach_m": {
+     "elite_men": 3.2,
+     "elite_women": 2.8,
+     "youth_women_u16": 2.55
+    },
+    "standing_reach_m": {
+     "elite_men": 2.44,
+     "elite_women": 2.24,
+     "youth_women_u16": 2.16
+    },
+    "stature_m": {
+     "elite_men": 1.85,
+     "elite_women": 1.7,
+     "youth_women_u16": 1.64
+    }
+   }
+  },
   "middle_blocker": {
    "techniques": [
     {
@@ -1082,6 +1756,1098 @@
      "elite_men": 2.04,
      "elite_women": 1.9,
      "youth_women_u16": 1.8
+    }
+   }
+  },
+  "opposite": {
+   "techniques": [
+    {
+     "angles": {
+      "l_ankle_dorsi": 26.0,
+      "l_elbow_flex": 75.0,
+      "l_hip_abd": 14.0,
+      "l_hip_ext_rot": 10.0,
+      "l_hip_flex": 34.0,
+      "l_knee_flex": 60.0,
+      "l_shoulder_abd": 12.0,
+      "l_shoulder_flex": 35.0,
+      "l_wrist_ext": 10.0,
+      "lumbar_flex": 12.0,
+      "neck_flex": -20.0,
+      "r_ankle_dorsi": 22.0,
+      "r_elbow_flex": 75.0,
+      "r_hip_abd": 12.0,
+      "r_hip_ext_rot": 10.0,
+      "r_hip_flex": 40.0,
+      "r_knee_flex": 62.0,
+      "r_shoulder_abd": 12.0,
+      "r_shoulder_flex": 35.0,
+      "r_wrist_ext": 10.0,
+      "thoracic_flex": 13.0
+     },
+     "confidence": "estimated (from coaching descriptions of the medium/ready posture and anatomy; no study measured an opposite's ready stance)",
+     "description": "Balanced medium posture the opposite holds in right-front/right-back base before the play develops: feet a little wider than the shoulders, right (sideline) foot slightly ahead so the body faces a touch toward the court, knees ~60 deg, chest over the knees, hands relaxed in front at waist height and eyes up. Weight on the balls of the feet so the first step can go in any direction. Position-defined, not hand-defined: use it unmirrored for a left-handed opposite.",
+     "evidence": [
+      "Volleyball Canada - Blocking (2-player) skill description: bent knees, shoulders forward, weight on balls of feet, hands low only when the set is far from the net - https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Blocking_2-Player_for_e_module_skill_description.pdf",
+      "Volleyball Vault - Volleyball positions 101: player roles explained - https://volleyballvault.com/?p=2615",
+      "DICK'S Sporting Goods ProTips - Volleyball 101: positions and their roles (opposite attacks front and back row, blocks the opposing outside hitter, sets when the... - https://www.dickssportinggoods.com/protips/sports-and-activities/volleyball/volleyball-101-volleyball-positions-and-their-roles"
+     ],
+     "id": "ready_medium",
+     "name": "Medium ready (right side)",
+     "phase": "ready",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.08,
+      "stance_width_m": 0.55,
+      "yaw_deg": 10.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 36.0,
+      "l_elbow_flex": 50.0,
+      "l_hip_abd": 22.0,
+      "l_hip_ext_rot": 15.0,
+      "l_hip_flex": 48.0,
+      "l_knee_flex": 84.0,
+      "l_shoulder_abd": 18.0,
+      "l_shoulder_flex": 45.0,
+      "l_wrist_ext": 10.0,
+      "lumbar_flex": 17.0,
+      "neck_flex": -32.0,
+      "r_ankle_dorsi": 30.0,
+      "r_elbow_flex": 50.0,
+      "r_hip_abd": 16.0,
+      "r_hip_ext_rot": 15.0,
+      "r_hip_flex": 58.0,
+      "r_knee_flex": 88.0,
+      "r_shoulder_abd": 18.0,
+      "r_shoulder_flex": 45.0,
+      "r_wrist_ext": 10.0,
+      "thoracic_flex": 18.0
+     },
+     "confidence": "estimated (coaching descriptions of the low defensive posture; anatomy)",
+     "description": "Low defensive base in zone 1 when the opponent attacks: wide stance (~0.65 m), right foot forward, knees ~85-90 deg, trunk inclined ~35 deg with a flat back, arms out in front and apart, head up to read the hitter. The body is turned slightly toward the court so a dig is angled back to the middle. Position-defined, not hand-defined: use it unmirrored for a left-handed opposite.",
+     "evidence": [
+      "Volleyball Vault - Volleyball positions 101: player roles explained - https://volleyballvault.com/?p=2615",
+      "DICK'S Sporting Goods ProTips - Volleyball 101: positions and their roles (opposite attacks front and back row, blocks the opposing outside hitter, sets when the... - https://www.dickssportinggoods.com/protips/sports-and-activities/volleyball/volleyball-101-volleyball-positions-and-their-roles"
+     ],
+     "id": "ready_low",
+     "name": "Low defensive ready (right back)",
+     "phase": "ready",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.1,
+      "stance_width_m": 0.66,
+      "yaw_deg": 15.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 18.0,
+      "l_elbow_flex": 60.0,
+      "l_hip_abd": 10.0,
+      "l_hip_ext_rot": 10.0,
+      "l_hip_flex": 26.0,
+      "l_knee_flex": 44.0,
+      "l_shoulder_abd": 10.0,
+      "l_shoulder_flex": 25.0,
+      "lumbar_flex": 8.0,
+      "neck_flex": -12.0,
+      "r_ankle_dorsi": 18.0,
+      "r_elbow_flex": 60.0,
+      "r_hip_abd": 10.0,
+      "r_hip_ext_rot": 10.0,
+      "r_hip_flex": 30.0,
+      "r_knee_flex": 48.0,
+      "r_shoulder_abd": 10.0,
+      "r_shoulder_flex": 25.0,
+      "thoracic_flex": 9.0
+     },
+     "confidence": "estimated (coaching role descriptions; geometry of the right-side approach)",
+     "description": "On a free-ball call the front-row opposite releases from the net to the approach start (about 3.5-4 m off the net, just inside the right sideline) and stands medium-high, opened toward the court and the setter so the pass and set can be seen, arms loose, ready to start the approach with the left foot. For a left-handed opposite the release spot is usually a little wider (outside the sideline) and the body opens the same way (toward the setter).",
+     "evidence": [
+      "DICK'S Sporting Goods ProTips - Volleyball 101: positions and their roles (opposite attacks front and back row, blocks the opposing outside hitter, sets when the... - https://www.dickssportinggoods.com/protips/sports-and-activities/volleyball/volleyball-101-volleyball-positions-and-their-roles",
+      "Volleyball Vault - Volleyball positions 101: player roles explained - https://volleyballvault.com/?p=2615",
+      "Volleyball1on1 - Mike Diehl right side / opposite hitter spiking instructional videos: right side is more involved for right-handers in transition, open up to the... - https://www.volleyball1on1.com/mike-diehl-volleyball-right-side-opposite-hitter-spiking-instructional-videos/",
+      "Smarter Volley (Joe Trinsey) - Technique Tuesday: step-out / step-close for non-dominant-side hitters; elite approach width and angle vary widely - https://smartervolley.substack.com/p/technique-tuesday-step-out-step-close"
+     ],
+     "id": "free_ball_ready",
+     "name": "Free-ball release ready",
+     "phase": "ready",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.1,
+      "stance_width_m": 0.48,
+      "yaw_deg": 30.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 15.0,
+      "l_elbow_flex": 70.0,
+      "l_hip_abd": 8.0,
+      "l_hip_ext_rot": 10.0,
+      "l_hip_flex": 30.0,
+      "l_knee_flex": 40.0,
+      "l_shoulder_abd": 15.0,
+      "l_shoulder_flex": 20.0,
+      "lumbar_flex": 6.0,
+      "neck_flex": -10.0,
+      "r_ankle_dorsi": 5.0,
+      "r_elbow_flex": 60.0,
+      "r_hip_abd": 8.0,
+      "r_hip_ext_rot": 15.0,
+      "r_hip_flex": -10.0,
+      "r_knee_flex": 25.0,
+      "r_shoulder_abd": 15.0,
+      "r_shoulder_flex": -10.0,
+      "thoracic_flex": 8.0,
+      "trunk_twist": -10.0
+     },
+     "confidence": "estimated (coaching descriptions of transition footwork; Diehl notes the right side is the harder transition for right-handers)",
+     "description": "After landing from a block the opposite drops the right (outside) foot back, opens the hips and chest to the left toward the court to keep sight of the ball, and runs/shuffles back to the approach start near the right sideline. Key instant: just after the drop step - right foot back, pelvis ~45 deg open to the court, chest turned further toward the ball, knees bent and arms relaxed.",
+     "evidence": [
+      "Volleyball1on1 - Mike Diehl right side / opposite hitter spiking instructional videos: right side is more involved for right-handers in transition, open up to the... - https://www.volleyball1on1.com/mike-diehl-volleyball-right-side-opposite-hitter-spiking-instructional-videos/",
+      "Smarter Volley (Joe Trinsey) - Technique Tuesday: step-out / step-close for non-dominant-side hitters; elite approach width and angle vary widely - https://smartervolley.substack.com/p/technique-tuesday-step-out-step-close"
+     ],
+     "id": "transition_retreat",
+     "name": "Transition off the net (right side)",
+     "phase": "transition",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": -0.45,
+      "stance_width_m": 0.3,
+      "yaw_deg": 45.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 10.0,
+      "l_elbow_flex": 30.0,
+      "l_hip_abd": 6.0,
+      "l_hip_ext_rot": 8.0,
+      "l_hip_flex": 25.0,
+      "l_knee_flex": 28.0,
+      "l_shoulder_abd": 10.0,
+      "l_shoulder_flex": 15.0,
+      "lumbar_flex": 10.0,
+      "neck_flex": -20.0,
+      "r_ankle_dorsi": -15.0,
+      "r_elbow_flex": 30.0,
+      "r_hip_abd": 6.0,
+      "r_hip_ext_rot": 8.0,
+      "r_hip_flex": -12.0,
+      "r_knee_flex": 20.0,
+      "r_shoulder_abd": 10.0,
+      "r_shoulder_flex": 15.0,
+      "thoracic_flex": 12.0
+     },
+     "confidence": "estimated (coaching texts on right-side approach angle and footwork; no measured opposite-specific approach angles found)",
+     "description": "First, directional step (left foot) of a right-handed opposite's 3-step left-right-left approach. The opposite starts near the right sideline around 3.5-4 m from the net and runs fairly straight at the net (often a few degrees inward, 'body moving toward the middle'), with the chest and hips slightly open to the left to watch the set travel from the setter; this is flatter and narrower than an outside hitter's banana approach because the ball has to cross in front of the body to reach the right shoulder. Left-handed opposite: do not use the automatic mirror of this posture (that is a left-hander hitting from zone 4); a lefty opposite moves like a mirrored right-handed outside hitter - the set arrives on the hitting side, the approach comes from outside the right sideline at roughly 30-45 deg and the hips open toward the setter.",
+     "evidence": [
+      "Volleyball1on1 - Mike Diehl right side / opposite hitter spiking instructional videos: right side is more involved for right-handers in transition, open up to the... - https://www.volleyball1on1.com/mike-diehl-volleyball-right-side-opposite-hitter-spiking-instructional-videos/",
+      "Smarter Volley (Joe Trinsey) - Technique Tuesday: step-out / step-close for non-dominant-side hitters; elite approach width and angle vary widely - https://smartervolley.substack.com/p/technique-tuesday-step-out-step-close",
+      "Coaching Volleyball - Hitter attack angles (approach angle: not too wide, deep or straight; left-handed outside hitters come in closer to the court) - https://testsite.coachingvb.com/index.php/2015/02/19/hitter-attack-angles/",
+      "AVCA - Getting it RIGHT: setting to and attacking the right side of the court (footwork for right- and left-handed right-side hitters; member content, summary only) - https://www.avca.org/resource/example-resource-5/",
+      "CoachTube - Volleyball: the fundamentals for pin hitters (opposite approach footwork; sharp cross, deep cross, line shots; sharp tip from the opposite spot) - https://coachtube.com/course_lesson/volleyball-the-fundamentals-for-pin-hitters/sharp-tip/18950640",
+      "Fuchs PX et al. (2019). Movement characteristics of volleyball spike jump performance in females. J Sci Med Sport (orientation step length and dominant-knee extension... - https://iris.unicas.it/retrieve/de2a6153-e413-86a2-e053-1705fe0a3017/49_Fuchs%20JSAMS%202019.pdf",
+      "Influence of the step number of the approach run on the jumping kinematics in volleyball spike jumps (UNLV, 2023; 3-step approach: higher horizontal speed, more... - https://digitalscholarship.unlv.edu/scholarship_kin/vol4/iss1/15"
+     ],
+     "id": "opp_approach_start",
+     "name": "Right-side approach start (first step)",
+     "phase": "approach (first step)",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": -0.6,
+      "stance_width_m": 0.2,
+      "yaw_deg": 20.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": -25.0,
+      "l_elbow_flex": 10.0,
+      "l_hip_abd": 5.0,
+      "l_hip_ext_rot": 5.0,
+      "l_hip_flex": -20.0,
+      "l_knee_flex": 30.0,
+      "l_shoulder_abd": 15.0,
+      "l_shoulder_flex": -60.0,
+      "lumbar_flex": 15.0,
+      "neck_flex": -30.0,
+      "r_ankle_dorsi": 5.0,
+      "r_elbow_flex": 10.0,
+      "r_hip_abd": 5.0,
+      "r_hip_ext_rot": 5.0,
+      "r_hip_flex": 35.0,
+      "r_knee_flex": 22.0,
+      "r_shoulder_abd": 15.0,
+      "r_shoulder_flex": -60.0,
+      "thoracic_flex": 20.0
+     },
+     "confidence": "estimated (coaching descriptions; Wagner 2009 / Fuchs 2019 give the importance of horizontal speed and step length but no joint angles were retrievable)",
+     "description": "Instant the right heel strikes at the end of the long penultimate step (~1 m): trunk inclined forward, both arms swung fully back and high behind the body, left toes just leaving the floor, eyes up on the set. This is where horizontal speed peaks and the last adjustment to the ball is made (LTPD card); approach speed and step length are what the studies link to jump height. Left-handed opposite: do not use the automatic mirror of this posture (that is a left-hander hitting from zone 4); a lefty opposite moves like a mirrored right-handed outside hitter - the set arrives on the hitting side, the approach comes from outside the right sideline at roughly 30-45 deg and the hips open toward the setter.",
+     "evidence": [
+      "Wagner H, Tilp M, von Duvillard SP, Mueller E (2009). Kinematic analysis of volleyball spike jump. Int J Sports Med 30(10):760-765 (spike jump height correlates with... - https://lida.sport-iat.de/ta/Record/4017113?lng=en",
+      "Fuchs PX et al. (2019). Movement characteristics of volleyball spike jump performance in females. J Sci Med Sport (orientation step length and dominant-knee extension... - https://iris.unicas.it/retrieve/de2a6153-e413-86a2-e053-1705fe0a3017/49_Fuchs%20JSAMS%202019.pdf",
+      "Fuchs PX et al. (2019). Spike jump biomechanics in male versus female elite volleyball players. J Sports Sci 37(21):2411-2419 (sex differences in approach speed, step... - https://pubmed.ncbi.nlm.nih.gov/31280702/",
+      "Gender differences in technical performance of the volleyball spike jump among Czech top national league players (German J Exerc Sport Res 2025): men more often... - https://link.springer.com/article/10.1007/s12662-025-01088-z",
+      "Volleyball Ireland LTPD Attack card: left foot plants in front of the right so the body and hips are open to the set; last adjustment on the big step - https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Attack-card.pdf",
+      "Smarter Volley (Joe Trinsey) - Technique Tuesday: step-out / step-close for non-dominant-side hitters; elite approach width and angle vary widely - https://smartervolley.substack.com/p/technique-tuesday-step-out-step-close",
+      "Kinematic analysis of volleyball spike (three Brazilian outside hitters, sagittal video): longer approaches typical of pin hitters, knee angles similar until flight - https://lida.sport-iat.de/twm/Record/3040210?lng=en",
+      "Coaching Volleyball - Hitter attack angles (approach angle: not too wide, deep or straight; left-handed outside hitters come in closer to the court) - https://testsite.coachingvb.com/index.php/2015/02/19/hitter-attack-angles/"
+     ],
+     "id": "approach_penultimate",
+     "name": "Penultimate (big) step - right foot plant",
+     "phase": "approach (penultimate step)",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 1.0,
+      "stance_width_m": 0.22,
+      "yaw_deg": 10.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 34.0,
+      "l_elbow_flex": 15.0,
+      "l_hip_abd": 8.0,
+      "l_hip_ext_rot": -12.0,
+      "l_hip_flex": 38.0,
+      "l_knee_flex": 72.0,
+      "l_shoulder_abd": 10.0,
+      "l_shoulder_flex": -30.0,
+      "lumbar_flex": 15.0,
+      "neck_flex": -30.0,
+      "r_ankle_dorsi": 43.0,
+      "r_elbow_flex": 15.0,
+      "r_hip_abd": 8.0,
+      "r_hip_ext_rot": 5.0,
+      "r_hip_flex": 30.0,
+      "r_knee_flex": 73.0,
+      "r_shoulder_abd": 10.0,
+      "r_shoulder_flex": -30.0,
+      "thoracic_flex": 18.0,
+      "trunk_twist": 5.0
+     },
+     "confidence": "estimated, anchored to measured knee data (Frontiers in Physiology 2026: opposites' propulsive knee range 72.8 +/- 9.3 deg; the ~107 deg minimum knee angle is an abstract value whose group label is ambiguous); other joints estimated",
+     "description": "Both feet planted (left foot slightly ahead and turned in), knees at their deepest bend (~72 deg flexion, i.e. ~107 deg knee angle) while the arms swing down past the hips and forward, trunk inclined, chest just starting to turn right. For a right-handed opposite the hips stay nearly square or slightly open to the setter rather than closed, so the ball can cross in front of the face before contact. A 2026 position study found opposites have the largest propulsive knee range (~73 deg) of all pin hitters. Left-handed opposite: do not use the automatic mirror of this posture (that is a left-hander hitting from zone 4); a lefty opposite moves like a mirrored right-handed outside hitter - the set arrives on the hitting side, the approach comes from outside the right sideline at roughly 30-45 deg and the hips open toward the setter.",
+     "evidence": [
+      "Position-specific sagittal-plane right knee kinematics during spike take-off in male volleyball players. Frontiers in Physiology (2026), 27 players incl. 9 opposites:... - https://www.frontiersin.org/journals/physiology/articles/10.3389/fphys.2026.1931891/full",
+      "Position-specific neuromuscular activation and lower-limb kinematics, outside vs opposite hitters (JOMH 2025, 12 national-level men): opposites show greater... - https://oss.jomh.org/files/article/20250627-579/pdf/JOMH2025041402.pdf",
+      "Wagner H, Tilp M, von Duvillard SP, Mueller E (2009). Kinematic analysis of volleyball spike jump. Int J Sports Med 30(10):760-765 (spike jump height correlates with... - https://lida.sport-iat.de/ta/Record/4017113?lng=en",
+      "Influence of the step number of the approach run on the jumping kinematics in volleyball spike jumps (UNLV, 2023; 3-step approach: higher horizontal speed, more... - https://digitalscholarship.unlv.edu/scholarship_kin/vol4/iss1/15",
+      "Asymmetrical lower-limb injury risk during the volleyball spike jump of male elite volleyball players (dominant leg generates more energy at take-off) - https://pure.jbnu.ac.kr/en/publications/asymmetrical-lower-limb-injury-risk-during-the-volleyball-spike-j/",
+      "Volleyball Ireland LTPD Attack card: left foot plants in front of the right so the body and hips are open to the set; last adjustment on the big step - https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Attack-card.pdf",
+      "Smarter Volley (Joe Trinsey) - Technique Tuesday: step-out / step-close for non-dominant-side hitters; elite approach width and angle vary widely - https://smartervolley.substack.com/p/technique-tuesday-step-out-step-close",
+      "Gender differences in technical performance of the volleyball spike jump among Czech top national league players (German J Exerc Sport Res 2025): men more often... - https://link.springer.com/article/10.1007/s12662-025-01088-z",
+      "Fuchs PX et al. (2019). Spike jump biomechanics in male versus female elite volleyball players. J Sports Sci 37(21):2411-2419 (sex differences in approach speed, step... - https://pubmed.ncbi.nlm.nih.gov/31280702/",
+      "Volleyball1on1 - Mike Diehl right side / opposite hitter spiking instructional videos: right side is more involved for right-handers in transition, open up to the... - https://www.volleyball1on1.com/mike-diehl-volleyball-right-side-opposite-hitter-spiking-instructional-videos/"
+     ],
+     "id": "approach_takeoff",
+     "name": "Take-off plant (deepest knee bend)",
+     "phase": "take-off (plant)",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": -0.1,
+      "stance_width_m": 0.35,
+      "yaw_deg": 5.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": -40.0,
+      "l_elbow_flex": 25.0,
+      "l_hip_abd": 5.0,
+      "l_hip_flex": 6.0,
+      "l_knee_flex": 14.0,
+      "l_shoulder_abd": 20.0,
+      "l_shoulder_flex": 145.0,
+      "lumbar_flex": 5.0,
+      "neck_flex": -30.0,
+      "r_ankle_dorsi": -42.0,
+      "r_elbow_flex": 25.0,
+      "r_hip_abd": 5.0,
+      "r_hip_ext_rot": 5.0,
+      "r_hip_flex": -4.0,
+      "r_knee_flex": 10.0,
+      "r_shoulder_abd": 20.0,
+      "r_shoulder_flex": 150.0,
+      "thoracic_flex": 5.0,
+      "trunk_twist": 10.0
+     },
+     "confidence": "estimated (knee nearly fully extended after the ~73 deg propulsive range reported for opposites; arm path from coaching texts)",
+     "description": "Instant the toes leave the floor: hips and knees almost fully extended, ankles plantarflexed, both arms driven up in front to above head height, trunk nearly upright and head up on the ball. Arm cocking of the right arm may already start here (ODU helical-axis thesis). Left-handed opposite: do not use the automatic mirror of this posture (that is a left-hander hitting from zone 4); a lefty opposite moves like a mirrored right-handed outside hitter - the set arrives on the hitting side, the approach comes from outside the right sideline at roughly 30-45 deg and the hips open toward the setter.",
+     "evidence": [
+      "Position-specific sagittal-plane right knee kinematics during spike take-off in male volleyball players. Frontiers in Physiology (2026), 27 players incl. 9 opposites:... - https://www.frontiersin.org/journals/physiology/articles/10.3389/fphys.2026.1931891/full",
+      "Position-specific neuromuscular activation and lower-limb kinematics, outside vs opposite hitters (JOMH 2025, 12 national-level men): opposites show greater... - https://oss.jomh.org/files/article/20250627-579/pdf/JOMH2025041402.pdf",
+      "Old Dominion University thesis: helical-axis analysis of the spike (16 players) - arm cocking may begin before take-off; cross-body vs same-side follow-through strategies - https://digitalcommons.odu.edu/biomedengineering_etds/29",
+      "Wagner H, Tilp M, von Duvillard SP, Mueller E (2009). Kinematic analysis of volleyball spike jump. Int J Sports Med 30(10):760-765 (spike jump height correlates with... - https://lida.sport-iat.de/ta/Record/4017113?lng=en"
+     ],
+     "id": "approach_toe_off",
+     "name": "Toe-off (leaving the floor)",
+     "phase": "take-off (toe-off)",
+     "root": {
+      "jump_m": 0.03,
+      "stagger_m": 0.0,
+      "yaw_deg": 5.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": -25.0,
+      "l_elbow_flex": 20.0,
+      "l_hip_abd": 6.0,
+      "l_hip_ext_rot": 5.0,
+      "l_hip_flex": 15.0,
+      "l_knee_flex": 55.0,
+      "l_shoulder_abd": 20.0,
+      "l_shoulder_flex": 155.0,
+      "lumbar_flex": -10.0,
+      "neck_flex": -15.0,
+      "r_ankle_dorsi": -30.0,
+      "r_elbow_flex": 105.0,
+      "r_hip_abd": 6.0,
+      "r_hip_ext_rot": 5.0,
+      "r_knee_flex": 70.0,
+      "r_shoulder_abd": 115.0,
+      "r_shoulder_ext_rot": 115.0,
+      "r_wrist_ext": 30.0,
+      "thoracic_flex": -12.0,
+      "trunk_lateral": -5.0,
+      "trunk_twist": 40.0
+     },
+     "confidence": "estimated, anchored to measured peak shoulder external rotation (Reeser 2010: 160 +/- 10 deg) and qualitative sex differences (Prosch); trunk and leg values estimated",
+     "description": "Rising in the air: left arm reaches up toward the ball, right elbow pulled back and high (above shoulder level), hand behind the head, back arched and the chest turned ~30 deg to the right of the net while the pelvis stays slightly open to the setter ('open hip'); legs bent behind in a bow. Max layback follows a few milliseconds later: studies report peak external rotation of 160 +/- 10 deg (Reeser) - the 115 deg used here is the recognisable bow-and-arrow frame; use 150-160 for a max-layback frame. Men tend to show more torso rotation in the backswing (Prosch). Left-handed opposite: do not use the automatic mirror of this posture (that is a left-hander hitting from zone 4); a lefty opposite moves like a mirrored right-handed outside hitter - the set arrives on the hitting side, the approach comes from outside the right sideline at roughly 30-45 deg and the hips open toward the setter.",
+     "evidence": [
+      "Reeser JC, Fleisig GS, Bolt B, Ruan M (2010). Upper limb biomechanics during the volleyball serve and spike. Sports Health 2(5):368-374. Table 3: cross-body spike max... - https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065",
+      "Seminati E et al. (2015). Shoulder 3D range of motion and humerus rotation in two volleyball spike techniques: injury prevention and performance. Sports Biomechanics... - https://researchportal.bath.ac.uk/en/publications/shoulder-3d-range-of-motion-and-humerus-rotation-in-two-volleybal/",
+      "Sex-specifics in volleyball spike technique, upper-body strength, and shoulder mobility. Journal of Human Kinetics (77 players, 3D capture): men more torso rotation... - https://johk.pl/?p=10121",
+      "A motion analysis in the volleyball spike - part 1: three-dimensional kinematics and performance (elite and junior elite; pelvis, trunk, shoulder and elbow differ by... - https://lida.sport-iat.de/ta/Record/4043909?lng=en",
+      "Investigation of shoulder kinematics in volleyball spikes (ISBS 2008; humerus ER/IR interdependent with abduction/adduction in league games) - https://lida.sport-iat.de/dvv/Record/4016745?lng=en",
+      "Spiking kinematics in volleyball players with shoulder pain. Journal of Athletic Training 54(1):90 (2019); painful group: less scapular posterior tilt, more... - https://meridian.allenpress.com/jat/article/54/1/90/9202/Spiking-Kinematics-in-Volleyball-Players-With",
+      "Old Dominion University thesis: helical-axis analysis of the spike (16 players) - arm cocking may begin before take-off; cross-body vs same-side follow-through strategies - https://digitalcommons.odu.edu/biomedengineering_etds/29",
+      "Kinematic analysis of volleyball spike (three Brazilian outside hitters, sagittal video): longer approaches typical of pin hitters, knee angles similar until flight - https://lida.sport-iat.de/twm/Record/3040210?lng=en"
+     ],
+     "id": "attack_arm_cock",
+     "name": "Arm cock (bow-and-arrow), right side",
+     "phase": "arm cock",
+     "root": {
+      "jump_m": 0.55,
+      "stagger_m": 0.0,
+      "yaw_deg": 10.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": -30.0,
+      "l_elbow_flex": 80.0,
+      "l_hip_abd": 6.0,
+      "l_hip_ext_rot": 5.0,
+      "l_hip_flex": 25.0,
+      "l_knee_flex": 50.0,
+      "l_shoulder_abd": 15.0,
+      "l_shoulder_flex": 80.0,
+      "lumbar_flex": -2.0,
+      "neck_flex": -15.0,
+      "r_ankle_dorsi": -30.0,
+      "r_elbow_flex": 75.0,
+      "r_hip_abd": 6.0,
+      "r_hip_ext_rot": 5.0,
+      "r_hip_flex": 15.0,
+      "r_knee_flex": 60.0,
+      "r_shoulder_abd": 120.0,
+      "r_shoulder_ext_rot": 90.0,
+      "r_wrist_ext": 20.0,
+      "thoracic_flex": -3.0,
+      "trunk_lateral": -15.0,
+      "trunk_twist": 15.0
+     },
+     "confidence": "estimated (4-phase spike model - approach, arm cocking, arm acceleration, follow-through - as used by Reeser et al. 2010; opposite-specific hip/chest timing from coaching texts)",
+     "description": "Opposite-specific frame between max layback and contact on a set that travels from the setter on the hitter's left across to the right shoulder: the pelvis stays open toward the setter/court while the chest unwinds from right to left, the right elbow leads high in front of the shoulder with the forearm still vertical, the left arm pulls down to the chest and the trunk starts to side-bend left. This open-hip swing lets a right-hander hit both the line and the sharp cross ('cut') from the right side. Left-handed opposite: do not use the automatic mirror of this posture (that is a left-hander hitting from zone 4); a lefty opposite moves like a mirrored right-handed outside hitter - the set arrives on the hitting side, the approach comes from outside the right sideline at roughly 30-45 deg and the hips open toward the setter.",
+     "evidence": [
+      "Reeser JC, Fleisig GS, Bolt B, Ruan M (2010). Upper limb biomechanics during the volleyball serve and spike. Sports Health 2(5):368-374. Table 3: cross-body spike max... - https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065",
+      "Ball-to-hand contact forces increase modeled shoulder torques during a volleyball spike. Journal of Sports Science and Medicine 22(3):488 (2023); adolescent females,... - https://www.jssm.org/researchjssm-22-488.xml.xml",
+      "Sex-specifics in volleyball spike technique, upper-body strength, and shoulder mobility. Journal of Human Kinetics (77 players, 3D capture): men more torso rotation... - https://johk.pl/?p=10121",
+      "Volleyball1on1 - Mike Diehl right side / opposite hitter spiking instructional videos: right side is more involved for right-handers in transition, open up to the... - https://www.volleyball1on1.com/mike-diehl-volleyball-right-side-opposite-hitter-spiking-instructional-videos/",
+      "Smarter Volley (Joe Trinsey) - Technique Tuesday: step-out / step-close for non-dominant-side hitters; elite approach width and angle vary widely - https://smartervolley.substack.com/p/technique-tuesday-step-out-step-close"
+     ],
+     "id": "opp_open_hip_arm_swing",
+     "name": "Open-hip forward arm swing (opposite)",
+     "phase": "arm acceleration",
+     "root": {
+      "jump_m": 0.6,
+      "stagger_m": 0.0,
+      "yaw_deg": 12.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": -30.0,
+      "l_elbow_flex": 95.0,
+      "l_hip_abd": 6.0,
+      "l_hip_ext_rot": 5.0,
+      "l_hip_flex": 30.0,
+      "l_knee_flex": 40.0,
+      "l_shoulder_abd": 20.0,
+      "l_shoulder_flex": 40.0,
+      "lumbar_flex": 3.0,
+      "neck_flex": -20.0,
+      "r_ankle_dorsi": -30.0,
+      "r_elbow_flex": 34.0,
+      "r_hip_abd": 6.0,
+      "r_hip_ext_rot": 5.0,
+      "r_hip_flex": 25.0,
+      "r_knee_flex": 45.0,
+      "r_shoulder_abd": 48.0,
+      "r_shoulder_ext_rot": -65.0,
+      "r_shoulder_flex": 160.0,
+      "r_wrist_ext": -10.0,
+      "thoracic_flex": 5.0,
+      "trunk_lateral": -20.0,
+      "trunk_twist": -5.0
+     },
+     "confidence": "measured for the hitting shoulder (Reeser 2010: abduction 130 +/- 8 deg at contact; Slovak 2023: 130-133 deg) and elbow (~34 deg, Reeser table value whose column mapping could not be verified); trunk, legs and non-hitting arm estimated",
+     "description": "Ball contact at near-full reach above and slightly in front of the right shoulder: hitting arm almost straight (elbow ~34 deg), shoulder elevated ~130 deg relative to the trunk while the trunk side-bends ~20 deg to the left so the arm is close to vertical in space, wrist starting to snap, left arm tucked to the chest, chest already rotated a little left of the pelvis for the cross-court/cut shot, legs flexing forward under the body. Hitting-arm note: shoulder values are given for the app's Euler order (abduction applied before flexion); this flex-dominant overhead arm with a negative ext_rot is exactly the same rotation as the abduction-dominant form flex ~-20 / abd ~130-150 / ext_rot ~105-125 in this rig, which is closer to how the studies report it (abduction ~130 deg at contact). Left-handed opposite: do not use the automatic mirror of this posture (that is a left-hander hitting from zone 4); a lefty opposite moves like a mirrored right-handed outside hitter - the set arrives on the hitting side, the approach comes from outside the right sideline at roughly 30-45 deg and the hips open toward the setter.",
+     "evidence": [
+      "Reeser JC, Fleisig GS, Bolt B, Ruan M (2010). Upper limb biomechanics during the volleyball serve and spike. Sports Health 2(5):368-374. Table 3: cross-body spike max... - https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065",
+      "Slovak L, Sarvestan J, Alaei F, Iwatsuki T, Zahradnik D (2023/24). Upper limb biomechanical differences in volleyball spikes among young female players (U16/U18/U20).... - https://journals.sagepub.com/doi/10.1177/17479541231211679",
+      "Ball-to-hand contact forces increase modeled shoulder torques during a volleyball spike. Journal of Sports Science and Medicine 22(3):488 (2023); adolescent females,... - https://www.jssm.org/researchjssm-22-488.xml.xml",
+      "Seminati E et al. (2015). Shoulder 3D range of motion and humerus rotation in two volleyball spike techniques: injury prevention and performance. Sports Biomechanics... - https://researchportal.bath.ac.uk/en/publications/shoulder-3d-range-of-motion-and-humerus-rotation-in-two-volleybal/",
+      "ClinicalTrials.gov NCT06416917 - Glenohumeral internal rotation deficit among professional athletes (background: shoulder abducted ~140-170 deg in neutral rotation... - https://clinicaltrials.gov/study/NCT06416917",
+      "Mitchinson et al. (2013), Journal of Applied Biomechanics: spike kinematics in elite male players with/without shoulder injury; thoracic rotation and shoulder... - https://espace.curtin.edu.au/handle/20.500.11937/20026",
+      "Spiking kinematics in volleyball players with shoulder pain. Journal of Athletic Training 54(1):90 (2019); painful group: less scapular posterior tilt, more... - https://meridian.allenpress.com/jat/article/54/1/90/9202/Spiking-Kinematics-in-Volleyball-Players-With",
+      "The effects of ball impact position on shoulder muscle activation during spiking in male volleyball players. JSES International (2020); deltoid activity changes when... - https://www.jsesinternational.org/article/S2666-6383(20)30008-6/fulltext",
+      "Coleman SGS, Benham AS, Northcott SR (1993). A three-dimensional cinematographical analysis of the volleyball spike. J Sports Sci 11(4):295-302 (10 international men;... - https://researchportal.hw.ac.uk/en/publications/a-three-dimensional-cinematographical-analysis-of-the-volleyball-/",
+      "Kawai et al. Effect of ball positions on trunk, hip, knee, and ankle joint kinematics and kinetics during a spike jump in volleyball (20 female college players): ball... - https://pubmed.ncbi.nlm.nih.gov/39094236",
+      "The Art of Coaching Volleyball - Right side hitting drill with over-the-net pepper format (cross-court swing, line variation) - https://www.theartofcoachingvolleyball.com/right-side-hitting-drill-with-over-the-net-pepper-format/",
+      "CoachTube - Volleyball: the fundamentals for pin hitters (opposite approach footwork; sharp cross, deep cross, line shots; sharp tip from the opposite spot) - https://coachtube.com/course_lesson/volleyball-the-fundamentals-for-pin-hitters/sharp-tip/18950640"
+     ],
+     "id": "attack_contact",
+     "name": "Spike contact from the right side (cross-court)",
+     "phase": "contact",
+     "root": {
+      "jump_m": 0.6,
+      "stagger_m": 0.0,
+      "yaw_deg": 15.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": -30.0,
+      "l_elbow_flex": 95.0,
+      "l_hip_abd": 6.0,
+      "l_hip_ext_rot": 5.0,
+      "l_hip_flex": 28.0,
+      "l_knee_flex": 42.0,
+      "l_shoulder_abd": 20.0,
+      "l_shoulder_flex": 45.0,
+      "lumbar_flex": 2.0,
+      "neck_flex": -20.0,
+      "r_ankle_dorsi": -30.0,
+      "r_elbow_flex": 30.0,
+      "r_hip_abd": 6.0,
+      "r_hip_ext_rot": 5.0,
+      "r_hip_flex": 22.0,
+      "r_knee_flex": 48.0,
+      "r_shoulder_abd": 45.0,
+      "r_shoulder_ext_rot": -55.0,
+      "r_shoulder_flex": 160.0,
+      "r_wrist_ext": -5.0,
+      "thoracic_flex": 4.0,
+      "trunk_lateral": -15.0,
+      "trunk_twist": 10.0
+     },
+     "confidence": "estimated (spike-type differences reported qualitatively by Mitchinson 2013; values estimated from coaching texts)",
+     "description": "Variant contact for the line (down the right sideline): less trunk rotation and side bend (chest stays square or slightly right), contact a little further to the right of the head, and the hand turns out so the palm faces the line ('thumb up/turn the ball'). Spike type changes thoracic rotation and shoulder abduction at impact (Mitchinson 2013). Hitting-arm note: shoulder values are given for the app's Euler order (abduction applied before flexion); this flex-dominant overhead arm with a negative ext_rot is exactly the same rotation as the abduction-dominant form flex ~-20 / abd ~130-150 / ext_rot ~105-125 in this rig, which is closer to how the studies report it (abduction ~130 deg at contact). Left-handed opposite: do not use the automatic mirror of this posture (that is a left-hander hitting from zone 4); a lefty opposite moves like a mirrored right-handed outside hitter - the set arrives on the hitting side, the approach comes from outside the right sideline at roughly 30-45 deg and the hips open toward the setter.",
+     "evidence": [
+      "Mitchinson et al. (2013), Journal of Applied Biomechanics: spike kinematics in elite male players with/without shoulder injury; thoracic rotation and shoulder... - https://espace.curtin.edu.au/handle/20.500.11937/20026",
+      "Reeser JC, Fleisig GS, Bolt B, Ruan M (2010). Upper limb biomechanics during the volleyball serve and spike. Sports Health 2(5):368-374. Table 3: cross-body spike max... - https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065",
+      "The effects of ball impact position on shoulder muscle activation during spiking in male volleyball players. JSES International (2020); deltoid activity changes when... - https://www.jsesinternational.org/article/S2666-6383(20)30008-6/fulltext",
+      "CoachTube - Volleyball: the fundamentals for pin hitters (opposite approach footwork; sharp cross, deep cross, line shots; sharp tip from the opposite spot) - https://coachtube.com/course_lesson/volleyball-the-fundamentals-for-pin-hitters/sharp-tip/18950640",
+      "The Art of Coaching Volleyball - Right side hitting drill with over-the-net pepper format (cross-court swing, line variation) - https://www.theartofcoachingvolleyball.com/right-side-hitting-drill-with-over-the-net-pepper-format/",
+      "Volleyball1on1 - Mike Diehl right side / opposite hitter spiking instructional videos: right side is more involved for right-handers in transition, open up to the... - https://www.volleyball1on1.com/mike-diehl-volleyball-right-side-opposite-hitter-spiking-instructional-videos/",
+      "Smarter Volley (Joe Trinsey) - Hitting Toolkit parts 1 and 2 - https://smartervolley.substack.com/p/hitting-toolkit-part-1"
+     ],
+     "id": "opp_attack_contact_line",
+     "name": "Line shot contact from the right side",
+     "phase": "contact",
+     "root": {
+      "jump_m": 0.6,
+      "stagger_m": 0.0,
+      "yaw_deg": 5.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": -30.0,
+      "l_elbow_flex": 95.0,
+      "l_hip_abd": 6.0,
+      "l_hip_ext_rot": 5.0,
+      "l_hip_flex": 20.0,
+      "l_knee_flex": 60.0,
+      "l_shoulder_abd": 20.0,
+      "l_shoulder_flex": 40.0,
+      "lumbar_flex": 8.0,
+      "neck_flex": -25.0,
+      "r_ankle_dorsi": -30.0,
+      "r_elbow_flex": 30.0,
+      "r_hip_abd": 6.0,
+      "r_hip_ext_rot": 5.0,
+      "r_hip_flex": 10.0,
+      "r_knee_flex": 65.0,
+      "r_shoulder_abd": 42.0,
+      "r_shoulder_ext_rot": -75.0,
+      "r_shoulder_flex": 160.0,
+      "r_wrist_ext": -20.0,
+      "thoracic_flex": 10.0,
+      "trunk_lateral": -18.0,
+      "trunk_twist": -5.0
+     },
+     "confidence": "estimated (jump/velocity differences measured qualitatively; joint values estimated from the front-row contact)",
+     "description": "Back-row attack from zone 1: take-off behind the 3 m line with a broad jump, so the body travels forward and the ball is contacted further in front of the hitting shoulder with more forward trunk flexion and a strong wrist snap for topspin; legs trail behind under the body. Back-row spikes show higher take-off speed and jump height than front-row spikes but lower ball speed (ISBS 2008). Hitting-arm note: shoulder values are given for the app's Euler order (abduction applied before flexion); this flex-dominant overhead arm with a negative ext_rot is exactly the same rotation as the abduction-dominant form flex ~-20 / abd ~130-150 / ext_rot ~105-125 in this rig, which is closer to how the studies report it (abduction ~130 deg at contact). Left-handed opposite: do not use the automatic mirror of this posture (that is a left-hander hitting from zone 4); a lefty opposite moves like a mirrored right-handed outside hitter - the set arrives on the hitting side, the approach comes from outside the right sideline at roughly 30-45 deg and the hips open toward the setter.",
+     "evidence": [
+      "Front-row vs back-row spike kinematics (ISBS 2008, 6 players): back-row spikes - higher CoM velocity at approach and take-off and greater jump height; front-row -... - https://ojs.ub.uni-konstanz.de/cpa/article/view/1952/1820",
+      "Kinematic parameters of take-off phase in volleyball back row spike (73 spikes, 7 elite young players): take-off angle and velocity related to jump height and skill score - https://smj.ssrc.ac.ir/m/article_859.html",
+      "One-foot vs two-foot take-off back-row spikes (ISBS, 8 elite men): one-foot version had greater approach speed and horizontal CoM velocity at take-off - https://ojs.ub.uni-konstanz.de/cpa/article/view/4049/3748",
+      "Reeser JC, Fleisig GS, Bolt B, Ruan M (2010). Upper limb biomechanics during the volleyball serve and spike. Sports Health 2(5):368-374. Table 3: cross-body spike max... - https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065",
+      "Slovak L, Sarvestan J, Alaei F, Iwatsuki T, Zahradnik D (2023/24). Upper limb biomechanical differences in volleyball spikes among young female players (U16/U18/U20).... - https://journals.sagepub.com/doi/10.1177/17479541231211679",
+      "The Art of Coaching Volleyball - Out of system hitting drill for opposites - https://www.theartofcoachingvolleyball.com/out-of-system-hitting-drill-for-opposites/",
+      "DICK'S Sporting Goods ProTips - Volleyball 101: positions and their roles (opposite attacks front and back row, blocks the opposing outside hitter, sets when the... - https://www.dickssportinggoods.com/protips/sports-and-activities/volleyball/volleyball-101-volleyball-positions-and-their-roles"
+     ],
+     "id": "backrow_attack_contact",
+     "name": "Back-row attack (D ball from zone 1) contact",
+     "phase": "contact",
+     "root": {
+      "jump_m": 0.65,
+      "stagger_m": 0.0,
+      "yaw_deg": 10.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 25.0,
+      "l_elbow_flex": 40.0,
+      "l_hip_abd": 8.0,
+      "l_hip_ext_rot": 5.0,
+      "l_hip_flex": 30.0,
+      "l_knee_flex": 55.0,
+      "l_shoulder_abd": 25.0,
+      "l_shoulder_flex": 30.0,
+      "lumbar_flex": 8.0,
+      "neck_flex": -10.0,
+      "r_ankle_dorsi": 25.0,
+      "r_elbow_flex": 30.0,
+      "r_hip_abd": 8.0,
+      "r_hip_ext_rot": 5.0,
+      "r_hip_flex": 25.0,
+      "r_knee_flex": 50.0,
+      "r_shoulder_abd": -10.0,
+      "r_shoulder_flex": 40.0,
+      "thoracic_flex": 12.0,
+      "trunk_lateral": -5.0,
+      "trunk_twist": -20.0
+     },
+     "confidence": "estimated (landing-pattern frequencies and qualitative kinematics measured; angle values estimated)",
+     "description": "Two-foot landing near the take-off spot with hips and knees flexing to absorb (frame ~50-55 deg knee flexion, after first contact), trunk flexed and still rotated left from the cross-body follow-through, right arm finishing across the body, left arm out for balance. In matches about half of landings are on one foot (Tillman 2004) and a set that stays on the non-dominant side increases trunk side-bend and knee valgus at landing (Kawai), which is common for a right-handed opposite on a tight or inside set. Left-handed opposite: do not use the automatic mirror of this posture (that is a left-hander hitting from zone 4); a lefty opposite moves like a mirrored right-handed outside hitter - the set arrives on the hitting side, the approach comes from outside the right sideline at roughly 30-45 deg and the hips open toward the setter.",
+     "evidence": [
+      "Tillman MD, Hass CJ, Brunt D, Bennett GR (2004). Jumping and landing techniques in elite women's volleyball. J Sports Sci Med 3:30-36 (~22 jump-landings per player... - https://www.jssm.org/jssm-03-30.xml-Fulltext",
+      "Lobietti R, Coleman S, Pizzichillo E, Merni F (2010). Landing techniques in volleyball. J Sports Sci 28(13):1469-1476 (Italian League, 48 men + 48 women; one-footed... - https://cris.unibo.it/handle/11585/92591",
+      "Kawai et al. Effect of ball positions on trunk, hip, knee, and ankle joint kinematics and kinetics during a spike jump in volleyball (20 female college players): ball... - https://pubmed.ncbi.nlm.nih.gov/39094236",
+      "Comparison of landing kinematics and kinetics between experienced and novice volleyball players during block and spike jumps. BMC Sports Sci Med Rehabil (2022):... - https://pmc.ncbi.nlm.nih.gov/articles/PMC9188216",
+      "Landing forces in volleyball spiking and blocking (ISBS; 16 players): spike landings produce larger vertical GRF than block landings - https://ojs.ub.uni-konstanz.de/cpa/article/view/5679",
+      "Understanding biomechanical demands during volleyball spike and block landings: a systematic review (Turkish J Kinesiology; 14 studies, mostly block landings) - https://dergipark.org.tr/en/download/article-file/5488302",
+      "Functional volleyball spike-jump landing biomechanics and injury incidence of adolescent female club volleyball athletes (Univ. Hawaii thesis): dominant leg lands... - https://scholarspace.manoa.hawaii.edu/items/b47b7abc-8dda-4406-960d-f596ed91322b",
+      "Landing techniques in beach volleyball. Journal of Sports Science and Medicine 12(3):447 (2013); one-foot landings are less common in beach than in indoor volleyball - https://jssm.org/jssm-12-447.xml-Fulltext",
+      "Old Dominion University thesis: helical-axis analysis of the spike (16 players) - arm cocking may begin before take-off; cross-body vs same-side follow-through strategies - https://digitalcommons.odu.edu/biomedengineering_etds/29"
+     ],
+     "id": "attack_landing",
+     "name": "Landing after a right-side attack",
+     "phase": "landing",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": -0.1,
+      "stance_width_m": 0.35,
+      "yaw_deg": 15.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 13.0,
+      "l_elbow_flex": 135.0,
+      "l_hip_abd": 8.0,
+      "l_hip_ext_rot": 8.0,
+      "l_hip_flex": 12.0,
+      "l_knee_flex": 25.0,
+      "l_shoulder_abd": 25.0,
+      "l_shoulder_flex": 15.0,
+      "l_wrist_ext": 20.0,
+      "lumbar_flex": 3.0,
+      "neck_flex": -5.0,
+      "r_ankle_dorsi": 13.0,
+      "r_elbow_flex": 135.0,
+      "r_hip_abd": 8.0,
+      "r_hip_ext_rot": 8.0,
+      "r_hip_flex": 12.0,
+      "r_knee_flex": 25.0,
+      "r_shoulder_abd": 25.0,
+      "r_shoulder_ext_rot": -10.0,
+      "r_shoulder_flex": 15.0,
+      "r_wrist_ext": 20.0,
+      "thoracic_flex": 4.0
+     },
+     "confidence": "estimated (coaching manuals: Volleyball Canada, USA Volleyball)",
+     "description": "Right-front blocking base about an arm's length from the net, square to the net and lined up on the opponent's outside hitter, knees slightly bent, shoulders a little forward, hands up at shoulder height in front with palms toward the net and elbows in. As the pin blocker the opposite owns the antenna side: the right (outside) hand is already slightly turned in so a deflection goes back into the court. Position-defined, not hand-defined: use it unmirrored for a left-handed opposite.",
+     "evidence": [
+      "Volleyball Canada - Blocking (2-player) skill description: bent knees, shoulders forward, weight on balls of feet, hands low only when the set is far from the net - https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Blocking_2-Player_for_e_module_skill_description.pdf",
+      "Volleyball Canada - Blocking (3-player) skill description: hands wide open and slightly turned to send the ball back toward the middle of the court - https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Blocking_3-Player_for_e_module_skill_description.pdf",
+      "USA Volleyball - Staying square to the volleyball net while blocking: five steps (VolleyballUSA 2008): palms up at shoulder height in ready, do not drop the hands... - https://usavolleyball.org/resource/staying-square-to-the-volleyball-net-while-blocking-five-steps/",
+      "DICK'S Sporting Goods ProTips - Volleyball 101: positions and their roles (opposite attacks front and back row, blocks the opposing outside hitter, sets when the... - https://www.dickssportinggoods.com/protips/sports-and-activities/volleyball/volleyball-101-volleyball-positions-and-their-roles"
+     ],
+     "id": "block_ready",
+     "name": "Block ready, right front",
+     "phase": "ready (block)",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.0,
+      "stance_width_m": 0.5,
+      "yaw_deg": 0.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 10.0,
+      "l_elbow_flex": 135.0,
+      "l_hip_abd": 6.0,
+      "l_hip_ext_rot": 5.0,
+      "l_hip_flex": 30.0,
+      "l_knee_flex": 40.0,
+      "l_shoulder_abd": 25.0,
+      "l_shoulder_flex": 15.0,
+      "l_wrist_ext": 20.0,
+      "lumbar_flex": 5.0,
+      "neck_flex": -5.0,
+      "r_ankle_dorsi": 35.0,
+      "r_elbow_flex": 135.0,
+      "r_hip_abd": 6.0,
+      "r_hip_ext_rot": 5.0,
+      "r_hip_flex": 10.0,
+      "r_knee_flex": 45.0,
+      "r_shoulder_abd": 25.0,
+      "r_shoulder_flex": 15.0,
+      "r_wrist_ext": 20.0,
+      "thoracic_flex": 5.0,
+      "trunk_twist": -40.0
+     },
+     "confidence": "estimated (footwork timing measured qualitatively by Dona 2006 and the 2020 Symmetry study; angles from coaching texts)",
+     "description": "From a pinched (bunch) start the opposite moves right to the antenna with a jab-crossover: hips turn ~55 deg toward the antenna while the left leg crosses in front, but the chest and hands stay nearly square to the net with hands at shoulder height, eyes on the hitter. The last step plants and turns the hips square before the jump. Moving left to help on a middle/pipe set is the mirror image (right leg crosses). Position-defined, not hand-defined: use it unmirrored for a left-handed opposite.",
+     "evidence": [
+      "Dona G et al. (2006). Biomechanical analysis of three different blocking footwork techniques in volleyball: a pilot study (ISBS): jab cross-over reaches peak CoM... - https://ojs.ub.uni-konstanz.de/cpa/article/view/163",
+      "A time-motion analysis of the cross-over step block technique in volleyball: non-linear and asymmetric performances. Symmetry 12:1027 (2020); wing blockers faster... - https://repositorio.ual.es/handle/10835/8308",
+      "Comparison of cross-over and slide-step block footwork in elite players (Univ. Bologna, 100 Hz stereophotogrammetry): no performance difference; arm/hand control at... - https://cris.unibo.it/handle/11585/71493",
+      "NTNU thesis on cross-over step block landings (greater vertical and anterior-posterior GRF than other footwork) - https://etds.lib.ntnu.edu.tw/thesis/detail/786569069852d4aa789a24cbf21658c9",
+      "Case study of left vs right block movements (ISBS): countermovement knee flexion ~61-66 deg (left) and ~42-92 deg (right, by leg) - https://ojs.ub.uni-konstanz.de/cpa/article/view/3163/2967",
+      "USA Volleyball - Staying square to the volleyball net while blocking: five steps (VolleyballUSA 2008): palms up at shoulder height in ready, do not drop the hands... - https://usavolleyball.org/resource/staying-square-to-the-volleyball-net-while-blocking-five-steps/",
+      "Straight vs side-step block landings (ISBS 2015): no joint-angle differences, greater knee extensor moment after side-step - https://ojs.ub.uni-konstanz.de/cpa/article/view/6567/5930"
+     ],
+     "id": "block_footwork_crossover",
+     "name": "Crossover step to the antenna",
+     "phase": "block footwork",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": -0.5,
+      "stance_width_m": 0.18,
+      "yaw_deg": -55.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 40.0,
+      "l_elbow_flex": 130.0,
+      "l_hip_abd": 8.0,
+      "l_hip_ext_rot": 8.0,
+      "l_hip_flex": 50.0,
+      "l_knee_flex": 90.0,
+      "l_shoulder_abd": 25.0,
+      "l_shoulder_flex": 20.0,
+      "l_wrist_ext": 20.0,
+      "lumbar_flex": 10.0,
+      "neck_flex": -15.0,
+      "r_ankle_dorsi": 40.0,
+      "r_elbow_flex": 130.0,
+      "r_hip_abd": 8.0,
+      "r_hip_ext_rot": 8.0,
+      "r_hip_flex": 50.0,
+      "r_knee_flex": 90.0,
+      "r_shoulder_abd": 25.0,
+      "r_shoulder_ext_rot": -10.0,
+      "r_shoulder_flex": 20.0,
+      "r_wrist_ext": 20.0,
+      "thoracic_flex": 10.0
+     },
+     "confidence": "estimated, anchored to a measured block-jump knee flexion of ~93 deg in junior elite players (Physical Treatments article 1-395; abstract-level data); other joints estimated",
+     "description": "Lowest point of the block countermovement after the closing step: feet about shoulder width and square to the net, knees ~90 deg, trunk slightly forward, hands kept up in front at shoulder height (not dropped below the tape). Junior elite players used ~93 deg knee flexion for a 45 cm block jump; less bend reduced height. Swing-blockers instead take the arms down and back here. Position-defined, not hand-defined: use it unmirrored for a left-handed opposite.",
+     "evidence": [
+      "Block-jump knee flexion and jump height in junior elite volleyball players (Physical Treatments journal, article 1-395; title paraphrased): mean knee flexion ~93 deg,... - https://ptj.uswr.ac.ir/article-1-395-en.html",
+      "Case study of left vs right block movements (ISBS): countermovement knee flexion ~61-66 deg (left) and ~42-92 deg (right, by leg) - https://ojs.ub.uni-konstanz.de/cpa/article/view/3163/2967",
+      "Block-jump countermovement preloading of hip extensors and knee flexors (ISBS) - https://ojs.ub.uni-konstanz.de/cpa/article/view/244/203",
+      "USA Volleyball - Staying square to the volleyball net while blocking: five steps (VolleyballUSA 2008): palms up at shoulder height in ready, do not drop the hands... - https://usavolleyball.org/resource/staying-square-to-the-volleyball-net-while-blocking-five-steps/",
+      "Biomecanica durante o bloqueio do voleibol na areia (EFDeportes 181) - https://efdeportes.com/efd181/biomecanica-durante-o-bloqueio-do-voleibol-na-areia.htm"
+     ],
+     "id": "block_takeoff",
+     "name": "Block take-off (countermovement bottom)",
+     "phase": "take-off (block)",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.0,
+      "stance_width_m": 0.45,
+      "yaw_deg": 0.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": -35.0,
+      "l_elbow_flex": 5.0,
+      "l_hip_abd": 4.0,
+      "l_hip_ext_rot": 5.0,
+      "l_hip_flex": 12.0,
+      "l_knee_flex": 12.0,
+      "l_shoulder_abd": -2.0,
+      "l_shoulder_flex": 155.0,
+      "l_wrist_ext": -15.0,
+      "lumbar_flex": 4.0,
+      "r_ankle_dorsi": -35.0,
+      "r_elbow_flex": 5.0,
+      "r_hip_abd": 4.0,
+      "r_hip_ext_rot": 5.0,
+      "r_hip_flex": 12.0,
+      "r_knee_flex": 12.0,
+      "r_shoulder_ext_rot": -20.0,
+      "r_shoulder_flex": 155.0,
+      "r_wrist_ext": -15.0,
+      "thoracic_flex": 6.0
+     },
+     "confidence": "estimated (coaching manuals; penetration and hand-control emphasis from the Bologna footwork study)",
+     "description": "Top of the block on the opponent's outside hitter: body straight with a slight pike, arms fully extended and reaching over the net (hands ~0.4 m ahead of the head), hands about shoulder width with fingers spread, wrists pressing over, and the outside (right) hand turned in toward the court so the ball is not tooled off it; eyes open on the hitter. Do not reach far over when the hitter is well outside the antenna. Position-defined, not hand-defined: use it unmirrored for a left-handed opposite.",
+     "evidence": [
+      "Volleyball Canada - Blocking (3-player) skill description: hands wide open and slightly turned to send the ball back toward the middle of the court - https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Blocking_3-Player_for_e_module_skill_description.pdf",
+      "Volleyball Canada - Blocking (2-player) skill description: bent knees, shoulders forward, weight on balls of feet, hands low only when the set is far from the net - https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./ADV_DEV/EN/Blocking_2-Player_for_e_module_skill_description.pdf",
+      "USA Volleyball - Five ways to more blocking success (2015): do not penetrate when the attacker is well outside the antenna (avoid being tooled) - https://usavolleyball.org/resource/five-ways-to-more-blocking-success/",
+      "University of Victoria volleyball unit - blocking warm-up / wall-jump tasks: arms extend forward, fingers spread to penetrate - https://web.uvic.ca/~thopper/Unitplan452/netwall2000/Kevin&jayson9VB/Gametasks/blockingwarm-up.html",
+      "Comparison of cross-over and slide-step block footwork in elite players (Univ. Bologna, 100 Hz stereophotogrammetry): no performance difference; arm/hand control at... - https://cris.unibo.it/handle/11585/71493",
+      "Block-jump knee flexion and jump height in junior elite volleyball players (Physical Treatments journal, article 1-395; title paraphrased): mean knee flexion ~93 deg,... - https://ptj.uswr.ac.ir/article-1-395-en.html"
+     ],
+     "id": "block_jump_peak",
+     "name": "Block at peak, right antenna",
+     "phase": "peak (block)",
+     "root": {
+      "jump_m": 0.5,
+      "stagger_m": 0.0,
+      "yaw_deg": 3.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 22.0,
+      "l_elbow_flex": 40.0,
+      "l_hip_abd": 8.0,
+      "l_hip_ext_rot": 8.0,
+      "l_hip_flex": 28.0,
+      "l_knee_flex": 50.0,
+      "l_shoulder_abd": 20.0,
+      "l_shoulder_flex": 110.0,
+      "lumbar_flex": 6.0,
+      "neck_flex": -10.0,
+      "r_ankle_dorsi": 22.0,
+      "r_elbow_flex": 40.0,
+      "r_hip_abd": 8.0,
+      "r_hip_ext_rot": 8.0,
+      "r_hip_flex": 28.0,
+      "r_knee_flex": 50.0,
+      "r_shoulder_abd": 20.0,
+      "r_shoulder_flex": 110.0,
+      "thoracic_flex": 8.0
+     },
+     "confidence": "estimated (effects measured qualitatively by Hughes 2010 and BMC 2022; exact angles not retrievable)",
+     "description": "Two-foot landing under the take-off spot, knees and hips flexing (~50 deg knee flexion frame), arms pulled back from the net and coming down in front, head already turning to find the ball before the transition off the net. Opposed blocks change knee flexion at contact and women land with less knee flexion than men (Hughes); over half of block landings in elite women were one-footed in one match study (Tillman). Position-defined, not hand-defined: use it unmirrored for a left-handed opposite.",
+     "evidence": [
+      "Hughes G, Watkins J, Owen N (2010). The effects of opposition and gender on knee kinematics and ground reaction force during landing from volleyball block jumps. Res... - https://uhra.herts.ac.uk/id/eprint/865/",
+      "Hughes G et al. Gender differences in knee kinematics during landing from volleyball block jumps (women: smaller knee flexion at ground contact) - https://researchprofiles.herts.ac.uk/en/publications/gender-differences-in-knee-kinematics-during-landing-from-volleyb/",
+      "Comparison of landing kinematics and kinetics between experienced and novice volleyball players during block and spike jumps. BMC Sports Sci Med Rehabil (2022):... - https://pmc.ncbi.nlm.nih.gov/articles/PMC9188216",
+      "Tillman MD, Hass CJ, Brunt D, Bennett GR (2004). Jumping and landing techniques in elite women's volleyball. J Sports Sci Med 3:30-36 (~22 jump-landings per player... - https://www.jssm.org/jssm-03-30.xml-Fulltext",
+      "Lobietti R, Coleman S, Pizzichillo E, Merni F (2010). Landing techniques in volleyball. J Sports Sci 28(13):1469-1476 (Italian League, 48 men + 48 women; one-footed... - https://cris.unibo.it/handle/11585/92591",
+      "Landing forces in volleyball spiking and blocking (ISBS; 16 players): spike landings produce larger vertical GRF than block landings - https://ojs.ub.uni-konstanz.de/cpa/article/view/5679",
+      "Straight vs side-step block landings (ISBS 2015): no joint-angle differences, greater knee extensor moment after side-step - https://ojs.ub.uni-konstanz.de/cpa/article/view/6567/5930",
+      "Understanding biomechanical demands during volleyball spike and block landings: a systematic review (Turkish J Kinesiology; 14 studies, mostly block landings) - https://dergipark.org.tr/en/download/article-file/5488302",
+      "Landing techniques in beach volleyball. Journal of Sports Science and Medicine 12(3):447 (2013); one-foot landings are less common in beach than in indoor volleyball - https://jssm.org/jssm-12-447.xml-Fulltext"
+     ],
+     "id": "block_landing",
+     "name": "Block landing",
+     "phase": "landing",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.0,
+      "stance_width_m": 0.4,
+      "yaw_deg": 10.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 40.0,
+      "l_hip_abd": 26.0,
+      "l_hip_ext_rot": 15.0,
+      "l_hip_flex": 48.0,
+      "l_knee_flex": 88.0,
+      "l_shoulder_abd": -18.0,
+      "l_shoulder_flex": 80.0,
+      "l_wrist_ext": -20.0,
+      "lumbar_flex": 18.0,
+      "neck_flex": -35.0,
+      "r_ankle_dorsi": 38.0,
+      "r_hip_abd": 18.0,
+      "r_hip_ext_rot": 15.0,
+      "r_hip_flex": 60.0,
+      "r_knee_flex": 98.0,
+      "r_shoulder_abd": -18.0,
+      "r_shoulder_flex": 80.0,
+      "r_wrist_ext": -20.0,
+      "thoracic_flex": 20.0,
+      "trunk_lateral": 8.0
+     },
+     "confidence": "estimated (coaching descriptions; anatomy)",
+     "description": "Digging a hard-driven line shot or tip in zone 1: very wide, low base (knees ~90-100 deg), right foot forward, arms locked straight and joined into a platform just in front of and above the knees, platform angled toward the middle of the court by dropping the right shoulder, head still and eyes on the ball. Position-defined, not hand-defined: use it unmirrored for a left-handed opposite.",
+     "evidence": [
+      "Volleyball Vault - Volleyball positions 101: player roles explained - https://volleyballvault.com/?p=2615",
+      "DICK'S Sporting Goods ProTips - Volleyball 101: positions and their roles (opposite attacks front and back row, blocks the opposing outside hitter, sets when the... - https://www.dickssportinggoods.com/protips/sports-and-activities/volleyball/volleyball-101-volleyball-positions-and-their-roles"
+     ],
+     "id": "dig_low",
+     "name": "Low dig, right back",
+     "phase": "contact (dig)",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.1,
+      "stance_width_m": 0.67,
+      "yaw_deg": 15.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 40.0,
+      "l_elbow_flex": 25.0,
+      "l_hip_abd": 20.0,
+      "l_hip_ext_rot": 15.0,
+      "l_hip_flex": 55.0,
+      "l_knee_flex": 95.0,
+      "l_shoulder_abd": 25.0,
+      "l_shoulder_flex": 50.0,
+      "lumbar_flex": 18.0,
+      "neck_flex": -35.0,
+      "r_ankle_dorsi": 40.0,
+      "r_elbow_flex": 25.0,
+      "r_hip_abd": 20.0,
+      "r_hip_ext_rot": 15.0,
+      "r_hip_flex": 55.0,
+      "r_knee_flex": 95.0,
+      "r_shoulder_abd": 25.0,
+      "r_shoulder_flex": 50.0,
+      "thoracic_flex": 20.0
+     },
+     "confidence": "estimated (coaching descriptions)",
+     "description": "Covering a teammate's attack (e.g. outside hitter from zone 4): the opposite moves in close behind the hitter, gets very low with a wide base, turns to face the hitter and the block, keeps the arms out low and apart with palms up, and watches the block for a rebound. Position-defined, not hand-defined: use it unmirrored for a left-handed opposite.",
+     "evidence": [
+      "Volleyball Vault - Volleyball positions 101: player roles explained - https://volleyballvault.com/?p=2615"
+     ],
+     "id": "cover",
+     "name": "Attack coverage",
+     "phase": "cover",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": 0.1,
+      "stance_width_m": 0.7,
+      "yaw_deg": 40.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 10.0,
+      "l_elbow_flex": 20.0,
+      "l_hip_abd": 6.0,
+      "l_hip_ext_rot": 5.0,
+      "l_hip_flex": 25.0,
+      "l_knee_flex": 30.0,
+      "l_shoulder_abd": 15.0,
+      "l_shoulder_flex": -20.0,
+      "lumbar_flex": 8.0,
+      "neck_flex": -25.0,
+      "r_ankle_dorsi": -10.0,
+      "r_elbow_flex": 10.0,
+      "r_hip_abd": 6.0,
+      "r_hip_ext_rot": 5.0,
+      "r_hip_flex": -10.0,
+      "r_knee_flex": 25.0,
+      "r_shoulder_abd": 10.0,
+      "r_shoulder_flex": 150.0,
+      "r_wrist_ext": -30.0,
+      "thoracic_flex": 10.0
+     },
+     "confidence": "estimated (coaching descriptions; no toss-instant kinematics retrievable)",
+     "description": "Toss of a jump-spin serve: stepping forward on the left foot, the right (hitting) arm releases the ball high and in front with the arm almost straight and the wrist flicking forward for topspin, left arm relaxed back, eyes on the ball. Opposites commonly jump-spin serve, especially in men's volleyball (coaching observation, not measured here); the approach that follows is the spike approach. Left-handed server: the automatic mirror is correct here (the serve does not depend on court position).",
+     "evidence": [
+      "Reeser JC, Fleisig GS, Bolt B, Ruan M (2010). Upper limb biomechanics during the volleyball serve and spike. Sports Health 2(5):368-374. Table 3: cross-body spike max... - https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065"
+     ],
+     "id": "serve_jump_toss",
+     "name": "Jump (spin) serve toss",
+     "phase": "toss",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": -0.5,
+      "stance_width_m": 0.25,
+      "yaw_deg": 0.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": -30.0,
+      "l_elbow_flex": 95.0,
+      "l_hip_abd": 6.0,
+      "l_hip_ext_rot": 5.0,
+      "l_hip_flex": 35.0,
+      "l_knee_flex": 45.0,
+      "l_shoulder_abd": 20.0,
+      "l_shoulder_flex": 40.0,
+      "lumbar_flex": 8.0,
+      "neck_flex": -20.0,
+      "r_ankle_dorsi": -30.0,
+      "r_elbow_flex": 30.0,
+      "r_hip_abd": 6.0,
+      "r_hip_ext_rot": 5.0,
+      "r_hip_flex": 30.0,
+      "r_knee_flex": 50.0,
+      "r_shoulder_abd": 42.0,
+      "r_shoulder_ext_rot": -70.0,
+      "r_shoulder_flex": 165.0,
+      "r_wrist_ext": -20.0,
+      "thoracic_flex": 10.0,
+      "trunk_lateral": -18.0,
+      "trunk_twist": -5.0
+     },
+     "confidence": "measured for the hitting shoulder (Reeser 2010 comparison column: abduction 129 +/- 11 deg at contact, peak ER 164 +/- 11 deg, n=5 collegiate women); rest estimated",
+     "description": "Contact of a jump-spin serve: like a spike contact but with the ball further in front because the body travels forward into the court, trunk flexing forward and a strong wrist snap over the top of the ball; legs come forward under the body. Reeser's comparison data list ~129 deg shoulder abduction at contact and ~164 deg peak external rotation for the jump serve. Hitting-arm note: shoulder values are given for the app's Euler order (abduction applied before flexion); this flex-dominant overhead arm with a negative ext_rot is exactly the same rotation as the abduction-dominant form flex ~-20 / abd ~130-150 / ext_rot ~105-125 in this rig, which is closer to how the studies report it (abduction ~130 deg at contact). Left-handed server: the automatic mirror is correct here (the serve does not depend on court position).",
+     "evidence": [
+      "Reeser JC, Fleisig GS, Bolt B, Ruan M (2010). Upper limb biomechanics during the volleyball serve and spike. Sports Health 2(5):368-374. Table 3: cross-body spike max... - https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065"
+     ],
+     "id": "serve_jump_contact",
+     "name": "Jump (spin) serve contact",
+     "phase": "contact",
+     "root": {
+      "jump_m": 0.55,
+      "stagger_m": 0.0,
+      "yaw_deg": 10.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 5.0,
+      "l_elbow_flex": 10.0,
+      "l_hip_abd": 6.0,
+      "l_hip_ext_rot": 5.0,
+      "l_hip_flex": 10.0,
+      "l_knee_flex": 15.0,
+      "l_shoulder_abd": 10.0,
+      "l_shoulder_flex": 120.0,
+      "lumbar_flex": 3.0,
+      "neck_flex": -20.0,
+      "r_ankle_dorsi": 15.0,
+      "r_elbow_flex": 95.0,
+      "r_hip_abd": 6.0,
+      "r_hip_ext_rot": 10.0,
+      "r_hip_flex": 5.0,
+      "r_knee_flex": 20.0,
+      "r_shoulder_abd": 95.0,
+      "r_shoulder_ext_rot": 80.0,
+      "r_wrist_ext": 20.0,
+      "thoracic_flex": 3.0,
+      "trunk_twist": 15.0
+     },
+     "confidence": "estimated (coaching descriptions)",
+     "description": "Standing float serve: left foot forward, right hip back (pelvis ~25 deg turned right), left hand lifts the ball to just above head height in front of the hitting shoulder while the right arm is already drawn back with the elbow high and the hand beside the ear (bow and arrow), weight on the back foot, eyes on the ball. Left-handed server: the automatic mirror is correct here (the serve does not depend on court position).",
+     "evidence": [
+      "Reeser JC, Fleisig GS, Bolt B, Ruan M (2010). Upper limb biomechanics during the volleyball serve and spike. Sports Health 2(5):368-374. Table 3: cross-body spike max... - https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065"
+     ],
+     "id": "serve_float_toss",
+     "name": "Standing float serve toss",
+     "phase": "toss",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": -0.4,
+      "stance_width_m": 0.3,
+      "yaw_deg": -25.0
+     }
+    },
+    {
+     "angles": {
+      "l_ankle_dorsi": 15.0,
+      "l_elbow_flex": 70.0,
+      "l_hip_abd": 6.0,
+      "l_hip_ext_rot": 5.0,
+      "l_hip_flex": 20.0,
+      "l_knee_flex": 20.0,
+      "l_shoulder_abd": 15.0,
+      "l_shoulder_flex": 50.0,
+      "lumbar_flex": 5.0,
+      "neck_flex": -15.0,
+      "r_ankle_dorsi": -5.0,
+      "r_elbow_flex": 45.0,
+      "r_hip_abd": 6.0,
+      "r_hip_ext_rot": 10.0,
+      "r_hip_flex": -5.0,
+      "r_knee_flex": 15.0,
+      "r_shoulder_abd": 30.0,
+      "r_shoulder_ext_rot": -75.0,
+      "r_shoulder_flex": 165.0,
+      "r_wrist_ext": 10.0,
+      "thoracic_flex": 5.0,
+      "trunk_lateral": -12.0,
+      "trunk_twist": 5.0
+     },
+     "confidence": "measured for the hitting arm (Reeser 2010: abduction ~130 deg at contact for all skills; greater elbow flexion for the float serve); rest estimated",
+     "description": "Contact of the standing float serve: weight transferred onto the front (left) foot, trunk nearly square to the net, arm high in front of the hitting shoulder with a firm, slightly extended wrist and a more bent elbow than in a spike (float serve elbow flexion at contact ~43-50 deg vs ~34 deg spikes), no follow-through snap; left arm has dropped in front of the body. Hitting-arm note: shoulder values are given for the app's Euler order (abduction applied before flexion); this flex-dominant overhead arm with a negative ext_rot is exactly the same rotation as the abduction-dominant form flex ~-20 / abd ~130-150 / ext_rot ~105-125 in this rig, which is closer to how the studies report it (abduction ~130 deg at contact). Left-handed server: the automatic mirror is correct here (the serve does not depend on court position).",
+     "evidence": [
+      "Reeser JC, Fleisig GS, Bolt B, Ruan M (2010). Upper limb biomechanics during the volleyball serve and spike. Sports Health 2(5):368-374. Table 3: cross-body spike max... - https://pmc.ncbi.nlm.nih.gov/articles/PMC3445065"
+     ],
+     "id": "serve_float_contact",
+     "name": "Standing float serve contact",
+     "phase": "contact",
+     "root": {
+      "jump_m": 0.0,
+      "stagger_m": -0.45,
+      "stance_width_m": 0.3,
+      "yaw_deg": -10.0
+     }
+    }
+   ],
+   "traits": {
+    "block_reach_m": {
+     "elite_men": 3.35,
+     "elite_women": 3.0,
+     "youth_women_u16": 2.72
+    },
+    "build_notes": "ALL NUMBERS ARE ESTIMATES, not values read from a study in this session (full texts could not be opened): typical magnitudes of international opposites on FIVB rosters (self-reported reaches, often generous), standing reach ~1.31 x stature (the app's default), spike reach ~ standing reach + 0.93 m (men) / + 0.68 m (women) / + 0.57 m (U16 girls), block reach ~ standing reach + 0.73 / 0.56 / 0.44 m; U16 values are for selected/competitive club or regional players. Supporting evidence: Palao et al. 2014 (Olympic and World Championship rosters 2000-2012) found height, spike reach and block reach differ by position, with opposites, outside hitters and middles the attackers/blockers; Slovenian female opposites: arm span relates more strongly than height to spike and block reach; Indonesian club men averaged ~3.21 m spike and ~3.11 m block reach (well below international level). Build: among the tallest players on the team (typically a little shorter than the middles, similar to or taller than the outside hitters), long arms (arm span about 1.02-1.05 x stature), powerful and often the heaviest hitter, strong trunk rotators and shoulders because the opposite attacks from front and back row (D/pipe from zone 1) and is the main scorer out of system. Gear: standard team jersey and shorts (not the libero's contrasting jersey), knee pads (often low-profile; some elite men play without), ankle braces common, sometimes a compression sleeve or tape on the hitting shoulder/arm and finger tape for blocking. Handedness: left-handed opposites are common because the set reaches their hitting side first; their attack and approach postures equal a mirrored right-handed outside hitter, while block, defence, cover and transition postures are position-defined and must NOT be mirrored; serves can be mirrored.",
+    "spike_reach_m": {
+     "elite_men": 3.55,
+     "elite_women": 3.12,
+     "youth_women_u16": 2.85
+    },
+    "standing_reach_m": {
+     "elite_men": 2.62,
+     "elite_women": 2.44,
+     "youth_women_u16": 2.28
+    },
+    "stature_m": {
+     "elite_men": 2.0,
+     "elite_women": 1.88,
+     "youth_women_u16": 1.76
     }
    }
   },

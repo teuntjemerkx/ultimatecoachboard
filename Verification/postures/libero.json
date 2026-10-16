@@ -1,0 +1,1307 @@
+{
+  "position": "libero",
+  "traits": {
+    "stature_m": {
+      "elite_men": 1.85,
+      "elite_women": 1.7,
+      "youth_women_u16": 1.64
+    },
+    "standing_reach_m": {
+      "elite_men": 2.44,
+      "elite_women": 2.24,
+      "youth_women_u16": 2.16
+    },
+    "spike_reach_m": {
+      "elite_men": 3.2,
+      "elite_women": 2.8,
+      "youth_women_u16": 2.55
+    },
+    "block_reach_m": {
+      "elite_men": 3.05,
+      "elite_women": 2.68,
+      "youth_women_u16": 2.45
+    },
+    "build_notes": "Liberos are the shortest and lightest players on every level studied (Palao et al. 2014; Marques 2009; Italian, VNL, Slovenian, Serbian and junior studies). STATURE (measured/reported): elite men ~1.85 m (London 2012 liberos 184.8 cm, range 180-190; Okano & Tanigawa 186.7 +/- 8.0 cm; a blog average of ~181 cm); elite women ~1.70 m (USA WNT libero 168.9 cm; Palao reference teams 1.69-1.75 m at 63-66 kg; blog ~169 cm); youth girls ~1.64 m (young female liberos 163.8 +/- 6.2 cm - exact age band of that sample not confirmed, used as the U16 value). REACHES ARE ESTIMATED: standing reach = ~1.32 x stature; spike/block reach are nominal for a libero (she may not attack above the net or block) and were set from standing reach + typical jumps, cross-checked with individual elite-men libero profiles of about 3.10-3.30 m spike / 2.90-3.21 m block and a men sample of unconfirmed (clearly sub-elite) level with liberos of 1.74 m (2.85 / 2.76 m). Exact libero means of Palao et al. could not be retrieved. BUILD: compact, light, low centre of mass, proportionally strong legs (Portuguese junior liberos had the best CMJ), agility and flexibility emphasised (Serbian U17 study); less upper-body mass than middles/opposites. GEAR: jersey of a clearly contrasting colour to the rest of the team (FIVB Official Volleyball Rules, Rule 19 - cited from prior knowledge, not re-verified in this session; no URL), same shorts as the team; knee pads are near-universal for liberos because of constant floor work (sprawls, collapses, pancakes) - common practice, not from a measured source; often long sleeves or elbow sleeves; low-cut indoor court shoes. The libero cannot serve under FIVB rules (some other rule sets allow it), attack above net height, block or rotate to the front row.",
+    "sources": [
+      "https://pmc.ncbi.nlm.nih.gov/articles/PMC4327374/",
+      "https://reference-global.com/article/10.2478/tperj-2014-0024",
+      "https://tsukuba.repo.nii.ac.jp/record/38485/files/%E7%94%B7%E5%AD%90%E3%83%90%E3%83%AC%E3%83%BC%E3%83%9C%E3%83%BC%E3%83%AB%E9%81%B8%E6%89%8B%E3%81%AE%E8%BA%AB%E9%95%B7%E3%81%AB%E9%96%A2%E3%81%99%E3%82%8B%E7%A0%94%E7%A9%B6.pdf",
+      "https://www.bisp-surf.de/Record/PU200909004105",
+      "https://lida.sport-iat.de/twm/Record/3039092?lng=en",
+      "https://dergipark.org.tr/tr/download/article-file/5807347",
+      "https://lida.sport-iat.de/ta/Record/4027260",
+      "https://lida.sport-iat.de/dvv/Record/4071056?lng=en",
+      "https://pmc.ncbi.nlm.nih.gov/articles/PMC5377555/table/t0003",
+      "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8393901/",
+      "https://doi.org/10.3390/app142311197",
+      "https://www.dlib.si/stream/URN:NBN:SI:doc-BHA1T7I9/c894787b-ae71-4474-9f15-9c6ac7126c30/PDF",
+      "https://hrcak.srce.hr/en/140254",
+      "https://doaj.org/article/24527f9d134e491aa2e50f8bb71820e5",
+      "https://www.hrpub.org/download/20231130/SAJ21-19934163.pdf",
+      "https://xbotgo.com/blogs/knowledge/average-volleyball-player-height",
+      "https://jokermag.com/average-height-volleyball-players/",
+      "https://en.wikipedia.org/wiki/Fabio_Balaso",
+      "https://en.wikipedia.org/wiki/Andrea_Giovi",
+      "https://en.wikipedia.org/wiki/M%C3%A1rio_da_Silva_Pedreira_J%C3%BAnior",
+      "https://it.volleyballworld.com/volleyball/competitions/men-world-championship-2022/players/152506",
+      "https://it.volleyballworld.com/volleyball/competitions/men-world-championship-2022/players/180990",
+      "https://www.atlantis-press.com/article/125934798.pdf"
+    ]
+  },
+  "techniques": [
+    {
+      "id": "ready_medium",
+      "name": "Serve-receive ready stance (medium posture)",
+      "phase": "ready (server toss to serve contact)",
+      "handedness": "right",
+      "description": "Feet a little wider than the shoulders, right foot slightly ahead, knees flexed about 50 deg and kept inside the feet, hips back and the trunk inclined about 25 deg so the shoulders sit over the knees, weight on the balls of the feet. Arms relaxed and apart in front of the thighs (not yet joined), head up watching the server.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.6,
+        "stagger_m": 0.08,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 10,
+        "thoracic_flex": 15,
+        "neck_flex": -25,
+        "r_shoulder_flex": 40,
+        "l_shoulder_flex": 40,
+        "r_shoulder_abd": 12,
+        "l_shoulder_abd": 12,
+        "r_elbow_flex": 50,
+        "l_elbow_flex": 50,
+        "r_hip_flex": 29,
+        "l_hip_flex": 23,
+        "r_hip_abd": 16,
+        "l_hip_abd": 16,
+        "r_hip_ext_rot": -3,
+        "l_hip_ext_rot": -2,
+        "r_knee_flex": 50,
+        "l_knee_flex": 50,
+        "r_ankle_dorsi": 21,
+        "l_ankle_dorsi": 26
+      },
+      "confidence": "measured (knee/hip) + estimated (rest): knee 50 deg sits between the measured start-of-pass knee angles (HS 134.8 / LS 125.6 deg included = 45 / 54 deg flexion, Ridgway & Hamilton; ~126 deg included, Kapidzic); anatomical hip flexion (thigh 23-29 + trunk 25 = 48-54 deg) matches ~46 deg thigh flexion (Ridgway) and ~125 deg trunk-thigh angle (Kapidzic). Trunk, arms, neck, stagger estimated from coaching texts. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+      "evidence": [
+        "https://ojs.ub.uni-konstanz.de/cpa/article/view/2336",
+        "https://www.iiste.org/Journals/index.php/JEP/article/view/12341",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+        "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Pass-card.pdf",
+        "https://coachesinsider.com/volleyball/passing-platform-progression-with-ron-zwerver-oregon-state-univ",
+        "https://www.slideshare.net/slideshow/voleyball-basic-techniquespptx/251484553",
+        "https://faculty.kfupm.edu.sa/PE/abuhilal/volleyball_skills.html",
+        "https://sde.ok.gov/sites/default/files/documents/files/S2.H2GLO9-12ForearmPass.docx%20%281%29.pdf",
+        "https://www.quickscores.com/downloads/ymcaatpabstfarms_Volleyball_Skill_Packet.pdf",
+        "https://web.uvic.ca/~thopper/iweb09/DaveKelsey/Site/Forearm_Pass.html",
+        "https://www.stpaul.gov/sites/default/files/Media%20Root/Parks%20%26%20Recreation/Muni%20Volleyball%20fundamentals.pdf"
+      ]
+    },
+    {
+      "id": "ready_low",
+      "name": "Defensive base (low ready)",
+      "phase": "ready (opponent attacker contact; after split step)",
+      "handedness": "right",
+      "description": "Wider and lower than serve receive: feet ~0.75 m apart, knees ~80 deg, trunk ~35 deg forward with the shoulders ahead of the knees, weight forward on the toes, body stopped and still at the attacker's contact. Arms bent in front of the knees, hands apart with palms up/forward; chin up, eyes on the hitter.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.76,
+        "stagger_m": 0.05,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 15,
+        "thoracic_flex": 20,
+        "neck_flex": -40,
+        "r_shoulder_flex": 45,
+        "l_shoulder_flex": 45,
+        "r_shoulder_abd": 15,
+        "l_shoulder_abd": 15,
+        "r_elbow_flex": 70,
+        "l_elbow_flex": 70,
+        "r_wrist_ext": 10,
+        "l_wrist_ext": 10,
+        "r_hip_flex": 49,
+        "l_hip_flex": 44,
+        "r_hip_abd": 25,
+        "l_hip_abd": 27,
+        "r_hip_ext_rot": -11,
+        "l_hip_ext_rot": -10,
+        "r_knee_flex": 80,
+        "l_knee_flex": 80,
+        "r_ankle_dorsi": 31,
+        "l_ankle_dorsi": 35
+      },
+      "confidence": "estimated: from Volleyball Canada / Volleyball Ireland defence descriptions (wider than ready, knees bent in line with toes, weight forward, arms bent in front palms up, shoulders forward) and USA Volleyball \"stopped and balanced at attacker contact\"; no measured joint angles found for the defensive base. Neck extension is large because the trunk is inclined and the hitter is above net height. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+      "evidence": [
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Defense_Basic_for_e_module_skill_description_copy.pdf",
+        "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Defence-card.pdf",
+        "https://betteratvolleyball.com/what-is-a-dig-in-volleyball-lessons-drills-and-techniques/",
+        "https://usavolleyball.org/resource/five-keys-to-making-more-digs/",
+        "https://usavolleyball.org/resource/five-tips-for-better-backcourt-defense/",
+        "https://usavolleyball.org/resource/keys-to-making-more-digs-on-the-beach/",
+        "https://air.unimi.it/handle/2434/422085",
+        "https://coachesinsider.com/volleyball/transition-movement-base-to-defense-with-genny-volpe-rice-univ"
+      ]
+    },
+    {
+      "id": "pass_platform",
+      "name": "Forearm pass (serve reception) - ball on the midline",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Ball met between knees and waist on the body midline. Arms straight and joined (thumbs together, pointing down), shoulders shrugged forward so the platform reaches out; forearms about 45 deg below horizontal. Trunk ~28 deg forward, hips back, knees ~50 deg and starting to extend toward the target; arms do not swing - the legs and shoulders give the small lift. Head still, eyes on the ball at the platform.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.6,
+        "stagger_m": 0.1,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 11,
+        "thoracic_flex": 17,
+        "neck_flex": -12,
+        "r_shoulder_flex": 75,
+        "l_shoulder_flex": 75,
+        "r_shoulder_abd": -14,
+        "l_shoulder_abd": -14,
+        "r_shoulder_ext_rot": 15,
+        "l_shoulder_ext_rot": 15,
+        "r_wrist_ext": -10,
+        "l_wrist_ext": -10,
+        "r_hip_flex": 32,
+        "l_hip_flex": 26,
+        "r_hip_abd": 15,
+        "l_hip_abd": 16,
+        "r_hip_ext_rot": -4,
+        "l_hip_ext_rot": -2,
+        "r_knee_flex": 48,
+        "l_knee_flex": 50,
+        "r_ankle_dorsi": 16,
+        "l_ankle_dorsi": 24
+      },
+      "confidence": "measured (legs, platform angle) + estimated (rest): knee 48-50 deg from measured start-of-pass values (Ridgway & Hamilton HS 45 deg, Kapidzic ~54 deg); platform ~45 deg below horizontal from Wicaksono et al. (arm angle ~45 deg best) and the 40-45 deg textbook value; skilled passers project the ball at ~64 deg (Ridgway). Shoulder flexion 75 deg relative to the trunk is an estimate (Kapidzic preparatory shoulder angle median ~54 deg, Volleyball Canada \"arms ~90 deg to the torso\" at contact). shoulder_abd -14 = arms converging so the wrists meet (~0.10 m apart). The rig has no forearm-supination or wrist-deviation keys: the flat platform / thumbs-down cue is approximated by 15 deg external rotation and 10 deg wrist flexion. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+      "evidence": [
+        "https://ojs.ub.uni-konstanz.de/cpa/article/view/2336",
+        "https://www.iiste.org/Journals/index.php/JEP/article/view/12341",
+        "https://avesis.omu.edu.tr/yayin/0c444ab4-ee04-402c-bbf5-1a3497fda353/voleybolcularin-manset-paslarinin-kinematik-analizi",
+        "https://www.researchgate.net/publication/346829083_Analysis_of_Superior_and_Inferior_Extremities_on_Forearm_Pass_in_Volleyball",
+        "https://prezi.com/pehj0bgfnlds/the-biomechanics-of-forearm-passing-a-volleyball/",
+        "https://prezi.com/3o6xhlud9f66/the-biomechanics-of-forearm-passing-a-volleyball/",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+        "https://www.saskvolleyball.ca/wp-content/uploads/2021/03/FORE-ARM-PASSING-Smry-Details-UPDATED-03-30-20.pdf",
+        "https://web.uvic.ca/~thopper/WEB/452/Units_2007/Taryn_Colton/On-the-Ball%20Skills.html",
+        "https://sde.ok.gov/sites/default/files/documents/files/S2.H2GLO9-12ForearmPass.docx%20%281%29.pdf",
+        "https://discover.sportsengineplay.com/video/volleyball/passing-drills-train-proper-technique-and-eliminate-bad-habits/",
+        "https://www.dickssportinggoods.com/protips/sports-and-activities/volleyball/volleyball-offense-how-to-create-a-strong-platform",
+        "https://kureansiklopedi.com/tr/detay/voleybolda-manset-teknigi",
+        "https://coachesinsider.com/volleyball/passing-platform-progression-with-ron-zwerver-oregon-state-univ"
+      ]
+    },
+    {
+      "id": "pass_platform_angled",
+      "name": "Forearm pass outside the midline (angled platform, ball outside right hip)",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Ball outside the right hip: the passer has stepped right and loads the right leg (knee ~60 deg, pelvis shifted over the right foot) while the left leg is longer and pushes. The right (ball-side) shoulder is dropped by a ~15 deg side bend and the chest turns slightly right so both straight, joined arms reach out to the right front; the tilted shoulder line tilts the platform so it faces the target instead of deflecting the ball sideways. Head and eyes stay on the ball.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.78,
+        "stagger_m": 0.1,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 10,
+        "thoracic_flex": 12,
+        "trunk_lateral": 15,
+        "trunk_twist": 12,
+        "neck_flex": -12,
+        "r_shoulder_flex": 58,
+        "l_shoulder_flex": 58,
+        "r_shoulder_abd": -4,
+        "l_shoulder_abd": -31,
+        "r_shoulder_ext_rot": 20,
+        "l_shoulder_ext_rot": 20,
+        "r_wrist_ext": -10,
+        "l_wrist_ext": -10,
+        "r_hip_flex": 37,
+        "l_hip_flex": 23,
+        "r_hip_abd": 20,
+        "l_hip_abd": 29,
+        "r_hip_ext_rot": 3,
+        "l_hip_ext_rot": -7,
+        "r_knee_flex": 60,
+        "l_knee_flex": 45,
+        "r_ankle_dorsi": 21,
+        "l_ankle_dorsi": 22
+      },
+      "confidence": "estimated: \"drop the ball-side shoulder / angle the platform to the target\" is a coaching cue; no measured angles found. Arm angles were solved so the wrists meet ~0.25 m right of the pelvis centre at hip height; in the simplified model the platform normal then points ~10-20 deg right of straight ahead and ~30 deg above horizontal (suits a zone-5/6 receiver passing to a setter at right front). Leg geometry includes a ~0.10 m pelvis shift over the right foot. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+      "evidence": [
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+        "https://www.saskvolleyball.ca/wp-content/uploads/2021/03/FORE-ARM-PASSING-Smry-Details-UPDATED-03-30-20.pdf",
+        "https://www.dickssportinggoods.com/protips/sports-and-activities/volleyball/volleyball-offense-how-to-create-a-strong-platform",
+        "https://coachesinsider.com/volleyball/passing-platform-progression-with-ron-zwerver-oregon-state-univ",
+        "https://discover.sportsengineplay.com/video/volleyball/passing-drills-train-proper-technique-and-eliminate-bad-habits/",
+        "https://prezi.com/pehj0bgfnlds/the-biomechanics-of-forearm-passing-a-volleyball/"
+      ]
+    },
+    {
+      "id": "overhead_pass",
+      "name": "Overhead (hand) reception of a float serve",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Used on high float serves arriving at head height: body square to the target, right foot slightly ahead, knees ~40 deg and extending, trunk almost upright. Hands form a window ~15 cm above and in front of the forehead, elbows out at about chin height, wrists cocked back; head tilted back, looking up through the hands.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.45,
+        "stagger_m": 0.15,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 3,
+        "thoracic_flex": 5,
+        "neck_flex": -40,
+        "r_shoulder_flex": 120,
+        "l_shoulder_flex": 120,
+        "r_shoulder_abd": 15,
+        "l_shoulder_abd": 15,
+        "r_shoulder_ext_rot": -38,
+        "l_shoulder_ext_rot": -38,
+        "r_elbow_flex": 98,
+        "l_elbow_flex": 98,
+        "r_wrist_ext": 60,
+        "l_wrist_ext": 60,
+        "r_hip_flex": 24,
+        "l_hip_flex": 12,
+        "r_hip_abd": 10,
+        "l_hip_abd": 11,
+        "r_hip_ext_rot": 1,
+        "l_hip_ext_rot": 3,
+        "r_knee_flex": 40,
+        "l_knee_flex": 38,
+        "r_ankle_dorsi": 16,
+        "l_ankle_dorsi": 25
+      },
+      "confidence": "estimated: no numeric overhead-pass data could be retrieved (the Sports Biomechanics 2019 overhead-pass study was found by title only). Values come from standard setting technique and were solved so the wrists sit ~0.22 m apart, ~0.30 m above shoulder level and ~0.20 m in front of the shoulders, elbows ~0.27 m out. NOTE: with the flex->abd->rotation order the inward-pointing forearms need NEGATIVE shoulder_ext_rot (-38); a rig using another Euler order will need its own value for the same hand position. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+      "evidence": [
+        "https://doi.org/10.1080/14763141.2019.1609072",
+        "https://pure.jbnu.ac.kr/en/publications/the-contribution-of-upper-or-lower-extremity-of-male-athletes-dif/",
+        "https://coachingvb.com/libero-in-volleyball-rules-role-rotations-skills/"
+      ]
+    },
+    {
+      "id": "dig_low",
+      "name": "Dig of a hard-driven attack (low platform)",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "From the defensive base the defender stays low (knees ~90 deg, hips ~0.6 m high), shoulders over the knees (trunk ~40 deg), arms straight and joined in front, platform at knee-thigh height and angled up so the ball rebounds high toward the middle of the court. Arms do not swing; the body follows through toward the target after contact. Eyes on the ball.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.76,
+        "stagger_m": 0.1,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 18,
+        "thoracic_flex": 22,
+        "neck_flex": -30,
+        "r_shoulder_flex": 85,
+        "l_shoulder_flex": 85,
+        "r_shoulder_abd": -14,
+        "l_shoulder_abd": -14,
+        "r_shoulder_ext_rot": 15,
+        "l_shoulder_ext_rot": 15,
+        "r_wrist_ext": -10,
+        "l_wrist_ext": -10,
+        "r_hip_flex": 59,
+        "l_hip_flex": 48,
+        "r_hip_abd": 26,
+        "l_hip_abd": 30,
+        "r_hip_ext_rot": -14,
+        "l_hip_ext_rot": -12,
+        "r_knee_flex": 90,
+        "l_knee_flex": 88,
+        "r_ankle_dorsi": 31,
+        "l_ankle_dorsi": 39
+      },
+      "confidence": "estimated: Volleyball Ireland/Canada contact description (shoulders over knees, arms in front, follow through), Gimmillaro \"keep arms out, don't swing\", feet ~2x shoulder width (betteratvolleyball). The Diyala study only reports that hip angle at contact differed between moving and stationary defence (no usable value). Forearms ~45 deg below horizontal, wrists ~0.6 m above the floor. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+      "evidence": [
+        "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Defence-card.pdf",
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Defense_Basic_for_e_module_skill_description_copy.pdf",
+        "https://betteratvolleyball.com/what-is-a-dig-in-volleyball-lessons-drills-and-techniques/",
+        "https://coachesinsider.com/volleyball/crossover-step-dig-drill-with-brian-gimmillaro",
+        "https://pessj.uodiyala.edu.iq/index.php/1/article/download/2035/1344/2188",
+        "https://air.unimi.it/handle/2434/422085",
+        "https://usavolleyball.org/wp-content/uploads/2020/11/Dig-2-Heffernan.pdf",
+        "https://doaj.org/article/c75b974f3ebc4aebb86448eef6976f19",
+        "https://coachesinsider.com/volleyball/transition-movement-base-to-defense-with-genny-volpe-rice-univ"
+      ]
+    },
+    {
+      "id": "dig_sprawl",
+      "name": "Sprawl dig (long lunge to a ball near the floor)",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Right leg lunges far forward (foot ~1 m ahead of the left), front knee ~105 deg, hips ~0.5 m off the floor; the left leg trails long behind on its toes. The trunk is almost horizontal (~70 deg lean) with both straight arms reaching ahead, platform ~0.2 m above the floor; neck extended to keep the eyes on the ball. Next instant the chest slides forward onto the floor.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.3,
+        "stagger_m": 1.0,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 30,
+        "thoracic_flex": 40,
+        "neck_flex": -40,
+        "r_shoulder_flex": 100,
+        "l_shoulder_flex": 100,
+        "r_shoulder_abd": -12,
+        "l_shoulder_abd": -12,
+        "r_shoulder_ext_rot": 15,
+        "l_shoulder_ext_rot": 15,
+        "r_wrist_ext": -10,
+        "l_wrist_ext": -10,
+        "r_hip_flex": 85,
+        "l_hip_flex": -45,
+        "r_hip_abd": 8,
+        "l_hip_abd": 6,
+        "r_knee_flex": 105,
+        "l_knee_flex": 37,
+        "r_ankle_dorsi": 20,
+        "l_ankle_dorsi": -30
+      },
+      "confidence": "estimated: IMG Academy sprawl progression (kneeling -> low lunge -> deep lunge finishing to the floor with the platform together) and Volleyball World definition (lunge forward to a ball near the ground in front). Because the schema pelvis is upright, part of the real anterior pelvic tilt is carried by lumbar_flex and hip_flex (anatomical front-hip flexion is lower than hip_flex + trunk lean suggests). Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles. Rear toes touch the floor (within ~2 cm).",
+      "evidence": [
+        "https://plus.imgacademy.com/resources/videos/volleyball-defense-drill-sprawl-progression",
+        "https://es.volleyballworld.com/blogs/learn-the-vital-techniques-of-volleyball",
+        "https://betteratvolleyball.com/what-is-a-dig-in-volleyball-lessons-drills-and-techniques/",
+        "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Defence-card.pdf"
+      ]
+    },
+    {
+      "id": "dig_collapse",
+      "name": "Collapse dig (drop to the knees under a fast low ball)",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "For a hard ball too fast to move to: the legs collapse straight down so both knees hit the floor almost at once (knees ~133 deg, toes tucked, hips ~0.4 m high), trunk ~35 deg forward, straight joined arms low in front of the knees with the platform under the ball. The body then sits/rolls back to absorb.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.3,
+        "stagger_m": 0.0,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 15,
+        "thoracic_flex": 20,
+        "neck_flex": -25,
+        "r_shoulder_flex": 92,
+        "l_shoulder_flex": 92,
+        "r_shoulder_abd": -14,
+        "l_shoulder_abd": -14,
+        "r_shoulder_ext_rot": 15,
+        "l_shoulder_ext_rot": 15,
+        "r_wrist_ext": -10,
+        "l_wrist_ext": -10,
+        "r_hip_flex": 30,
+        "l_hip_flex": 30,
+        "r_hip_abd": 14,
+        "l_hip_abd": 14,
+        "r_knee_flex": 133,
+        "l_knee_flex": 133,
+        "r_ankle_dorsi": 30,
+        "l_ankle_dorsi": 30
+      },
+      "confidence": "estimated: The Art of Coaching Volleyball (Dani Busboom Kelly, Nebraska) collapse-dig description - lower onto the knees fast and get the platform under the ball. Knees are the floor contact here, not the feet (the avatar must be grounded on the knees: hip joint ~0.42 m, ankles ~0.12 m above the floor). Wrists ~0.5 m high.",
+      "evidence": [
+        "https://www.theartofcoachingvolleyball.com/floor-work-for-defenders-the-collapse-dig/",
+        "https://es.volleyballworld.com/blogs/learn-the-vital-techniques-of-volleyball",
+        "https://betteratvolleyball.com/what-is-a-dig-in-volleyball-lessons-drills-and-techniques/"
+      ]
+    },
+    {
+      "id": "dig_pancake",
+      "name": "Pancake (hand flat on the floor at the end of a lunge/dive)",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Last-resort play when the ball cannot be reached with a platform: from a long right-leg lunge the right arm shoots forward and the hand is laid flat, palm down, on the floor before the ball lands so it rebounds off the back of the hand. Trunk nearly horizontal (~77 deg) and turned slightly left to lengthen the right arm; left arm out for balance; rear leg long on its toes.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.29,
+        "stagger_m": 1.0,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 32,
+        "thoracic_flex": 45,
+        "trunk_twist": -15,
+        "neck_flex": -45,
+        "r_shoulder_flex": 113,
+        "r_shoulder_abd": 6,
+        "r_shoulder_ext_rot": -80,
+        "r_wrist_ext": 50,
+        "l_shoulder_flex": 30,
+        "l_shoulder_abd": 35,
+        "l_elbow_flex": 40,
+        "r_hip_flex": 92,
+        "l_hip_flex": -48,
+        "r_hip_abd": 8,
+        "l_hip_abd": 6,
+        "r_knee_flex": 115,
+        "l_knee_flex": 40,
+        "r_ankle_dorsi": 23,
+        "l_ankle_dorsi": -30
+      },
+      "confidence": "estimated: pancake descriptions (hand down before the ball arrives; used when moving forward, as a one-arm lunge or at the end of a dive). Solved so the right wrist is ~0.03 m above the floor ~0.85 m in front of the pelvis; ext_rot -80 turns the palm to face the floor, wrist_ext 50 lays the hand flat. A full horizontal dive cannot be expressed with an upright-pelvis root, so the lunge version is given. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+      "evidence": [
+        "https://volleyballmag.com/?p=65211",
+        "https://es.volleyballworld.com/blogs/learn-the-vital-techniques-of-volleyball",
+        "https://www.sportplan.net/sketches/Volleyball/openSketch/5271661",
+        "https://web.uvic.ca/~thopper/Unitplan452/netwall2000/Kate%20&%20Darryl/Pages/Block%20Plan/Pancake%20Game.html",
+        "https://www.youth.inc/learn/youth-inc-recommends-top-five-resources-to-master-the-art-of-digging-in-volleyball",
+        "https://betteratvolleyball.com/what-is-a-dig-in-volleyball-lessons-drills-and-techniques/"
+      ]
+    },
+    {
+      "id": "libero_overhead_set",
+      "name": "Libero overhead (hand) set from behind the 3 m line",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Libero sets a teammate's attack with the hands only from behind the attack line (a hand set from on/in front of the line may not be attacked above net height). Body turned to face the target (here the left-side hitter, pelvis ~40 deg left), right foot ahead, knees ~50 deg driving up because the set travels far, trunk upright, hands above the forehead, elbows out, wrists cocked, head back.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.45,
+        "stagger_m": 0.2,
+        "yaw_deg": 40
+      },
+      "angles": {
+        "lumbar_flex": 2,
+        "thoracic_flex": 3,
+        "neck_flex": -40,
+        "r_shoulder_flex": 122,
+        "l_shoulder_flex": 122,
+        "r_shoulder_abd": 15,
+        "l_shoulder_abd": 15,
+        "r_shoulder_ext_rot": -39,
+        "l_shoulder_ext_rot": -39,
+        "r_elbow_flex": 95,
+        "l_elbow_flex": 95,
+        "r_wrist_ext": 65,
+        "l_wrist_ext": 65,
+        "r_hip_flex": 30,
+        "l_hip_flex": 13,
+        "r_hip_abd": 11,
+        "l_hip_abd": 13,
+        "l_hip_ext_rot": 5,
+        "r_knee_flex": 50,
+        "l_knee_flex": 45,
+        "r_ankle_dorsi": 19,
+        "l_ankle_dorsi": 31
+      },
+      "confidence": "estimated: rule context from NFHS/MPSSAA rule texts and coaching pages; the longer back-court set relies more on the legs (JBNU study title: lower-extremity contribution changes as overhead-pass distance increases). Arm angles solved for the same hand window as overhead_pass (negative ext_rot is an Euler-order artefact, see overhead_pass). Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+      "evidence": [
+        "https://www.whsaa.org/Officials/updates/NFHS_Libero_Exchange_Rules.pdf",
+        "https://www.mpssaa.org/wp-content/uploads/2026/07/Volleyball-10-22-25Rev.pdf",
+        "https://coachingvb.com/libero-in-volleyball-rules-role-rotations-skills/",
+        "https://cyberpost.co/can-liberos-overhand-set/",
+        "https://pure.jbnu.ac.kr/en/publications/the-contribution-of-upper-or-lower-extremity-of-male-athletes-dif/",
+        "https://doi.org/10.1080/14763141.2019.1609072"
+      ]
+    },
+    {
+      "id": "libero_forearm_set",
+      "name": "Libero forearm (bump) set to the hitter",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "When the libero is in the front zone or the ball is too low to hand-set, she bump-sets: square to the target (pelvis ~35 deg left toward the left-side hitter), right foot ahead, knees ~45 deg extending, trunk ~18 deg forward, straight joined arms only ~28 deg below horizontal so the platform faces up for a high, hittable arc; the arms rise only slightly and stop below shoulder height.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.55,
+        "stagger_m": 0.2,
+        "yaw_deg": 35
+      },
+      "angles": {
+        "lumbar_flex": 8,
+        "thoracic_flex": 10,
+        "neck_flex": -20,
+        "r_shoulder_flex": 80,
+        "l_shoulder_flex": 80,
+        "r_shoulder_abd": -14,
+        "l_shoulder_abd": -14,
+        "r_shoulder_ext_rot": 15,
+        "l_shoulder_ext_rot": 15,
+        "r_wrist_ext": -10,
+        "l_wrist_ext": -10,
+        "r_hip_flex": 28,
+        "l_hip_flex": 12,
+        "r_hip_abd": 14,
+        "l_hip_abd": 15,
+        "r_hip_ext_rot": -2,
+        "l_hip_ext_rot": 2,
+        "r_knee_flex": 45,
+        "l_knee_flex": 42,
+        "r_ankle_dorsi": 17,
+        "l_ankle_dorsi": 29
+      },
+      "confidence": "estimated: coaching sources say a libero near/inside the front zone should bump-set by default; platform held further from the body for a higher ball (Dick's); skilled passers keep the upper arms below horizontal in the follow-through (Ridgway & Hamilton). Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+      "evidence": [
+        "https://cyberpost.co/can-liberos-overhand-set/",
+        "https://coachingvb.com/libero-in-volleyball-rules-role-rotations-skills/",
+        "https://www.whsaa.org/Officials/updates/NFHS_Libero_Exchange_Rules.pdf",
+        "https://www.dickssportinggoods.com/protips/sports-and-activities/volleyball/volleyball-offense-how-to-create-a-strong-platform",
+        "https://ojs.ub.uni-konstanz.de/cpa/article/view/2336",
+        "https://prezi.com/pehj0bgfnlds/the-biomechanics-of-forearm-passing-a-volleyball/"
+      ]
+    },
+    {
+      "id": "cover",
+      "name": "Hitter coverage (low behind the attacker)",
+      "phase": "ready (own attacker contact)",
+      "handedness": "right",
+      "description": "Libero is close behind the hitter, very low (knees ~90 deg, hips ~0.6 m), feet wide, trunk fairly upright (~25 deg) so the head is up watching the block above; hands low and out in front, palms up, ready to play a ball rebounding off the block.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.76,
+        "stagger_m": 0.12,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 10,
+        "thoracic_flex": 15,
+        "neck_flex": -40,
+        "r_shoulder_flex": 50,
+        "l_shoulder_flex": 50,
+        "r_shoulder_abd": 20,
+        "l_shoulder_abd": 20,
+        "r_elbow_flex": 25,
+        "l_elbow_flex": 25,
+        "r_hip_flex": 57,
+        "l_hip_flex": 44,
+        "r_hip_abd": 30,
+        "l_hip_abd": 34,
+        "r_hip_ext_rot": -11,
+        "l_hip_ext_rot": -7,
+        "r_knee_flex": 90,
+        "l_knee_flex": 88,
+        "r_ankle_dorsi": 32,
+        "l_ankle_dorsi": 41
+      },
+      "confidence": "estimated: no source with numeric cover posture was found; built from the low defensive base (Volleyball Canada/Ireland) with a more upright trunk and raised gaze because the ball comes off the block from above. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+      "evidence": [
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Defense_Basic_for_e_module_skill_description_copy.pdf",
+        "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Defence-card.pdf",
+        "https://betteratvolleyball.com/what-is-a-dig-in-volleyball-lessons-drills-and-techniques/",
+        "https://coachesinsider.com/volleyball/transition-movement-base-to-defense-with-genny-volpe-rice-univ"
+      ]
+    },
+    {
+      "id": "free_ball_ready",
+      "name": "Free-ball ready (expecting an easy ball)",
+      "phase": "ready",
+      "handedness": "right",
+      "description": "Higher, relaxed version of the receive stance once the opponent can only send an easy ball: feet about shoulder width, knees ~30 deg, trunk ~14 deg forward, arms loosely in front, eyes on the ball; the libero calls the free ball and gets ready to pass it to the setter.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.55,
+        "stagger_m": 0.08,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 6,
+        "thoracic_flex": 8,
+        "neck_flex": -15,
+        "r_shoulder_flex": 30,
+        "l_shoulder_flex": 30,
+        "r_shoulder_abd": 10,
+        "l_shoulder_abd": 10,
+        "r_elbow_flex": 60,
+        "l_elbow_flex": 60,
+        "r_hip_flex": 18,
+        "l_hip_flex": 13,
+        "r_hip_abd": 14,
+        "l_hip_abd": 14,
+        "r_hip_ext_rot": 1,
+        "l_hip_ext_rot": 2,
+        "r_knee_flex": 30,
+        "l_knee_flex": 30,
+        "r_ankle_dorsi": 11,
+        "l_ankle_dorsi": 17
+      },
+      "confidence": "estimated: higher variant of the Volleyball Canada / Ireland ready position. Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+      "evidence": [
+        "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+        "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Pass-card.pdf",
+        "https://www.stpaul.gov/sites/default/files/Media%20Root/Parks%20%26%20Recreation/Muni%20Volleyball%20fundamentals.pdf"
+      ]
+    },
+    {
+      "id": "transition",
+      "name": "Transition move (crossover step into the defensive spot)",
+      "phase": "movement (mid crossover step)",
+      "handedness": "right",
+      "description": "Moving more than a step or two (e.g. from serve-receive or cover to the defensive spot) the libero runs with a crossover: hips turned ~60 deg toward the direction of travel (right), left foot crossing in front of the right, right foot pushing off on the ball of the foot; shoulders twisted back toward the net, body still medium-low, eyes on the ball. Short distances use a shuffle instead, ending in a split step.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.18,
+        "stagger_m": -0.59,
+        "yaw_deg": -60
+      },
+      "angles": {
+        "lumbar_flex": 7,
+        "thoracic_flex": 8,
+        "trunk_twist": -30,
+        "neck_flex": -15,
+        "r_shoulder_flex": 40,
+        "l_shoulder_flex": -20,
+        "r_elbow_flex": 80,
+        "l_elbow_flex": 80,
+        "r_hip_flex": -15,
+        "l_hip_flex": 35,
+        "r_hip_abd": 3,
+        "l_hip_abd": -3,
+        "r_knee_flex": 30,
+        "l_knee_flex": 45,
+        "r_ankle_dorsi": -20,
+        "l_ankle_dorsi": 10
+      },
+      "confidence": "estimated: crossover footwork described in the USA Volleyball BCAP dig drill (crossover footwork to a cut shot) and Gimmillaro crossover-step dig drill; \"be in position early and stopped\" (Volpe, USA Volleyball). Right heel raised (ankle ~0.13 m high, ball of foot on the floor). Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+      "evidence": [
+        "https://usavolleyball.org/wp-content/uploads/2020/11/Dig-2-Heffernan.pdf",
+        "https://coachesinsider.com/volleyball/crossover-step-dig-drill-with-brian-gimmillaro",
+        "https://coachesinsider.com/volleyball/transition-movement-base-to-defense-with-genny-volpe-rice-univ",
+        "https://usavolleyball.org/resource/five-tips-for-better-backcourt-defense/"
+      ]
+    },
+    {
+      "id": "dig_overhead",
+      "name": "Overhead dig (hands up to a hard ball at head height)",
+      "phase": "contact",
+      "handedness": "right",
+      "description": "Hard attack arriving at face/head height: the libero keeps the feet, stays fairly upright with knees ~45 deg and plays the ball with firm open hands in front of and just above the face, elbows bent ~70 deg, wrists firm, chin up.",
+      "root": {
+        "jump_m": 0,
+        "stance_width_m": 0.6,
+        "stagger_m": 0.05,
+        "yaw_deg": 0
+      },
+      "angles": {
+        "lumbar_flex": 3,
+        "thoracic_flex": 4,
+        "neck_flex": -35,
+        "r_shoulder_flex": 122,
+        "l_shoulder_flex": 122,
+        "r_shoulder_abd": 15,
+        "l_shoulder_abd": 15,
+        "r_shoulder_ext_rot": -49,
+        "l_shoulder_ext_rot": -49,
+        "r_elbow_flex": 70,
+        "l_elbow_flex": 70,
+        "r_wrist_ext": 40,
+        "l_wrist_ext": 40,
+        "r_hip_flex": 25,
+        "l_hip_flex": 22,
+        "r_hip_abd": 16,
+        "l_hip_abd": 16,
+        "r_hip_ext_rot": -2,
+        "l_hip_ext_rot": -1,
+        "r_knee_flex": 45,
+        "l_knee_flex": 45,
+        "r_ankle_dorsi": 19,
+        "l_ankle_dorsi": 23
+      },
+      "confidence": "estimated (low confidence): overhead defence is recorded as a distinct floor-defence technique (European Journal of Human Movement 2019) but no description with body angles was found; values derived from the overhead-pass hand window moved further forward (wrists ~0.33 m in front of the shoulders). Geometry checked with a forward-kinematics model (pelvis upright, limb order flex->abd->axial rotation, 1.75 m body): feet flat and level, stance width/stagger reproduced by the leg angles.",
+      "evidence": [
+        "https://doaj.org/article/c75b974f3ebc4aebb86448eef6976f19",
+        "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Defence-card.pdf"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "title": "Ridgway & Hamilton - The Kinematics of Forearm Passing in Low Skilled and High Skilled Volleyball Players (ISBS proceedings; knee 134.8/125.6 deg at start of pass, thigh ~46 deg, projection 63.7/71.9 deg)",
+      "url": "https://ojs.ub.uni-konstanz.de/cpa/article/view/2336",
+      "type": "study",
+      "used_for": [
+        "ready_medium",
+        "pass_platform",
+        "libero_forearm_set"
+      ]
+    },
+    {
+      "title": "Kapidzic et al. 2014 - Kinematic Analysis Forearm Passing in Volleyball at Different Distances (prep shoulder ~54, hip ~125, knee ~126 deg medians)",
+      "url": "https://www.iiste.org/Journals/index.php/JEP/article/view/12341",
+      "type": "study",
+      "used_for": [
+        "ready_medium",
+        "pass_platform"
+      ]
+    },
+    {
+      "title": "Atan, Acikada, Asci 2003 - Voleybolcularin manset paslarinin kinematik analizi (3D, Super League vs 1st League)",
+      "url": "https://avesis.omu.edu.tr/yayin/0c444ab4-ee04-402c-bbf5-1a3497fda353/voleybolcularin-manset-paslarinin-kinematik-analizi",
+      "type": "study",
+      "used_for": [
+        "pass_platform"
+      ]
+    },
+    {
+      "title": "Wicaksono et al. 2020 - Analysis of Superior and Inferior Extremities on Forearm Pass in Volleyball (arm angle ~45 deg)",
+      "url": "https://www.researchgate.net/publication/346829083_Analysis_of_Superior_and_Inferior_Extremities_on_Forearm_Pass_in_Volleyball",
+      "type": "study",
+      "used_for": [
+        "pass_platform"
+      ]
+    },
+    {
+      "title": "The Biomechanics of forearm passing a volleyball (student presentation; forearms 40-45 deg from horizontal)",
+      "url": "https://prezi.com/pehj0bgfnlds/the-biomechanics-of-forearm-passing-a-volleyball/",
+      "type": "technique article",
+      "used_for": [
+        "pass_platform",
+        "pass_platform_angled",
+        "libero_forearm_set"
+      ]
+    },
+    {
+      "title": "The Biomechanics of forearm passing a volleyball (second student presentation)",
+      "url": "https://prezi.com/3o6xhlud9f66/the-biomechanics-of-forearm-passing-a-volleyball/",
+      "type": "technique article",
+      "used_for": [
+        "pass_platform"
+      ]
+    },
+    {
+      "title": "Volleyball Canada - Basic Passing skill description",
+      "url": "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Basic_Passing_for_e_module_skill_description.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "ready_medium",
+        "pass_platform",
+        "pass_platform_angled",
+        "free_ball_ready"
+      ]
+    },
+    {
+      "title": "Volleyball Canada - Defense Basic skill description",
+      "url": "https://volleyball.ca/uploads/Development/Coach/Skills/One_page_desc./DEV/English/Defense_Basic_for_e_module_skill_description_copy.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "ready_low",
+        "dig_low",
+        "cover"
+      ]
+    },
+    {
+      "title": "Volleyball Ireland LTPD Pass card",
+      "url": "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Pass-card.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "ready_medium",
+        "free_ball_ready"
+      ]
+    },
+    {
+      "title": "Volleyball Ireland LTPD Defence card",
+      "url": "https://www.volleyballireland.com/wp-content/uploads/2020/12/LTPD-Defence-card.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "ready_low",
+        "dig_low",
+        "dig_sprawl",
+        "cover",
+        "dig_overhead"
+      ]
+    },
+    {
+      "title": "Saskatchewan Volleyball - Fore-arm passing summary (after Atomic Volleyball)",
+      "url": "https://www.saskvolleyball.ca/wp-content/uploads/2021/03/FORE-ARM-PASSING-Smry-Details-UPDATED-03-30-20.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "pass_platform",
+        "pass_platform_angled"
+      ]
+    },
+    {
+      "title": "UVic - Forearm Pass (ready position, shoulders over knees)",
+      "url": "https://web.uvic.ca/~thopper/iweb09/DaveKelsey/Site/Forearm_Pass.html",
+      "type": "technique article",
+      "used_for": [
+        "ready_medium"
+      ]
+    },
+    {
+      "title": "UVic - On-the-Ball Skills (arms do not swing)",
+      "url": "https://web.uvic.ca/~thopper/WEB/452/Units_2007/Taryn_Colton/On-the-Ball%20Skills.html",
+      "type": "technique article",
+      "used_for": [
+        "pass_platform"
+      ]
+    },
+    {
+      "title": "KFUPM - Volleyball Basic Skills",
+      "url": "https://faculty.kfupm.edu.sa/PE/abuhilal/volleyball_skills.html",
+      "type": "technique article",
+      "used_for": [
+        "ready_medium"
+      ]
+    },
+    {
+      "title": "Oklahoma SDE - Forearm pass standard (knees ~90 deg cue, shoulders square)",
+      "url": "https://sde.ok.gov/sites/default/files/documents/files/S2.H2GLO9-12ForearmPass.docx%20%281%29.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "ready_medium",
+        "pass_platform"
+      ]
+    },
+    {
+      "title": "YMCA Pabst Farms - Volleyball Skill Packet (right foot slightly forward)",
+      "url": "https://www.quickscores.com/downloads/ymcaatpabstfarms_Volleyball_Skill_Packet.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "ready_medium"
+      ]
+    },
+    {
+      "title": "Coaches Insider - Passing platform progression with Ron Zwerver (Oregon State)",
+      "url": "https://coachesinsider.com/volleyball/passing-platform-progression-with-ron-zwerver-oregon-state-univ",
+      "type": "video analysis",
+      "used_for": [
+        "ready_medium",
+        "pass_platform",
+        "pass_platform_angled"
+      ]
+    },
+    {
+      "title": "Volleyball basic techniques (slides; shoulders over knees, knees ~90 deg cue)",
+      "url": "https://www.slideshare.net/slideshow/voleyball-basic-techniquespptx/251484553",
+      "type": "technique article",
+      "used_for": [
+        "ready_medium"
+      ]
+    },
+    {
+      "title": "City of St Paul - Muni Volleyball fundamentals",
+      "url": "https://www.stpaul.gov/sites/default/files/Media%20Root/Parks%20%26%20Recreation/Muni%20Volleyball%20fundamentals.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "ready_medium",
+        "free_ball_ready"
+      ]
+    },
+    {
+      "title": "SportsEngine - Passing drills: train proper technique (platform over the knee)",
+      "url": "https://discover.sportsengineplay.com/video/volleyball/passing-drills-train-proper-technique-and-eliminate-bad-habits/",
+      "type": "video analysis",
+      "used_for": [
+        "pass_platform",
+        "pass_platform_angled"
+      ]
+    },
+    {
+      "title": "Dick's Sporting Goods ProTips - How to create a strong platform",
+      "url": "https://www.dickssportinggoods.com/protips/sports-and-activities/volleyball/volleyball-offense-how-to-create-a-strong-platform",
+      "type": "technique article",
+      "used_for": [
+        "pass_platform",
+        "pass_platform_angled",
+        "libero_forearm_set"
+      ]
+    },
+    {
+      "title": "Kure Ansiklopedi - Voleybolda manset teknigi",
+      "url": "https://kureansiklopedi.com/tr/detay/voleybolda-manset-teknigi",
+      "type": "technique article",
+      "used_for": [
+        "pass_platform"
+      ]
+    },
+    {
+      "title": "Better at Volleyball - What is a dig (feet ~2x shoulder width, low hips)",
+      "url": "https://betteratvolleyball.com/what-is-a-dig-in-volleyball-lessons-drills-and-techniques/",
+      "type": "technique article",
+      "used_for": [
+        "ready_low",
+        "dig_low",
+        "dig_sprawl",
+        "dig_collapse",
+        "dig_pancake",
+        "cover"
+      ]
+    },
+    {
+      "title": "Munerati et al. 2016 - Knee angle in squat test vs defence/reception efficacy",
+      "url": "https://air.unimi.it/handle/2434/422085",
+      "type": "study",
+      "used_for": [
+        "ready_low",
+        "dig_low"
+      ]
+    },
+    {
+      "title": "Univ. of Diyala PESSJ - hip angle at contact, moving vs stationary defence",
+      "url": "https://pessj.uodiyala.edu.iq/index.php/1/article/download/2035/1344/2188",
+      "type": "study",
+      "used_for": [
+        "dig_low"
+      ]
+    },
+    {
+      "title": "The Art of Coaching Volleyball - Floor work for defenders: the collapse dig",
+      "url": "https://www.theartofcoachingvolleyball.com/floor-work-for-defenders-the-collapse-dig/",
+      "type": "video analysis",
+      "used_for": [
+        "dig_collapse"
+      ]
+    },
+    {
+      "title": "USA Volleyball BCAP drill - Dig 2 (Heffernan): crossover footwork",
+      "url": "https://usavolleyball.org/wp-content/uploads/2020/11/Dig-2-Heffernan.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "dig_low",
+        "transition"
+      ]
+    },
+    {
+      "title": "USA Volleyball - Five keys to making more digs",
+      "url": "https://usavolleyball.org/resource/five-keys-to-making-more-digs/",
+      "type": "coaching manual",
+      "used_for": [
+        "ready_low"
+      ]
+    },
+    {
+      "title": "USA Volleyball - Five tips for better backcourt defense",
+      "url": "https://usavolleyball.org/resource/five-tips-for-better-backcourt-defense/",
+      "type": "coaching manual",
+      "used_for": [
+        "ready_low",
+        "transition"
+      ]
+    },
+    {
+      "title": "USA Volleyball - Keys to making more digs on the beach (stopped and balanced)",
+      "url": "https://usavolleyball.org/resource/keys-to-making-more-digs-on-the-beach/",
+      "type": "coaching manual",
+      "used_for": [
+        "ready_low"
+      ]
+    },
+    {
+      "title": "Coaches Insider - Crossover step dig drill with Brian Gimmillaro",
+      "url": "https://coachesinsider.com/volleyball/crossover-step-dig-drill-with-brian-gimmillaro",
+      "type": "video analysis",
+      "used_for": [
+        "dig_low",
+        "transition"
+      ]
+    },
+    {
+      "title": "Coaches Insider - Transition movement base to defense with Genny Volpe (Rice)",
+      "url": "https://coachesinsider.com/volleyball/transition-movement-base-to-defense-with-genny-volpe-rice-univ",
+      "type": "video analysis",
+      "used_for": [
+        "ready_low",
+        "dig_low",
+        "cover",
+        "transition"
+      ]
+    },
+    {
+      "title": "IMG Academy - Volleyball defense drill: sprawl progression",
+      "url": "https://plus.imgacademy.com/resources/videos/volleyball-defense-drill-sprawl-progression",
+      "type": "video analysis",
+      "used_for": [
+        "dig_sprawl"
+      ]
+    },
+    {
+      "title": "Volleyball World blog - Learn the vital techniques of volleyball (sprawl, dive, pancake)",
+      "url": "https://es.volleyballworld.com/blogs/learn-the-vital-techniques-of-volleyball",
+      "type": "technique article",
+      "used_for": [
+        "dig_sprawl",
+        "dig_collapse",
+        "dig_pancake"
+      ]
+    },
+    {
+      "title": "Volleyball Magazine article (returned for the pancake-technique query; general pancake description)",
+      "url": "https://volleyballmag.com/?p=65211",
+      "type": "technique article",
+      "used_for": [
+        "dig_pancake"
+      ]
+    },
+    {
+      "title": "Sportplan - pancake drill sketch",
+      "url": "https://www.sportplan.net/sketches/Volleyball/openSketch/5271661",
+      "type": "technique article",
+      "used_for": [
+        "dig_pancake"
+      ]
+    },
+    {
+      "title": "UVic - Pancake Game",
+      "url": "https://web.uvic.ca/~thopper/Unitplan452/netwall2000/Kate%20&%20Darryl/Pages/Block%20Plan/Pancake%20Game.html",
+      "type": "technique article",
+      "used_for": [
+        "dig_pancake"
+      ]
+    },
+    {
+      "title": "Youth Inc - Top five resources to master digging",
+      "url": "https://www.youth.inc/learn/youth-inc-recommends-top-five-resources-to-master-the-art-of-digging-in-volleyball",
+      "type": "technique article",
+      "used_for": [
+        "dig_pancake"
+      ]
+    },
+    {
+      "title": "European Journal of Human Movement 2019 - Evolution of floor defense efficacy and execution, U-14 to senior (forearm and overhead defence)",
+      "url": "https://doaj.org/article/c75b974f3ebc4aebb86448eef6976f19",
+      "type": "study",
+      "used_for": [
+        "dig_low",
+        "dig_overhead"
+      ]
+    },
+    {
+      "title": "NFHS - Libero rules (front-zone overhand set restriction)",
+      "url": "https://www.whsaa.org/Officials/updates/NFHS_Libero_Exchange_Rules.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "libero_overhead_set",
+        "libero_forearm_set"
+      ]
+    },
+    {
+      "title": "MPSSAA Volleyball rules 2025 (libero overhand finger pass on/in front of the attack line)",
+      "url": "https://www.mpssaa.org/wp-content/uploads/2026/07/Volleyball-10-22-25Rev.pdf",
+      "type": "coaching manual",
+      "used_for": [
+        "libero_overhead_set"
+      ]
+    },
+    {
+      "title": "CoachingVB - Libero in volleyball: rules, role, rotations, skills",
+      "url": "https://coachingvb.com/libero-in-volleyball-rules-role-rotations-skills/",
+      "type": "technique article",
+      "used_for": [
+        "overhead_pass",
+        "libero_overhead_set",
+        "libero_forearm_set"
+      ]
+    },
+    {
+      "title": "Cyberpost - Can liberos overhand set? (bump set by default near the line)",
+      "url": "https://cyberpost.co/can-liberos-overhand-set/",
+      "type": "technique article",
+      "used_for": [
+        "libero_overhead_set",
+        "libero_forearm_set"
+      ]
+    },
+    {
+      "title": "Biomechanical analysis of volleyball overhead pass (Sports Biomechanics 2019) - title/abstract listing only, no values retrieved",
+      "url": "https://doi.org/10.1080/14763141.2019.1609072",
+      "type": "study",
+      "used_for": [
+        "overhead_pass",
+        "libero_overhead_set"
+      ]
+    },
+    {
+      "title": "JBNU - Contribution of upper or lower extremity differs as overhead pass distance increases (title-level)",
+      "url": "https://pure.jbnu.ac.kr/en/publications/the-contribution-of-upper-or-lower-extremity-of-male-athletes-dif/",
+      "type": "study",
+      "used_for": [
+        "overhead_pass",
+        "libero_overhead_set"
+      ]
+    },
+    {
+      "title": "Palao, Manzanares, Valades 2014 - Anthropometric, physical and age differences by player position (J Hum Kinet; 1454 M / 1452 F, OG & WCh 2000-2012)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC4327374/",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Comparative Analysis of the \"Libero\" in Great Performance Volleyball (London 2012 liberos: mean 184.8 cm, 180-190)",
+      "url": "https://reference-global.com/article/10.2478/tperj-2014-0024",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Okano & Tanigawa - Height of men's volleyball players (London 2012 libero 186.7 +/- 8.0 cm)",
+      "url": "https://tsukuba.repo.nii.ac.jp/record/38485/files/%E7%94%B7%E5%AD%90%E3%83%90%E3%83%AC%E3%83%BC%E3%83%9C%E3%83%BC%E3%83%AB%E9%81%B8%E6%89%8B%E3%81%AE%E8%BA%AB%E9%95%B7%E3%81%AB%E9%96%A2%E3%81%99%E3%82%8B%E7%A0%94%E7%A9%B6.pdf",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Marques et al. 2009 - Physical fitness qualities of professional volleyball players: positional differences (liberos lightest)",
+      "url": "https://www.bisp-surf.de/Record/PU200909004105",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Anthropometric assessment of elite Italian female volleyball players: comparison among roles",
+      "url": "https://lida.sport-iat.de/twm/Record/3039092?lng=en",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Women's VNL Final Four player profiles by position (liberos shortest and lightest)",
+      "url": "https://dergipark.org.tr/tr/download/article-file/5807347",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Power, speed and anthropometric measures of Portuguese elite junior players (liberos 178 cm, most explosive CMJ)",
+      "url": "https://lida.sport-iat.de/ta/Record/4027260",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "2017 Women's U18 World Championship anthropometry by position",
+      "url": "https://lida.sport-iat.de/dvv/Record/4071056?lng=en",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Inter-positional differences of young female volleyball players (libero 163.8 +/- 6.2 cm)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5377555/table/t0003",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Anthropometric characteristics and vertical jump by position, junior female players",
+      "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8393901/",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Basic anthropological characteristics of elite U17 Serbian female players by position (Applied Sciences 2024)",
+      "url": "https://doi.org/10.3390/app142311197",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Slovenian female cadet/junior/senior national teams (setters and liberos shorter)",
+      "url": "https://www.dlib.si/stream/URN:NBN:SI:doc-BHA1T7I9/c894787b-ae71-4474-9f15-9c6ac7126c30/PDF",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Croatian 14-16-year-old players by position (spike and block reach)",
+      "url": "https://hrcak.srce.hr/en/140254",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "CEJSSM - premier-league players incl. 8 liberos (standing reach differs by position)",
+      "url": "https://doaj.org/article/24527f9d134e491aa2e50f8bb71820e5",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Comparison of anthropometric characteristics among positions (HRPUB 2023; men sample of unconfirmed level: libero 173.8 cm, spike 284.5, block 276.2 cm)",
+      "url": "https://www.hrpub.org/download/20231130/SAJ21-19934163.pdf",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "XbotGo - Average volleyball player height (blog; libero men ~181 cm, women ~169 cm)",
+      "url": "https://xbotgo.com/blogs/knowledge/average-volleyball-player-height",
+      "type": "technique article",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Joker Mag - Average height of volleyball players (USA WNT libero ~168.9 cm)",
+      "url": "https://jokermag.com/average-height-volleyball-players/",
+      "type": "technique article",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Wikipedia - Fabio Balaso (libero profile)",
+      "url": "https://en.wikipedia.org/wiki/Fabio_Balaso",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Wikipedia - Andrea Giovi (libero profile)",
+      "url": "https://en.wikipedia.org/wiki/Andrea_Giovi",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Wikipedia - Mario da Silva Pedreira Junior (libero profile)",
+      "url": "https://en.wikipedia.org/wiki/M%C3%A1rio_da_Silva_Pedreira_J%C3%BAnior",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Volleyball World - Men's World Championship 2022 player profile (libero)",
+      "url": "https://it.volleyballworld.com/volleyball/competitions/men-world-championship-2022/players/152506",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Volleyball World - Men's World Championship 2022 player profile (libero)",
+      "url": "https://it.volleyballworld.com/volleyball/competitions/men-world-championship-2022/players/180990",
+      "type": "photo caption/gallery",
+      "used_for": [
+        "traits"
+      ]
+    },
+    {
+      "title": "Nasuka - Anthropometric profile and motor skill of men elite volleyball players (Atlantis Press; Rio 2016 libero heights)",
+      "url": "https://www.atlantis-press.com/article/125934798.pdf",
+      "type": "study",
+      "used_for": [
+        "traits"
+      ]
+    }
+  ]
+}
