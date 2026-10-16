@@ -9,20 +9,36 @@ final class AppModel {
     enum Screen {
         case launcher
         case setup
+        case roster
         case live(LiveController)
+        case matchLog(MatchSummary)
     }
 
     var screen: Screen = .launcher
     private(set) var lastSetup: MatchSetupData?
-    private(set) var resumable: URL?
+    /// Saved matches, newest first (the launcher's recents strip).
+    private(set) var recents: [MatchSummary] = []
     var errorMessage: String?
+    var showSettings = false
+
+    /// The newest match that has rallies but has not ended (Appendix B3 recovery).
+    var resumable: MatchSummary? { recents.first { !$0.finished && $0.rallies > 0 } }
 
     init() {
         lastSetup = Self.loadSetup()
-        resumable = Self.findResumableJournal()
+        refreshArchive()
+    }
+
+    func refreshArchive() {
+        Task {
+            let list = await Task.detached(priority: .userInitiated) { MatchArchive.list() }.value
+            recents = list
+        }
     }
 
     func newMatch() { screen = .setup }
+
+    func openRoster() { screen = .roster }
 
     func start(_ setup: MatchSetupData) {
         Self.saveSetup(setup)
@@ -36,12 +52,11 @@ final class AppModel {
     }
 
     func quickMatch() {
-        guard let lastSetup else { return newMatch() }
+        guard let lastSetup, lastSetup.homeSlots.allSatisfy({ $0 != nil }) else { return newMatch() }
         start(lastSetup)
     }
 
-    func resume() {
-        guard let url = resumable else { return }
+    func resume(_ url: URL) {
         do {
             screen = .live(try LiveController(resuming: url))
         } catch {
@@ -49,9 +64,23 @@ final class AppModel {
         }
     }
 
-    func exitLive() {
+    /// A recent card reopens exactly where it was left: a match in progress goes back to Live, a finished one to its log.
+    func open(_ summary: MatchSummary) {
+        if summary.finished || summary.rallies == 0 { screen = .matchLog(summary) } else { resume(summary.url) }
+    }
+
+    func delete(_ summary: MatchSummary) {
+        do {
+            try MatchArchive.moveToDeleted(summary.url)
+        } catch {
+            errorMessage = "Could not delete: \(error.localizedDescription)"
+        }
+        refreshArchive()
+    }
+
+    func backToLauncher() {
         screen = .launcher
-        resumable = Self.findResumableJournal()
+        refreshArchive()
     }
 
     // MARK: - Persistence of the last setup (Quick Match)
@@ -69,18 +98,5 @@ final class AppModel {
     private static func saveSetup(_ setup: MatchSetupData) {
         guard let url = setupURL, let data = try? JSONEncoder().encode(setup) else { return }
         try? data.write(to: url, options: .atomic)
-    }
-
-    /// The newest journal whose match has not ended (Appendix B3 recovery).
-    private static func findResumableJournal() -> URL? {
-        guard let dir = try? JournalPipe.journalsDirectory(),
-              let files = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { return nil }
-        var best: (URL, Int64)?
-        for url in files where url.pathExtension == "cbj" {
-            guard let data = try? Data(contentsOf: url), let read = try? JournalCodec.read(data),
-                  read.records.count > 1, read.records.last?.knownType != .matchEnded else { continue }
-            if best == nil || read.header.createdAtNanoseconds > best!.1 { best = (url, read.header.createdAtNanoseconds) }
-        }
-        return best?.0
     }
 }

@@ -3,25 +3,6 @@ import Observation
 import QuartzCore
 import CoachBoardCore
 
-/// Everything Match Setup collects (Screen 2), saved for Quick Match.
-struct MatchSetupData: Codable, Equatable {
-    var homeName = "Home"
-    var opponentName = "Opponent"
-    /// Jersey numbers in template lineup order: S, OH1, MB1, OPP, OH2, MB2.
-    var homeNumbers: [Int] = [1, 2, 3, 4, 5, 6]
-    var homeLibero: Int? = 7
-    var opponentNumbers: [Int?] = [nil, nil, nil, nil, nil, nil]
-    var opponentLibero: Int?
-    /// Starting rotation named by the setter's position (R1 = setter in P1).
-    var homeStartRotation = 1
-    var opponentStartRotation = 1
-    var firstServer: Side = .home
-    var mode: CoachMode = .solo
-    var netHeight = 2.43
-
-    static let roleOrder = ["S", "OH1", "MB1", "OPP", "OH2", "MB2"]
-}
-
 /// Bridges the pure LiveState reducer to the screen: runs effects (haptics, journal),
 /// converts touches to court coordinates and builds the board scene.
 @MainActor
@@ -56,37 +37,49 @@ final class LiveController {
 
     init(setup: MatchSetupData) throws {
         let profile = try RuleCourtProfile.fivbSenior()
-        let template = try TemplateLibrary.shipped("5-1-outside-follows-setter")
-        func sheet(numbers: [Int?], libero: Int?, start: Int, labels: inout [PlayerID: String], jerseys: inout [PlayerID: Int]) -> TeamSheet {
-            let ids = (0..<6).map { _ in UUID() }
-            var roles: [PlayerID: String] = [:]
-            for (i, id) in ids.enumerated() {
-                roles[id] = MatchSetupData.roleOrder[i]
-                if let n = numbers[i] { labels[id] = String(n); jerseys[id] = n } else { labels[id] = MatchSetupData.roleOrder[i] }
-            }
-            // P_i holds order[(i - R) mod 6] when the setter starts in P_R.
-            let lineup = (1...6).map { i in ids[((i - start) % 6 + 6) % 6] }
-            var liberos: [PlayerID] = []
-            if let libero {
-                let liberoID = UUID()
-                liberos.append(liberoID)
-                roles[liberoID] = "L"
-                labels[liberoID] = String(libero)
-                jerseys[liberoID] = libero
-            }
-            return TeamSheet(startingLineup: lineup, roles: roles, liberos: liberos,
-                             liberoPartners: liberos.isEmpty ? [] : [ids[2], ids[5]])
-        }
-        var labels: [PlayerID: String] = [:]
+        let homeTemplate = try TemplateLibrary.template(id: setup.system.templateID)
+        let opponentTemplate = try TemplateLibrary.template(id: MatchStartedPayload.defaultOpponentTemplateID)
         var jerseys: [PlayerID: Int] = [:]
-        let home = sheet(numbers: setup.homeNumbers.map { Optional($0) }, libero: setup.homeLibero,
-                         start: setup.homeStartRotation, labels: &labels, jerseys: &jerseys)
-        let opponent = sheet(numbers: setup.opponentNumbers, libero: setup.opponentLibero,
-                             start: setup.opponentStartRotation, labels: &labels, jerseys: &jerseys)
+        var names: [PlayerID: String] = [:]
+
+        // Home: roster players placed on P1...P6; roles follow from the system's lineup order and the setter's slot.
+        var homePlayers: [CourtPosition: PlayerID] = [:]
+        for (i, slot) in setup.homeSlots.enumerated() {
+            guard let slot, let pos = CourtPosition(rawValue: i + 1) else { throw MatchSetupData.SetupError.incomplete }
+            homePlayers[pos] = slot.id
+            jerseys[slot.id] = slot.jersey
+            if let n = slot.name { names[slot.id] = n }
+        }
+        if let l = setup.homeLibero {
+            jerseys[l.id] = l.jersey
+            if let n = l.name { names[l.id] = n }
+        }
+        let homeAnchor = setup.system.hasSetter ? (CourtPosition(rawValue: setup.setterPosition) ?? .p1) : .p1
+        let home = LineupBuilder.sheet(players: homePlayers, order: homeTemplate.lineupOrder, anchor: homeAnchor,
+                                       libero: homeTemplate.libero == nil ? nil : setup.homeLibero?.id,
+                                       liberoReplaces: homeTemplate.libero?.replaces ?? [])
+
+        // Opponent: positions with optional numbers; unknown players are labelled by role.
+        var opponentPlayers: [CourtPosition: PlayerID] = [:]
+        for pos in CourtPosition.allCases {
+            let id = UUID()
+            opponentPlayers[pos] = id
+            if let n = setup.opponentNumbers[pos.rawValue - 1] { jerseys[id] = n }
+        }
+        let opponentLibero = setup.opponentLibero.map { n -> PlayerID in
+            let id = UUID()
+            jerseys[id] = n
+            return id
+        }
+        let opponent = LineupBuilder.sheet(players: opponentPlayers, order: opponentTemplate.lineupOrder,
+                                           anchor: CourtPosition(rawValue: setup.opponentSetterPosition) ?? .p1,
+                                           libero: opponentLibero, liberoReplaces: opponentTemplate.libero?.replaces ?? [])
+
         let payload = MatchStartedPayload(profileName: profile.name, home: home, opponent: opponent,
-                                          firstServer: setup.firstServer, mode: setup.mode, templateID: template.id,
+                                          firstServer: setup.firstServer, mode: setup.mode, templateID: homeTemplate.id,
                                           homeName: setup.homeName, opponentName: setup.opponentName,
-                                          jerseys: jerseys, netHeight: setup.netHeight)
+                                          jerseys: jerseys, netHeight: setup.netHeight,
+                                          opponentTemplateID: opponentTemplate.id, names: names.isEmpty ? nil : names)
         let matchID = UUID()
         let url = try JournalPipe.journalsDirectory().appendingPathComponent("\(matchID.uuidString).cbj")
         let header = JournalHeader(matchID: matchID,
@@ -98,30 +91,25 @@ final class LiveController {
         self.homeName = setup.homeName
         self.opponentName = setup.opponentName
         self.journal = pipe
-        self.state = LiveState(setup: payload, profile: profile, template: template, nextSeq: pipe.firstFreeSeq + 1)
-        self.labels = labels
+        self.state = LiveState(setup: payload, profile: profile, template: homeTemplate,
+                               opponentTemplate: opponentTemplate, nextSeq: pipe.firstFreeSeq + 1)
+        self.labels = payload.playerLabels
     }
 
     /// Resumes a match from its journal after a crash, a kill or a dead battery (Appendix B3 recovery).
     init(resuming url: URL) throws {
         let profile = try RuleCourtProfile.fivbSenior()
-        let template = try TemplateLibrary.shipped("5-1-outside-follows-setter")
         let data = try Data(contentsOf: url)
         let read = try JournalCodec.read(data)
-        guard let replayed = try LiveState.replay(records: read.records, profile: profile, template: template) else {
+        guard let replayed = try LiveState.replay(records: read.records, profile: profile) else {
             throw JournalError.badHeader
         }
         let pipe = try JournalPipe(url: url, header: read.header)
-        var labels: [PlayerID: String] = [:]
-        for side in Side.allCases {
-            guard let sheet = replayed.match.sheets[side] else { continue }
-            for (id, role) in sheet.roles { labels[id] = replayed.setup.jerseys?[id].map { String($0) } ?? role }
-        }
         self.homeName = replayed.setup.homeName ?? "Home"
         self.opponentName = replayed.setup.opponentName ?? "Opponent"
         self.journal = pipe
         self.state = replayed
-        self.labels = labels
+        self.labels = replayed.setup.playerLabels
     }
 
     static func wallClock() -> Int64 { Int64(Date().timeIntervalSince1970 * 1_000_000_000) }
@@ -180,9 +168,9 @@ final class LiveController {
 
     func clearPanicInk() { panicInkStart = state.ink.count }
 
-    func nextSet(firstServer: Side?) {
+    func nextSet(firstServer: Side?, homeStartRotation: Int?) {
         let before = state.match.current.number
-        dispatch(.startNextSet(firstServer: firstServer))
+        dispatch(.startNextSet(firstServer: firstServer, homeStartRotation: homeStartRotation))
         if state.match.current.number > before { homeOnLeft.toggle() }   // teams change ends between sets
     }
 

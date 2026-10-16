@@ -269,48 +269,6 @@ struct PanicOverlay: View {
     }
 }
 
-struct SetBreakPanel: View {
-    @Bindable var controller: LiveController
-    var onExit: () -> Void
-    @State private var firstServer: Side = .home
-
-    var body: some View {
-        let over = controller.state.context == .matchOver
-        VStack(alignment: .leading, spacing: 16) {
-            Text(over ? "MATCH OVER" : "SET \(controller.setNumber) COMPLETE").font(.sectionLabel).foregroundStyle(Tokens.accent.color)
-            Text("\(controller.homeName) \(controller.score.home) : \(controller.score.opponent) \(controller.opponentName)")
-                .font(.liveNumerals)
-            Text("Sets \(controller.state.match.setsWonHome) : \(controller.state.match.setsWonOpponent)").font(.dataMono)
-            if !controller.scoutSummaryLines.isEmpty {
-                Text("OPPONENT ATTACKS THIS SET").font(.sectionLabel).foregroundStyle(Tokens.textSecondary.color)
-                ForEach(controller.scoutSummaryLines, id: \.self) { Text($0).font(.dataMono) }
-            }
-            if over {
-                Button("Back to start") { controller.close(); onExit() }.buttonStyle(.borderedProminent).tint(Tokens.accent.color)
-            } else {
-                Picker("First serve next set", selection: $firstServer) {
-                    Text(controller.homeName).tag(Side.home)
-                    Text(controller.opponentName).tag(Side.opponent)
-                }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 360)
-                HStack {
-                    Button("Next set") { controller.nextSet(firstServer: firstServer) }
-                        .buttonStyle(.borderedProminent).tint(Tokens.accent.color)
-                        .frame(height: Tokens.targetLivePrimary)
-                    Button("Undo last action") { controller.undo() }.foregroundStyle(Tokens.white.color)
-                }
-            }
-        }
-        .foregroundStyle(Tokens.white.color)
-        .padding(32)
-        .frame(maxWidth: 640, alignment: .leading)
-        .background(Tokens.canvasRaised.color, in: RoundedRectangle(cornerRadius: 6))
-        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Tokens.accent.withAlpha(0.6).color))
-        .onAppear { firstServer = controller.state.match.current.firstServer.other }
-    }
-}
-
 struct RotationCorrectionSheet: View {
     @Bindable var controller: LiveController
     @Environment(\.dismiss) private var dismiss
