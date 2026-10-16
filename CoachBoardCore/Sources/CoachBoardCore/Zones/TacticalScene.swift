@@ -13,9 +13,11 @@ public struct SceneToken: Codable, Hashable, Sendable, Identifiable {
     public var stature: Double?
     /// Keyframes at later phase markers; `point` and `posture` are the first marker's (Section 3.3).
     public var keys: [TokenKey]?
+    /// Facing set by hand (radians from +Z toward +X); nil faces automatically (the net, or the ball in a rally).
+    public var yaw: Double?
 
     public init(id: UUID = UUID(), side: Side, label: String, role: String, point: FloorPoint,
-                posture: Posture? = nil, stature: Double? = nil, keys: [TokenKey]? = nil) {
+                posture: Posture? = nil, stature: Double? = nil, keys: [TokenKey]? = nil, yaw: Double? = nil) {
         self.id = id
         self.side = side
         self.label = label
@@ -24,12 +26,13 @@ public struct SceneToken: Codable, Hashable, Sendable, Identifiable {
         self.posture = posture
         self.stature = stature
         self.keys = keys
+        self.yaw = yaw
     }
 
     public var effectivePosture: Posture { posture ?? Self.automaticPosture(at: point) }
 
-    /// Facing the net: home players face -Z, opponents +Z (radians from +Z toward +X).
-    public var facing: Double { side == .home ? .pi : 0 }
+    /// The explicit facing, else facing the net: home players face -Z, opponents +Z (radians from +Z toward +X).
+    public var facing: Double { yaw ?? (side == .home ? .pi : 0) }
 }
 
 /// A manual scene for the Analysis Canvas (Screen 8): tokens, zones and ink, all in world metres.
@@ -47,6 +50,10 @@ public struct TacticalScene: Codable, Hashable, Sendable, Identifiable {
     public var contacts: [BallContact]?
     /// Where the last flight lands; nil uses the deep middle of the far half.
     public var ballLanding: FloorPoint?
+    /// Height of the ball's centre where the last flight ends (a player's hands); nil lands it on the floor.
+    public var ballLandingHeight: Double?
+    /// The systems, rotations and server the players were placed from (nil for a hand-made scene).
+    public var setup: SceneSetup?
 
     public init(id: UUID = UUID(), title: String, tokens: [SceneToken] = [], zones: [Zone] = [], ink: [InkStroke] = []) {
         self.id = id
@@ -234,7 +241,12 @@ public struct SceneEditor: Sendable {
         }
     }
 
-    public mutating func setBallLanding(_ p: FloorPoint?) { edit { $0.ballLanding = p } }
+    public mutating func setBallLanding(_ p: FloorPoint?) {
+        edit { s in
+            s.ballLanding = p
+            s.ballLandingHeight = nil
+        }
+    }
 
     /// Removes a token's or zone's keyframe at a marker, so it interpolates through that marker again.
     public mutating func clearKey(_ id: UUID, phase: RallyPhase) {
@@ -248,6 +260,22 @@ public struct SceneEditor: Sendable {
                 if s.zones[i].keys?.isEmpty == true { s.zones[i].keys = nil }
             }
         }
+    }
+
+    // MARK: - Easy placement
+
+    /// Places both teams from a setup (systems, rotations, who serves); one undo step.
+    public mutating func place(_ setup: SceneSetup) { edit { $0.place(setup) } }
+
+    /// The next (or previous) rotation for a side, placed.
+    public mutating func rotate(_ side: Side, forward: Bool = true) { edit { $0.rotate(side, forward: forward) } }
+
+    /// Plays the rally out from the placed formations (serve to defence, with the ball).
+    public mutating func playOut(_ attack: AttackOption? = nil) { edit { $0.playOut(attack) } }
+
+    /// Sets (or with nil returns to automatic) a player's facing.
+    public mutating func setYaw(_ yaw: Double?, token id: UUID) {
+        edit { s in if let i = s.tokens.firstIndex(where: { $0.id == id }) { s.tokens[i].yaw = yaw } }
     }
 
     public mutating func addInk(_ stroke: InkStroke) { edit { $0.ink.append(stroke) } }

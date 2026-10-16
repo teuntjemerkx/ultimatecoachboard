@@ -156,7 +156,7 @@ extension TacticalScene {
             let endTime: Double
             if last {
                 let landing = ballLanding ?? defaultLanding(for: sides[k])
-                to = V3(landing, y: BallFlight.radius)
+                to = V3(landing, y: ballLanding == nil ? BallFlight.radius : max(BallFlight.radius, ballLandingHeight ?? 0))
                 endTime = min(Double(i + 1), Double(max(line.count - 1, i)))
             } else {
                 to = points[k + 1]
