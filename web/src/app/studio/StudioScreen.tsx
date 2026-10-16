@@ -1,9 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import * as THREE from "three";
 import "./studio.css";
 import type { Side } from "../../core/match/court";
 import { TeamSystem } from "../../core/match/teamSystem";
-import { PlayerBodies, posedPlayers } from "../../core/spatial";
-import { AttackOption, SceneSetup, templateRotations, type RallyPhase, type ZonePattern } from "../../core/zones";
+import { PlayerBodies, Posture, posedPlayers } from "../../core/spatial";
+import {
+  AttackOption, ContactKind, SceneSetup, templateRotations, type RallyPhase, type ShapeKind, type ZonePattern, type ZoneTag,
+} from "../../core/zones";
 import { loadTemplate } from "../../core/zones/templateAccess";
 import type { Board3D } from "../three/Board3D";
 import { Bar } from "../ui/Bar";
@@ -24,6 +27,25 @@ const phaseName: Record<RallyPhase, string> = {
 const systemShortName: Record<TeamSystem, string> = {
   "5-1-outside-follows-setter": "5-1", "5-1-middle-follows-setter": "5-1 (middle)", "6-2": "6-2", "4-2": "4-2", "youth-w": "Youth W",
 };
+
+/** Contact names on the ball strip. */
+const contactName: Record<ContactKind, string> = {
+  floatServe: "Float serve", jumpServe: "Jump serve", pass: "Pass", quickSet: "Quick set", secondTempoSet: "Second tempo",
+  highSet: "High set", attack: "Attack", freeball: "Free ball", dig: "Dig",
+};
+
+/** Postures on the body strip, in rally order (Section 5.2's library). */
+const postureOrder: Posture[] = [
+  "standing", "readyHigh", "ready", "lowDefence", "pass", "angledPass", "overheadPass", "dig", "sprawl", "set", "backSet", "jumpSet",
+  "approach", "armCock", "attack", "quickAttack", "landing", "blockReady", "block", "blockLanding", "floatServe", "jumpServe", "cover",
+  "reach",
+];
+
+/** "LOW DEFENCE" reads "Low defence". */
+const sentenceCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+
+/** What a name sheet edits: the board's title or a player's name or shirt number. */
+interface Naming { heading: string; label: string; value: string; save: (v: string) => void }
 
 function rotationsOf(system: string): number[] {
   const t = loadTemplate(system);
@@ -74,9 +96,10 @@ export function Studio({ boardId }: { boardId?: string }) {
   PlayerBodies.women = women;
   const st = useStudio();
   const [boxRef, box] = useBoxSize<HTMLDivElement>();
+  const [dockRef, dock] = useBoxSize<HTMLDivElement>();
   const board3D = useRef<Board3D | null>(null);
   const [sheet, setSheet] = useState(false);
-  const [renaming, setRenaming] = useState<string | null>(null);
+  const [naming, setNaming] = useState<Naming | null>(null);
   const [exiting, setExiting] = useState(false);
 
   useEffect(() => { void useStudio.getState().open(boardId); }, [boardId]);
@@ -106,15 +129,23 @@ export function Studio({ boardId }: { boardId?: string }) {
   const frame = st.frame();
   const timeline = scene.phases ?? [];
   const vertical = box.h > box.w * 1.1;
+  // In 3D the strips float over the board; the camera centres the court in the part above them.
+  const inset = st.view3D ? dock.h : 0;
   const selected = st.selectedToken ? frame.tokens.find((t) => t.id === st.selectedToken) : undefined;
   const povToken = st.pov ? frame.tokens.find((t) => t.id === st.pov) : undefined;
   const showHint = timeline.length === 0 && scene.zones.length === 0 && scene.ink.length === 0 && !st.selectedToken;
   const hint = st.tool === "pen" ? "Draw with one finger"
     : st.tool === "zone" ? "Draw a zone with one finger"
     : st.view3D ? "Drag a player to move them, or drag the floor to turn the court" : "Drag a player to move them, or play a rally below";
-  const gaze = st.view3D && st.gaze
-    ? sightLines(posedPlayers(frame), st.gaze, { id: st.pov, yaw: st.povYaw, pitch: st.povPitch }, st.ball(), box.w / Math.max(box.h, 1))
+  const posed = st.view3D && st.gaze ? posedPlayers(frame) : undefined;
+  const gaze = posed && st.gaze
+    ? sightLines(posed, st.gaze, { id: st.pov, yaw: st.povYaw, pitch: st.povPitch }, st.ball(), box.w / Math.max(box.h, 1),
+      st.gazeTargetList(posed))
     : undefined;
+  const nameBoard = () => setNaming({ heading: "Name this board", label: "Name", value: scene.title, save: (v) => st.rename(v) });
+  const namePlayer = (id: string, label: string) =>
+    setNaming({ heading: "Name or shirt number", label: "Name or number", value: label, save: (v) => st.setLabel(id, v) });
+  const alternative = st.alternative ? alternativeSpot(st.alternative.anchor, box, vertical, st.flipped, st.view3D ? board3D.current : null) : null;
 
   /** Back to 2D: the camera flies up to the view from above first, then the 2D board takes over. */
   const show2D = () => {
@@ -144,11 +175,17 @@ export function Studio({ boardId }: { boardId?: string }) {
         <button className="btn quiet" onClick={() => go({ name: "home" })} aria-label="Home">
           <Icon name="back" /><span className="studio-wide">Home</span>
         </button>
-        <button className="studio-title" onClick={() => setRenaming(scene.title)} aria-label={`Rename this board: ${scene.title}`}>
+        <button className="studio-title" onClick={nameBoard} aria-label={`Rename this board: ${scene.title}`}>
           <span>{scene.title}</span><Icon name="pen" size={16} />
         </button>
         {advanced && <span className="studio-count">{scene.zones.length} zone{scene.zones.length === 1 ? "" : "s"}</span>}
         <span className="spacer" />
+        {advanced && (
+          <button className={`btn quiet${st.snapping ? " on" : ""}`} onClick={() => st.set({ snapping: !st.snapping })}
+                  aria-pressed={st.snapping} aria-label="Snap to the court and the formation">
+            <Icon name="magnet" /><span className="studio-wide">Snap</span>
+          </button>
+        )}
         {advanced && (
           <button className="btn quiet" onClick={() => st.set({ flipped: !st.flipped })} aria-label="Swap ends">
             <Icon name="swap" /><span className="studio-wide">Swap ends</span>
@@ -194,75 +231,219 @@ export function Studio({ boardId }: { boardId?: string }) {
           )}
         </nav>
 
-        <div className="studio-main">
+        <div className={`studio-main${st.view3D ? " floating" : ""}`}>
           <div className="studio-board" ref={boxRef}>
             {st.view3D
-              ? <StudioBoard3D themeKey={themeId} netHeight={netHeight(women)} onBoard={(b) => { board3D.current = b; }} />
+              ? <StudioBoard3D themeKey={themeId} netHeight={netHeight(women)} onBoard={(b) => { board3D.current = b; }}
+                               inset={inset} size={box} />
               : <Board2D frame={frame} vertical={vertical} />}
-            {showHint && <div className="hint-pill studio-hint">{hint}</div>}
+            {showHint && <div className="hint-pill studio-hint" style={{ bottom: inset + 14 }}>{hint}</div>}
             {(st.tool === "zone" || st.selectedZone) && <ZoneStrip advanced={advanced} />}
-            {st.view3D && st.pov && <FieldRings width={box.w} />}
+            {st.view3D && st.pov && <FieldRings width={box.w} centerY={(box.h - inset) / 2} />}
             {gaze && (
               <div className="panel studio-gaze" role="status">
                 <span className="studio-label">What they can see</span>
-                {gaze.readouts.length === 0 && <span className="muted">No players to check</span>}
+                {gaze.readouts.length === 0 && (
+                  <span className="muted">{st.pov ? "Tap a player to check if they can be seen" : "No players to check"}</span>
+                )}
                 {gaze.readouts.map((r) => (
                   <div key={`${r.targetID}-${r.aim}`} className="studio-gaze-row">
                     <i style={{ background: r.visibility.fraction >= 0.5 ? "var(--c-text)" : "#FF3B1A" }} />{r.text}
                   </div>
                 ))}
-                {st.pov && <small className="muted">Shows where the head points, not the eyes. The rings mark sharp and side vision.</small>}
-              </div>
-            )}
-          </div>
-
-          <div className="studio-dock">
-            {st.view3D && (selected || povToken) && (
-              <div className="panel studio-emphasis">
-                {povToken ? (
-                  <>
-                    <span className="studio-label">Eye view of {povToken.label}</span>
-                    <Chip on={st.povYaw === 0 && st.povPitch === 0} onClick={() => st.look(st.povYaw, -st.povPitch)}>Look ahead</Chip>
-                    {selected && selected.id !== povToken.id && (
-                      <Chip icon="eye" onClick={() => st.enterPOV()}>Switch to {selected.label}</Chip>
-                    )}
-                    {advanced && (
-                      <Chip on={st.gaze === povToken.id} onClick={() => useStudio.setState({ gaze: st.gaze === povToken.id ? undefined : povToken.id })}>
-                        Sight lines
-                      </Chip>
-                    )}
-                    <Chip icon="close" prominent onClick={() => st.exitPOV()}>Leave eye view</Chip>
-                  </>
-                ) : selected && (
-                  <>
-                    <Chip icon="eye" prominent onClick={() => st.enterPOV()} label={`See through the eyes of ${selected.label}`}>
-                      See what {selected.label} sees
-                    </Chip>
-                    {advanced && <Chip on={st.gaze === selected.id} onClick={() => st.toggleGaze()}>Sight lines</Chip>}
-                  </>
+                {st.pov && (
+                  <small className="muted">
+                    Shows where the head points, not the eyes. The rings mark sharp and side vision. Tap a player to add or remove them.
+                  </small>
                 )}
               </div>
             )}
-            {timeline.length > 0 && (
-              <div className="panel">
-                <button type="button" className="studio-chip prominent studio-play" onClick={() => st.togglePlay()}
-                        aria-label={st.playing ? "Pause" : "Play the rally"}>
-                  <Icon name={st.playing ? "pause" : "play"} />
-                </button>
-                {timeline.map((p, i) => (
-                  <Chip key={p} on={Math.round(st.time) === i} onClick={() => st.goTo(p)}>{phaseName[p]}</Chip>
-                ))}
-                <Sep />
-                <Chip icon="close" onClick={() => st.backToLineup()}>Clear rally</Chip>
-              </div>
+            {st.alternative && alternative && (
+              <button type="button" className="studio-alt" style={{ left: alternative.x, top: alternative.y }}
+                      onClick={() => st.acceptAlternative()} aria-label={`Make it a ${shapeName(st.alternative.kind).toLowerCase()}`}>
+                {shapeName(st.alternative.kind)}?
+              </button>
             )}
+            {st.aimingLanding && <div className="hint-pill studio-aim">Tap the floor where the ball lands</div>}
+          </div>
+
+          <div className="studio-dock" ref={dockRef}>
+            {(selected || (st.view3D && povToken)) && (
+              <PlayerStrip advanced={advanced} onName={namePlayer} />
+            )}
+            {advanced && timeline.length > 0 && <BallStrip />}
+            {(timeline.length > 0 || advanced) && <TimelineStrip advanced={advanced} />}
             {!st.pov && <LineupBar advanced={advanced} />}
           </div>
         </div>
       </div>
 
       {sheet && <BoardsSheet onClose={() => setSheet(false)} />}
-      {renaming !== null && <RenameSheet title={renaming} onClose={() => setRenaming(null)} />}
+      {naming && <NameSheet naming={naming} onClose={() => setNaming(null)} />}
+    </div>
+  );
+}
+
+const shapeNames: Record<ShapeKind, string> = {
+  line: "Line", openPath: "Path", circle: "Circle", ellipse: "Ellipse", rect: "Rectangle", polygon: "Polygon", freeform: "Free shape",
+};
+const shapeName = (k: ShapeKind) => shapeNames[k];
+
+/**
+ * Where the alternative chip floats: above the zone's centre, on the 2D board (the SVG's view box fitted into the
+ * board) or on the 3D board (the point through the camera).
+ */
+function alternativeSpot(anchor: { x: number; z: number }, box: { w: number; h: number }, vertical: boolean, flipped: boolean,
+  board: Board3D | null): { x: number; y: number } | null {
+  let p: { x: number; y: number } | null;
+  if (board) p = board.screenPoint(new THREE.Vector3(anchor.x, 0, anchor.z));
+  else {
+    const m = 2.4, [w, h] = vertical ? [9 + 2 * m, 18 + 2 * m] : [18 + 2 * m, 9 + 2 * m];
+    const k = Math.min(box.w / w, box.h / h), s = flipped ? -1 : 1;
+    const u = vertical ? s * anchor.x : -s * anchor.z, v = vertical ? s * anchor.z : s * anchor.x;
+    p = { x: box.w / 2 + u * k, y: box.h / 2 + v * k };
+  }
+  if (!p) return null;
+  return { x: Math.max(60, Math.min(box.w - 60, p.x)), y: Math.max(24, p.y - 56) };
+}
+
+/**
+ * The selected player: a name or shirt number (numbers show on the jersey in 3D), and in 3D the eye view (Section
+ * 5.1); Advanced adds the sight lines.
+ */
+function PlayerStrip({ advanced, onName }: { advanced: boolean; onName: (id: string, label: string) => void }) {
+  const st = useStudio();
+  const frame = st.frame();
+  const selected = st.selectedToken ? frame.tokens.find((t) => t.id === st.selectedToken) : undefined;
+  const povToken = st.pov ? frame.tokens.find((t) => t.id === st.pov) : undefined;
+  if (st.view3D && povToken) {
+    return (
+      <div className="panel studio-emphasis">
+        <span className="studio-label">Eye view of {povToken.label}</span>
+        <Chip on={st.povYaw === 0 && st.povPitch === 0} onClick={() => st.look(st.povYaw, -st.povPitch)}>Look ahead</Chip>
+        {selected && selected.id !== povToken.id && <Chip icon="eye" onClick={() => st.enterPOV()}>Switch to {selected.label}</Chip>}
+        <Chip on={st.gaze === povToken.id} onClick={() => useStudio.setState({ gaze: st.gaze === povToken.id ? undefined : povToken.id })}>
+          Sight lines
+        </Chip>
+        <Chip icon="close" prominent onClick={() => st.exitPOV()}>Leave eye view</Chip>
+      </div>
+    );
+  }
+  if (!selected) return null;
+  return (
+    <div className="panel studio-emphasis">
+      <strong className="studio-player">{selected.label}</strong>
+      <Chip icon="pen" onClick={() => onName(selected.id, selected.label)} label={`Name or shirt number of ${selected.label}`}>
+        Name or number
+      </Chip>
+      {st.view3D && (
+        <Chip icon="eye" prominent onClick={() => st.enterPOV()} label={`See through the eyes of ${selected.label}`}>
+          See what {selected.label} sees
+        </Chip>
+      )}
+      {st.view3D && advanced && <Chip on={st.gaze === selected.id} onClick={() => st.toggleGaze()}>Sight lines</Chip>}
+      {st.view3D && advanced && <><Sep /><PostureChips /></>}
+    </div>
+  );
+}
+
+/** Posture chips for the selected player in 3D (Section 5.2's library), at the current marker; they scroll. */
+function PostureChips() {
+  const st = useStudio();
+  const explicit = st.selectedPosture();
+  return (
+    <div className="studio-body-chips">
+      <span className="studio-label">Body</span>
+      <div className="studio-scroll">
+        <Chip on={explicit === undefined} onClick={() => st.setPosture(undefined)}>Auto</Chip>
+        {postureOrder.map((p) => (
+          <Chip key={p} on={explicit === p} onClick={() => st.setPosture(p)}>{sentenceCase(Posture.title(p))}</Chip>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Ball contacts at the current marker (Section 5.4): who plays the ball and how; the physics flies it to the next
+ * contact. The readout describes the flight in the air now.
+ */
+function BallStrip() {
+  const st = useStudio();
+  const phase = st.currentPhase();
+  const selected = st.selectedToken ? st.scene().tokens.find((t) => t.id === st.selectedToken) : undefined;
+  const contact = st.currentContact();
+  const summary = st.ballSummary();
+  return (
+    <div className="panel">
+      <span className="studio-label">Ball</span>
+      {phase && selected ? (
+        contact?.player === selected.id ? (
+          <>
+            {ContactKind.choices(phase).map((k) => (
+              <Chip key={k} on={k === contact.kind} onClick={() => st.setContact(k)}>{contactName[k]}</Chip>
+            ))}
+            <Chip onClick={() => st.removeContact()}>No ball</Chip>
+            {st.currentContactIsLast() && (
+              <Chip icon="target" on={st.aimingLanding} onClick={() => st.aimLanding()}>{st.aimingLanding ? "Tap the floor" : "Aim"}</Chip>
+            )}
+          </>
+        ) : (
+          <Chip onClick={() => st.setContact()}>{contact ? `${selected.label} plays it instead` : `${selected.label} plays it`}</Chip>
+        )
+      ) : !st.scene().contacts?.length && (
+        <span className="muted">Pick a player on a phase to give them the ball</span>
+      )}
+      {summary && <span className="mono studio-summary">{summary}</span>}
+    </div>
+  );
+}
+
+/**
+ * The rally timeline (Section 3.5.7): play, the phase markers and (Advanced) the selected item's keyframe at the
+ * marker. Edits made while resting on a later marker become keyframes there; the first marker holds the base scene.
+ */
+function TimelineStrip({ advanced }: { advanced: boolean }) {
+  const st = useStudio();
+  const timeline = st.scene().phases ?? [];
+  if (timeline.length === 0) {
+    return (
+      <div className="panel">
+        <Chip icon="film" onClick={() => st.enableTimeline()} label="Animate by phase: players and zones can then change per phase">
+          Animate by phase
+        </Chip>
+      </div>
+    );
+  }
+  const shown = Math.round(st.time);
+  const phase = st.currentPhase();
+  const editing = advanced && (st.selectedToken || st.selectedZone) && phase && timeline[0] !== phase;
+  const hidden = st.selectedZone ? (st.frame().intensities.get(st.selectedZone) ?? 1) < 0.5 : false;
+  return (
+    <div className="panel">
+      <button type="button" className="studio-chip prominent studio-play" onClick={() => st.togglePlay()}
+              aria-label={st.playing ? "Pause" : "Play the rally"}>
+        <Icon name={st.playing ? "pause" : "play"} />
+      </button>
+      {timeline.map((p, i) => (
+        <Chip key={p} on={shown === i} onClick={() => st.goTo(p)}>
+          {phaseName[p]}
+          {advanced && <span className={`studio-dot${st.selectionHasKey(p) ? " on" : ""}`} aria-hidden="true" />}
+        </Chip>
+      ))}
+      {editing && (
+        <>
+          <Sep />
+          {st.selectionHasKey(phase)
+            ? <Chip onClick={() => st.clearSelectionKey()}>Clear key</Chip>
+            : <Chip onClick={() => st.pinSelection()}>Hold here</Chip>}
+          {st.selectedZone && <Chip on={hidden} onClick={() => st.toggleZoneVisibility()}>{hidden ? "Show" : "Hide"}</Chip>}
+        </>
+      )}
+      <Sep />
+      {advanced
+        ? <Chip onClick={() => st.disableTimeline()} label="Static: back to one picture without phases">Static</Chip>
+        : <Chip icon="close" onClick={() => st.backToLineup()}>Clear rally</Chip>}
     </div>
   );
 }
@@ -347,28 +528,89 @@ function RotationStepper({ side, rotation, advanced }: { side: Side; rotation: n
   );
 }
 
-/** The zone controls: a fill and whose colour, for the selected zone or the next one drawn. */
+/**
+ * The zone controls, one strip one level deep (W3): they edit the selected zone, or set the defaults for the next
+ * stroke. Simple shows a fill and whose colour; Advanced adds the shape, density, angle, edge and the tag.
+ */
 function ZoneStrip({ advanced }: { advanced: boolean }) {
   const st = useStudio();
   const zone = st.selectedZone ? st.scene().zones.find((z) => z.id === st.selectedZone) : undefined;
-  const style = zone?.style ?? st.zoneStyle;
+  const style = st.stripStyle();
+  const [density, setDensity] = useState<number | null>(null);
   const patterns: [string, ZonePattern][] = [
     ...(advanced ? [["Cross", "crossHatch"] as [string, ZonePattern]] : []),
     ["Lines", "diagonal"], ["Dots", "dots"], ["Glow", "glowFill"], ["Outline", "outline"],
   ];
-  return (
-    <div className="panel studio-emphasis studio-zones">
-      <span className="studio-label">{zone ? "Zone" : "Draw a zone"}</span>
-      {patterns.map(([title, p]) => <Chip key={p} on={style.pattern === p} onClick={() => st.updateStyle(p)}>{title}</Chip>)}
-      <Sep />
+  const fills = patterns.map(([title, p]) => <Chip key={p} on={style.pattern === p} onClick={() => st.updateStyle(p)}>{title}</Chip>);
+  const tints = (
+    <>
       <Chip on={style.tint === "pink"} onClick={() => st.updateStyle(undefined, "pink")}>Ours</Chip>
       <Chip on={style.tint === "cyan"} onClick={() => st.updateStyle(undefined, "cyan")}>Theirs</Chip>
-      {zone && (
+    </>
+  );
+  const del = zone && <Chip icon="trash" onClick={() => st.deleteSelection()}>Delete</Chip>;
+  if (!advanced) {
+    return (
+      <div className="panel studio-emphasis studio-zones">
+        <span className="studio-label">{zone ? "Zone" : "Draw a zone"}</span>
+        {fills}
+        <Sep />
+        {tints}
+        {del && <><Sep />{del}</>}
+      </div>
+    );
+  }
+  const shapes: [string, ShapeKind | undefined][] = [
+    ["Auto", undefined], ["Rectangle", "rect"], ["Circle", "circle"], ["Ellipse", "ellipse"], ["Polygon", "polygon"], ["Free", "freeform"],
+  ];
+  const tags: [string, ZoneTag][] = [
+    ["No-fly", "noFly"], ["Serve target", "serveTarget"], ["Tip alert", "tipAlert"], ["Free ball", "freeBall"],
+    ["Responsibility", "responsibility"], ["Custom", "custom"],
+  ];
+  const tag = st.stripTag();
+  const deg = Math.round((style.angle * 180) / Math.PI);
+  const commitDensity = () => {
+    if (density !== null) st.editStyle((s) => ({ ...s, spacing: 0.75 - density }));
+    setDensity(null);
+  };
+  const row = (title: string, children: ReactNode) => (
+    <div className="studio-zone-row"><span className="studio-label">{title}</span><div className="studio-scroll">{children}</div></div>
+  );
+  return (
+    <div className="panel studio-emphasis studio-zones studio-zones-full">
+      {row("Shape", shapes.map(([title, k]) => (
+        <Chip key={title} on={st.forcedShape === k} onClick={() => st.setShape(k)}>{title}</Chip>
+      )))}
+      {row("Fill", fills)}
+      {row("Density", (
         <>
-          <Sep />
-          <Chip icon="trash" onClick={() => st.deleteSelection()}>Delete</Chip>
+          <input type="range" min={0.15} max={0.6} step={0.01} aria-label="Density"
+                 value={density ?? 0.75 - style.spacing}
+                 onPointerDown={() => setDensity(0.75 - style.spacing)}
+                 onChange={(e) => {
+                   const v = Number(e.target.value);
+                   if (density === null) st.editStyle((s) => ({ ...s, spacing: 0.75 - v }));
+                   else setDensity(v);
+                 }}
+                 onPointerUp={commitDensity} onPointerCancel={commitDensity} />
+          <span className="mono studio-angle">Angle {deg}°</span>
+          <Chip onClick={() => st.editStyle((s) => ({ ...s, angle: s.angle - Math.PI / 12 }))} label="Turn the lines back 15 degrees">−</Chip>
+          <Chip onClick={() => st.editStyle((s) => ({ ...s, angle: s.angle + Math.PI / 12 }))} label="Turn the lines on 15 degrees">+</Chip>
         </>
-      )}
+      ))}
+      {row("Edge", (
+        <>
+          <Chip on={style.edge === "solid"} onClick={() => st.editStyle((s) => ({ ...s, edge: "solid" }))}>Solid</Chip>
+          <Chip on={style.edge === "dashed"} onClick={() => st.editStyle((s) => ({ ...s, edge: "dashed" }))}>Dashed</Chip>
+          <Sep />
+          {tints}
+        </>
+      ))}
+      {row("Tag", tags.map(([title, t]) => <Chip key={t} on={tag === t} onClick={() => st.setTag(t)}>{title}</Chip>))}
+      <div className="studio-zone-row">
+        <span className="muted studio-note">{zone ? "Editing the selected zone" : "Settings for the next zone you draw"}</span>
+        {del}
+      </div>
     </div>
   );
 }
@@ -377,11 +619,11 @@ function ZoneStrip({ advanced }: { advanced: boolean }) {
  * In eye view, thin rings mark the central field (30 degrees) and the sharp core (2.5 degrees) (Section 5.7). With a
  * 90 degree horizontal field of view, an angle theta from the centre sits at (width / 2) * tan(theta).
  */
-function FieldRings({ width }: { width: number }) {
+function FieldRings({ width, centerY }: { width: number; centerY: number }) {
   const half = width / 2;
   const central = half * Math.tan((30 * Math.PI) / 180), foveal = half * Math.tan((2.5 * Math.PI) / 180);
   return (
-    <div className="studio-rings" aria-hidden="true">
+    <div className="studio-rings" aria-hidden="true" style={{ bottom: "auto", height: centerY * 2 }}>
       <span style={{ width: central * 2, height: central * 2, borderColor: "color-mix(in srgb, var(--c-accent) 55%, transparent)", borderWidth: 1.5 }} />
       <span style={{ width: foveal * 2, height: foveal * 2, borderColor: "color-mix(in srgb, var(--c-text) 70%, transparent)" }} />
     </div>
@@ -467,16 +709,15 @@ function BoardsSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
-function RenameSheet({ title, onClose }: { title: string; onClose: () => void }) {
-  const rename = useStudio((s) => s.rename);
-  const [value, setValue] = useState(title);
+function NameSheet({ naming, onClose }: { naming: Naming; onClose: () => void }) {
+  const [value, setValue] = useState(naming.value);
   return (
     <div className="studio-sheet" onClick={onClose}>
-      <form className="card stack" role="dialog" aria-label="Name this board" style={{ width: "min(460px, 100%)" }}
-            onClick={(e) => e.stopPropagation()} onSubmit={(e) => { e.preventDefault(); rename(value); onClose(); }}>
-        <h2 className="group-title" style={{ margin: 0 }}>Name this board</h2>
+      <form className="card stack" role="dialog" aria-label={naming.heading} style={{ width: "min(460px, 100%)" }}
+            onClick={(e) => e.stopPropagation()} onSubmit={(e) => { e.preventDefault(); naming.save(value); onClose(); }}>
+        <h2 className="group-title" style={{ margin: 0 }}>{naming.heading}</h2>
         <label className="field">
-          <span className="label">Name</span>
+          <span className="label">{naming.label}</span>
           <input autoFocus value={value} onChange={(e) => setValue(e.target.value)} />
         </label>
         <div className="row">

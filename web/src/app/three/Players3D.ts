@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import type { FloorPoint } from "../../core/match/court";
 import type { InkStroke } from "../../core/match/liveTypes";
-import { AvatarMaterial, AvatarMesh, BallFlight, BodyMetrics, Joint, SkeletonModel, type PosedPlayer } from "../../core/spatial";
-import { Zone } from "../../core/zones";
+import { AvatarMaterial, AvatarMesh, BallFlight, BodyMetrics, Joint, SkeletonModel, V3, type PosedPlayer } from "../../core/spatial";
+import { Zone, type SnapTarget } from "../../core/zones";
 import type { Board3D, BoardColors } from "./Board3D";
 
 /** What the Studio shows on the 3D board for one moment of the scene. */
@@ -18,6 +18,10 @@ export interface Players3DInput {
   stroke?: { points: FloorPoint[]; zone: boolean; tint: string };
   /** Sight lines (Section 5.6): eye to target; dashed and red when less than half visible. */
   gaze?: { from: { x: number; y: number; z: number }; to: { x: number; y: number; z: number }; visible: boolean }[];
+  /** What a drop or a zone just snapped to (court lines, spots, cells), shown briefly. */
+  highlights?: SnapTarget[];
+  /** The ball's solved flights, as points in the air. */
+  ballPaths?: { x: number; y: number; z: number }[][];
 }
 
 type RestBuffers = ReturnType<AvatarMesh["buffers"]>;
@@ -85,6 +89,8 @@ interface Avatar {
   label: THREE.Sprite;
   labelText: string;
   ring: THREE.Mesh;
+  /** Shirt numbers on the chest and the back, when the label is a number. */
+  numbers?: { key: string; front: THREE.Mesh; back: THREE.Mesh };
 }
 
 const labelTextures = new Map<string, THREE.CanvasTexture>();
@@ -117,6 +123,32 @@ function labelTexture(text: string, color: string, fill: string): THREE.CanvasTe
   t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;
   labelTextures.set(key, t);
+  return t;
+}
+
+const numberTextures = new Map<string, THREE.CanvasTexture>();
+
+/** A shirt number in athletic lettering on a transparent canvas. */
+function numberTexture(text: string, color: string): THREE.CanvasTexture {
+  const key = `${text}|${color}`;
+  let t = numberTextures.get(key);
+  if (t) return t;
+  const cv = document.createElement("canvas");
+  const h = 128;
+  const g = cv.getContext("2d")!;
+  const font = `800 ${h * 0.95}px "Barlow Condensed", "Arial Narrow", sans-serif`;
+  g.font = font;
+  cv.width = Math.ceil(g.measureText(text).width + 8);
+  cv.height = h;
+  g.font = font;
+  g.fillStyle = color;
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillText(text, cv.width / 2, h / 2 + 6);
+  t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  numberTextures.set(key, t);
   return t;
 }
 
@@ -252,6 +284,7 @@ export class Players3D {
       a.ring.position.set(pelvis.x, 0.012, pelvis.z);
       a.ring.scale.setScalar(selected ? 1.25 : 1);
       (a.ring.material as THREE.MeshBasicMaterial).color.set(selected ? led : jersey[p.token.side]);
+      this.placeNumbers(a, p, team);
     }
     for (const [id, a] of this.avatars) if (!seen.has(id)) { this.removeAvatar(a); this.avatars.delete(id); }
     this.applyHidden();
@@ -280,6 +313,68 @@ export class Players3D {
       const line = new THREE.Line(geo, mat);
       if (!g.visible) line.computeLineDistances();
       this.overlay.add(line);
+    }
+    for (const h of input.highlights ?? []) {
+      if (h.kind === "line") this.addRibbon([h.from, h.to], 0.06, led, 0.026);
+      else if (h.kind === "point") {
+        const { x, z } = h.point;
+        this.addRibbon([{ x: x - 0.25, z }, { x: x + 0.25, z }], 0.06, led, 0.026);
+        this.addRibbon([{ x, z: z - 0.25 }, { x, z: z + 0.25 }], 0.06, led, 0.026);
+      } else {
+        const { min, max } = h;
+        this.addRibbon([min, { x: max.x, z: min.z }, max, { x: min.x, z: max.z }], 0.06, led, 0.026, true);
+      }
+    }
+    for (const path of input.ballPaths ?? []) {
+      if (path.length < 2) continue;
+      const geo = new THREE.BufferGeometry().setFromPoints(path.map((q) => new THREE.Vector3(q.x, q.y, q.z)));
+      this.overlay.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: input.colors.ball, transparent: true, opacity: 0.7 })));
+    }
+  }
+
+  /**
+   * Numbers on the jersey when the label is a number: about 14 cm on the chest and 20 cm on the back, following the
+   * chest, in white or navy, whichever stands out against the jersey.
+   */
+  private placeNumbers(a: Avatar, p: PosedPlayer, team: string) {
+    const label = p.token.label.replace(/^#/, "");
+    if (!/^\d{1,2}$/.test(label)) {
+      if (a.numbers) {
+        for (const m of [a.numbers.front, a.numbers.back]) { this.board.dynamic.remove(m); m.geometry.dispose(); (m.material as THREE.Material).dispose(); }
+        a.numbers = undefined;
+      }
+      return;
+    }
+    const c = new THREE.Color(team);
+    const lum = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
+    const ink = lum > 0.45 ? "#11183A" : "#FFFFFF";
+    const key = `${label}|${ink}`;
+    if (a.numbers?.key !== key) {
+      if (a.numbers) for (const m of [a.numbers.front, a.numbers.back]) { this.board.dynamic.remove(m); m.geometry.dispose(); (m.material as THREE.Material).dispose(); }
+      const tex = numberTexture(label, ink);
+      const make = () => {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({
+          map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+        m.renderOrder = 1;
+        this.board.dynamic.add(m);
+        return m;
+      };
+      a.numbers = { key, front: make(), back: make() };
+    }
+    const h = a.stature;
+    const chest = p.joints[Joint.chest];
+    const r = chest.rotation;
+    const q = new THREE.Quaternion(r.x, r.y, r.z, r.w);
+    const img = numberTexture(label, ink).image as HTMLCanvasElement;
+    const aspect = img.width / img.height;
+    for (const front of [true, false]) {
+      const m = front ? a.numbers!.front : a.numbers!.back;
+      const at = chest.apply(front ? new V3(0, -0.012 * h, 0.076 * h) : new V3(0, -0.03 * h, -0.075 * h));
+      m.position.set(at.x, at.y, at.z);
+      m.quaternion.copy(q);
+      if (!front) m.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
+      const height = (front ? 0.075 : 0.11) * h;
+      m.scale.set(height * aspect, height, 1);
     }
   }
 
@@ -361,6 +456,7 @@ export class Players3D {
 
   private removeAvatar(a: Avatar) {
     this.board.dynamic.remove(a.mesh, a.label, a.ring);
+    if (a.numbers) for (const m of [a.numbers.front, a.numbers.back]) { this.board.dynamic.remove(m); m.geometry.dispose(); (m.material as THREE.Material).dispose(); }
     a.geometry.dispose();
     (a.mesh.material as THREE.Material).dispose();
     (a.label.material as THREE.Material).dispose();
@@ -390,7 +486,11 @@ export class Players3D {
   }
 
   private applyHidden() {
-    for (const [id, a] of this.avatars) a.mesh.visible = a.label.visible = id !== this.hidden;
+    for (const [id, a] of this.avatars) {
+      const shown = id !== this.hidden;
+      a.mesh.visible = a.label.visible = shown;
+      if (a.numbers) a.numbers.front.visible = a.numbers.back.visible = shown;
+    }
   }
 
   private clearOverlay() {
@@ -439,5 +539,26 @@ export class Players3D {
     }
     this.addRibbon(outline, selected ? 0.09 : 0.05, color, lift + 0.001, true, Math.max(0.4, opacity));
     if (selected) this.addRibbon(outline, 0.03, led, lift + 0.002, true);
+    // Walls and cylinders (no-fly, serve target, tip alert): a translucent band rising from the outline, fading upward.
+    const ext = s.extrusion;
+    const height = "wall" in ext ? ext.wall.height : "cylinder" in ext ? ext.cylinder.height : 0;
+    if (height > 0) {
+      const ring = [...outline, outline[0]];
+      const c = new THREE.Color(color);
+      const pos: number[] = [], col: number[] = [], idx: number[] = [];
+      ring.forEach((p, i) => {
+        pos.push(p.x, 0, p.z, p.x, height, p.z);
+        col.push(c.r, c.g, c.b, 0.42 * opacity, c.r, c.g, c.b, 0);
+        if (i > 0) { const k = 2 * (i - 1); idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+      });
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 4));
+      geo.setIndex(idx);
+      const wall = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false,
+        side: THREE.DoubleSide }));
+      wall.renderOrder = 3;
+      this.overlay.add(wall);
+    }
   }
 }

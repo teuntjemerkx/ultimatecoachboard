@@ -34,7 +34,12 @@
 .studio-tool[aria-pressed="true"] { background: var(--c-accent); color: var(--c-onAccent); }
 .studio-tool:disabled { opacity: 0.35; cursor: default; }
 
-.studio-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.studio-main { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+/* In 3D the strips float over the bottom of the board. */
+.studio-main.floating .studio-dock {
+  position: absolute; left: 0; right: 0; bottom: 0; background: transparent; border-top: 0; pointer-events: none;
+}
+.studio-main.floating .studio-dock > * { pointer-events: auto; }
 .studio-board { flex: 1; min-height: 0; position: relative; overflow: hidden; background: var(--c-hallFloor); }
 .studio-dock {
   flex: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
@@ -43,6 +48,7 @@
 }
 .studio-dock:empty { display: none; }
 .studio-dock .panel { max-width: 100%; }
+.studio-dock { max-height: 48%; overflow-y: auto; }
 .studio-emphasis { border-color: color-mix(in srgb, var(--c-accent) 50%, transparent); }
 
 .studio-chip {
@@ -89,8 +95,37 @@
 .studio-gaze-row { display: flex; align-items: center; gap: 8px; }
 .studio-gaze-row i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .studio-gaze small { max-width: 300px; }
-.studio-rings { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.studio-rings { position: absolute; top: 0; left: 0; right: 0; display: grid; place-items: center; pointer-events: none; }
 .studio-rings span { grid-area: 1 / 1; border: 1px solid; border-radius: 50%; }
+
+/* The selected player, the body strip, the ball strip and the timeline's keyframe dots. */
+.studio-player { font: 800 20px/1 var(--font-athletic); letter-spacing: 0.04em; padding: 0 4px; }
+.studio-body-chips { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1 1 260px; max-width: 520px; }
+.studio-scroll {
+  display: flex; align-items: center; gap: 6px; overflow-x: auto; min-width: 0; max-width: min(760px, 100%);
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.studio-scroll::-webkit-scrollbar { display: none; }
+.studio-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0; margin-left: -2px; align-self: flex-end; margin-bottom: 9px; }
+.studio-dot.on { opacity: 1; }
+.studio-summary { font-size: 13px; color: var(--c-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
+
+/* The full zone strip (Advanced): one labelled row per setting. */
+.studio-zones-full { flex-direction: column; align-items: stretch; gap: 4px; max-width: min(760px, calc(100% - 24px)); }
+.studio-zones-full .studio-chip { min-height: 38px; }
+.studio-zone-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.studio-zone-row > .studio-label { width: 64px; flex: none; font-size: 13px; }
+.studio-zone-row input[type="range"] { width: 160px; accent-color: var(--c-accent); }
+.studio-angle { font-size: 13px; width: 86px; text-align: center; }
+.studio-note { font-size: 13px; flex: 1; }
+
+/* The one-tap alternative after an uncertain zone, and the hint while aiming the ball's landing. */
+.studio-alt {
+  position: absolute; transform: translateX(-50%); z-index: 3; min-height: 36px; padding: 0 14px; border: 0; border-radius: 999px;
+  background: var(--c-text); color: var(--c-bg); font: 800 14px/1 var(--font-athletic); letter-spacing: 0.08em; text-transform: uppercase;
+  cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+}
+.studio-aim { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); pointer-events: none; color: var(--c-text); font-weight: 700; }
 
 .studio-sheet {
   position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px;

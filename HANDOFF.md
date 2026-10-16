@@ -32,34 +32,35 @@ The owner speaks Dutch: always answer in Dutch. App UI text, code, comments and 
   - `StudioScreen.tsx`: the screen, mirroring the native `StudioView.swift` and `StudioControls.swift`. It is not called `Studio.tsx` because macOS file systems ignore case, and that name clashes with the store `studio.ts`.
     - Tool rail: Move / Draw / Zone, Undo / Redo, Delete (selected zone), Erase (ink). Cmd-Z and Shift-Cmd-Z work too.
     - Top bar: title (tap to rename), 2D|3D, Reset view (3D), and Boards (new board from a system, rotation and serve or receive; open; delete with a second tap).
-    - Dock under the board: the lineup bar (system, rotation ‹ ›, Serve Us/Them, Play a rally Left/Middle/Right/Back row), the timeline strip (play/pause, phase chips, Clear rally) and the eye-view strip.
-    - Over the board: the zone strip (Lines/Dots/Glow/Outline, Ours/Theirs), the field rings in eye view, and the sight-line readouts.
-    - Advanced adds: the opponent's system and rotation, Swap ends, the Cross fill, and sight lines.
+    - Dock under the board (in 3D it floats over the board, and a camera view offset centres the court above it): the selected player (name or shirt number; in 3D the eye view), the lineup bar (system, rotation ‹ ›, Serve Us/Them, Play a rally Left/Middle/Right/Back row) and the timeline strip (play/pause, phase chips, Clear rally).
+    - Over the board: the zone strip (Lines/Dots/Glow/Outline, Ours/Theirs), the "Free shape?"-style alternative chip after an uncertain zone, the field rings in eye view, and the sight-line readouts (on in eye view; a tap on another player adds or removes them as a target).
+    - Advanced adds:
+      - the opponent's system and rotation, Swap ends, Snap on or off, and sight lines outside the eye view;
+      - keyframes per phase: "Animate by phase" for a static board, a dot on each marker where the selection has a key, "Hold here" / "Clear key", hide or show a zone per phase, and "Static";
+      - the body strip in 3D (Auto plus the 24 postures, keyed at the marker) and the ball strip (who plays it and how, No ball, Aim the landing, the flight readout);
+      - the full zone strip: shape (refits a selected zone), fill, density, angle, edge, Ours/Theirs and the tag (No-fly, Serve target and Tip alert get walls in 3D).
     - `PlayerBodies.women` follows Settings, so the net and the statures follow women/men.
   - `studio.ts`: the zustand store around `SceneEditor`. Boards are saved in the IndexedDB `boards` store. Opening and creating boards run one after another, and a pending save is written before another board opens.
-  - `Board2D.tsx`: the 2D board (zones as SVG patterns, ink, the ball, tokens; drag, tap, pen and zone tools).
+  - `Board2D.tsx`: the 2D board (zones as SVG patterns, ink, the ball and its flights, snap highlights, tokens; drag, tap, pen and zone tools).
   - `StudioBoard3D.tsx`: the 3D board wired to the store.
     - One finger on a player or zone drags it (with the same snapping as 2D). With Draw or Zone it draws through the touch ray. Elsewhere it turns the court; two fingers turn and pinch.
     - Entering 3D flies down from the 2D view to the bench (behind the home end line when the board stands upright); leaving flies back up first.
     - Eye view: `board.flyTo` follows `skeleton.povPose`, one finger looks around, and the player's own avatar hides once the camera is in their head.
   - `web/src/app/three/Players3D.ts`: the 3D scene content.
     - Avatars use `AvatarMesh` buffers cached per stature with CPU dual-quaternion skinning, in team colours (the libero in white).
-    - Each player has a label above the head and a ring on the floor.
-    - Also drawn: the ball and its shadow, zones (pattern textures) and ink as floor ribbons, sight lines, and a cylinder pick for taps.
+    - Each player has a label above the head and a ring on the floor; a numeric label is also printed on the chest and the back.
+    - Also drawn: the ball, its shadow and its flights, zones (pattern textures, walls for tagged zones) and ink as floor ribbons, snap highlights, sight lines, and a cylinder pick for taps.
   - `Court3DView.tsx` has an `onDispose` callback, so the Studio frees what it added before the board goes.
 - Core ported from Swift to TypeScript with Vitest tests (126 pass):
   - `web/src/core/match` (match domain)
   - `web/src/core/spatial` (3D math, skeleton, avatar mesh, postures, ball flight, line of sight, POV)
-  - `web/src/core/zones` (zones, tactical scene, timeline, ball plan, rally autopilot)
+  - `web/src/core/zones` (zones, tactical scene, timeline, ball plan, rally autopilot). `SceneEditor.setLabel` is a web addition (player names and shirt numbers).
 - `web/src/app/video/detect.ts`: two-stage MediaPipe detection, tested on real broadcast frames. The models are downloaded at build time by `web/scripts/fetch-models.mjs`. Not wired to a screen yet.
 
-## Studio: not ported yet (Advanced extras of the native app)
+## Studio: left out on purpose
 
-- Keyframes per phase ("Animate by phase" for a static scene, "Hold here" / "Clear key", hide or show a zone per phase).
-- The posture strip and the ball strip (contacts, aim the landing).
-- The full zone strip: shape, density, angle, edge, and tags; the alternative-shape chip after a stroke.
-- In eye view, a tap on another player adds or removes them as a gaze target (now it selects them for "Switch to").
-- Zone walls and extrusions in 3D, and numbers printed on the jerseys.
+- The field-of-view cones in 3D (the readouts and the field rings cover it).
+- Two- and three-finger taps for undo and redo (the rail buttons and Cmd-Z do it).
 
 ## Web app: next, Video to 3D (task 2)
 

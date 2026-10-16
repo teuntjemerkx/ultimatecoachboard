@@ -30,6 +30,8 @@ const paths: Record<string, string> = {
   chevronLeft: "M15 5l-7 7 7 7",
   chevronRight: "M9 5l7 7-7 7",
   target: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M12 2v3 M12 19v3 M2 12h3 M19 12h3",
+  magnet: "M6 3v8a6 6 0 0 0 12 0V3 M6 7h4 M14 7h4",
+  film: "M4 4h16v16H4z M8 4v16 M16 4v16 M4 8h4 M4 12h4 M4 16h4 M16 8h4 M16 12h4 M16 16h4",
 };
 
 export function Icon({ name, size = 20, className = "icon" }: { name: keyof typeof paths | string; size?: number; className?: string }) {

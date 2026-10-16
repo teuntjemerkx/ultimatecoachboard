@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
 import type { FloorPoint } from "../../core/match/court";
-import { Zone, type SceneFrame } from "../../core/zones";
+import { Zone, sceneTimeline, type SceneFrame, type SnapTarget } from "../../core/zones";
 import type { InkStroke } from "../../core/match/liveTypes";
 import { Court2D, courtView, type CourtToken } from "../ui/Court2D";
-import { useStudio } from "./studio";
+import { ballPlanOf, useStudio } from "./studio";
 
 /** The zone tint as a theme colour: "pink" is ours (zone A), "cyan" theirs (zone B). */
 export const tintColor = (tint: string) => (tint === "pink" ? "var(--c-zoneA, var(--c-home))" : "var(--c-zoneB, var(--c-opponent))");
@@ -50,6 +50,22 @@ function ZoneShape({ zone, view, selected }: { zone: Zone; view: (x: number, z: 
   );
 }
 
+/** What a drop or a zone snapped to, flashed in the LED colour: a court line, a spot (a cross) or a zone cell. */
+function Highlight({ hit, view }: { hit: SnapTarget; view: (x: number, z: number) => { u: number; v: number } }) {
+  const seg = (a: FloorPoint, b: FloorPoint, key: string) => {
+    const p = view(a.x, a.z), q = view(b.x, b.z);
+    return <line key={key} x1={p.u} y1={p.v} x2={q.u} y2={q.v} stroke="var(--c-led, var(--c-focus))" strokeWidth={0.07} strokeLinecap="round" />;
+  };
+  if (hit.kind === "line") return seg(hit.from, hit.to, "l");
+  if (hit.kind === "point") {
+    const { x, z } = hit.point;
+    return <g>{seg({ x: x - 0.25, z }, { x: x + 0.25, z }, "a")}{seg({ x, z: z - 0.25 }, { x, z: z + 0.25 }, "b")}</g>;
+  }
+  const { min, max } = hit;
+  const c = [min, { x: max.x, z: min.z }, max, { x: min.x, z: max.z }];
+  return <g>{c.map((p, i) => seg(p, c[(i + 1) % 4], `c${i}`))}</g>;
+}
+
 function inkPath(points: FloorPoint[], view: (x: number, z: number) => { u: number; v: number }) {
   return points.map((p, i) => { const q = view(p.x, p.z); return `${i ? "L" : "M"}${q.u.toFixed(3)} ${q.v.toFixed(3)}`; }).join("");
 }
@@ -75,6 +91,7 @@ export function Board2D({ frame, vertical }: { frame: SceneFrame; vertical: bool
 
   const onPointer = (kind: "down" | "move" | "up", w: { x: number; z: number }) => {
     if (st.playing && kind === "down") st.togglePlay();
+    if (kind === "down" && st.aimingLanding) { st.tapFloor(w); return; }
     if (st.tool === "pen" || st.tool === "zone") {
       if (kind === "down") { strokeRef.current = [w]; setStroke([w]); }
       else if (kind === "move" && strokeRef.current) {
@@ -113,6 +130,10 @@ export function Board2D({ frame, vertical }: { frame: SceneFrame; vertical: bool
   };
 
   const zoneOffset = drag?.kind === "zone" && drag.moved ? { id: drag.id, dx: drag.at.x - drag.start.x, dz: drag.at.z - drag.start.z } : null;
+  // The ball's solved flights over the floor (Section 5.4).
+  const ballPaths = sceneTimeline(scene).length
+    ? ballPlanOf(scene).segments.flatMap((seg) => (seg.trajectory ? [seg.trajectory.samples.map((q) => ({ x: q.p.x, z: q.p.z }))] : []))
+    : [];
 
   return (
     <Court2D tokens={tokens} vertical={vertical} flipped={st.flipped} onPointer={onPointer}
@@ -125,6 +146,11 @@ export function Board2D({ frame, vertical }: { frame: SceneFrame; vertical: bool
         <path key={i} d={inkPath(s.points, view)} fill="none" stroke="var(--c-ink)" strokeWidth={Math.max(0.05, s.width)}
               strokeLinecap="round" strokeLinejoin="round" />
       ))}
+      {ballPaths.map((path, i) => (
+        <path key={`b${i}`} d={inkPath(path, view)} fill="none" stroke="var(--c-ball)" strokeWidth={0.04} strokeDasharray="0.15 0.12"
+              opacity={0.8} />
+      ))}
+      {st.highlights.map((h, i) => <Highlight key={`h${i}`} hit={h} view={view} />)}
       {stroke && stroke.length > 1 && (
         <path d={inkPath(stroke, view)} fill="none" stroke={st.tool === "pen" ? "var(--c-ink)" : tintColor(st.zoneStyle.tint)}
               strokeWidth={0.07} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={st.tool === "zone" ? "0.2 0.12" : undefined} />

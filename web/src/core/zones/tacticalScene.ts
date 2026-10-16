@@ -457,6 +457,14 @@ export class SceneEditor {
     });
   }
 
+  /** Relabels a player (a shirt number or a name). Web addition; re-placing keeps it (placeScene reads the labels). */
+  setLabel(label: string, id: string): void {
+    this.edit((s) => {
+      const t = s.tokens.find((tok) => tok.id === id);
+      if (t) t.label = label;
+    });
+  }
+
   /** The topmost zone under a point (the last drawn wins), for selection. Swift `zone(at:tolerance:)`. */
   zoneAt(p: FloorPoint, tolerance = 0.15): Zone | undefined {
     const zones = this.current.zones;

@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import type { FloorPoint } from "../../core/match/court";
-import { Gaze, PlayerBodies, V3, posedPlayers, type GazeReadout, type PosedPlayer } from "../../core/spatial";
-import { Zone, type SceneFrame } from "../../core/zones";
+import { Gaze, PlayerBodies, V3, posedPlayers, type GazeAim, type GazeReadout, type PosedPlayer } from "../../core/spatial";
+import { Zone, sceneTimeline, type SceneFrame } from "../../core/zones";
 import { benchOrbit, type Board3D, type Orbit } from "../three/Board3D";
 import { Court3DView, boardColors } from "../three/Court3DView";
 import { Players3D } from "../three/Players3D";
-import { useStudio } from "./studio";
+import { ballPlanOf, useStudio } from "./studio";
 
 /** Upright views stand the court upright, as the 2D board does. */
 export const uprightAspect = (aspect: number) => aspect < 1 / 1.1;
@@ -34,14 +34,15 @@ export function studioOrbit(aspect: number, flipped: boolean, topDown = false): 
   return o;
 }
 
-/** Sight lines of a player (Section 5.6): the default read cues, the ball first. */
+/** Sight lines of a player (Section 5.6): to the targets (by default the read cues), the ball first. */
 export function sightLines(players: readonly PosedPlayer[], viewerId: string, pov: { id?: string; yaw: number; pitch: number },
-  ball?: { x: number; y: number; z: number }, aspect = 1.4): { eye: V3; readouts: GazeReadout[] } | undefined {
+  ball?: { x: number; y: number; z: number }, aspect = 1.4, targets?: readonly (readonly [string, GazeAim])[],
+): { eye: V3; readouts: GazeReadout[] } | undefined {
   const viewer = players.find((p) => p.id === viewerId);
   if (!viewer) return undefined;
   const look = pov.id === viewerId ? { yaw: pov.yaw, pitch: pov.pitch } : {};
   const pose = viewer.skeleton.povPose(viewer.joints, aspect, look);
-  const readouts = Gaze.readouts(viewer, pose, Gaze.defaultTargets(viewer, players), players, PlayerBodies.netHeight,
+  const readouts = Gaze.readouts(viewer, pose, targets ?? Gaze.defaultTargets(viewer, players), players, PlayerBodies.netHeight,
     ball ? new V3(ball.x, ball.y, ball.z) : undefined);
   return { eye: pose.eye, readouts };
 }
@@ -67,10 +68,13 @@ function withDrag(frame: SceneFrame, drag: Drag | null): SceneFrame {
  * Draw or Zone it draws on the floor through the touch ray, anywhere else it turns the court; two fingers turn and
  * pinch. A tap selects. In eye view the camera rides in the player's head and one finger looks around.
  */
-export function StudioBoard3D({ themeKey, netHeight, onBoard }: {
+export function StudioBoard3D({ themeKey, netHeight, onBoard, inset = 0, size }: {
   themeKey: string;
   netHeight: number;
   onBoard?: (board: Board3D | null) => void;
+  /** Pixels at the bottom covered by the Studio's strips: the picture shifts up so the court sits above them. */
+  inset?: number;
+  size?: { w: number; h: number };
 }) {
   const st = useStudio();
   const boardRef = useRef<Board3D | null>(null);
@@ -131,16 +135,31 @@ export function StudioBoard3D({ themeKey, netHeight, onBoard }: {
     posedRef.current = posed;
     const ball = st.ball();
     const gaze = st.gaze ? sightLines(posed, st.gaze, { id: st.pov, yaw: st.povYaw, pitch: st.povPitch }, ball,
-      boardRef.current?.camera.aspect) : undefined;
+      boardRef.current?.camera.aspect, st.gazeTargetList(posed)) : undefined;
+    const scene = st.scene();
+    const ballPaths = sceneTimeline(scene).length
+      ? ballPlanOf(scene).segments.flatMap((seg) => (seg.trajectory ? [seg.trajectory.samples.map((q) => q.p)] : []))
+      : undefined;
     players.update({
       players: posed, colors: boardColors(), selected: st.selectedToken, ball, zones: frame.zones, selectedZone: st.selectedZone,
       ink: st.scene().ink,
       stroke: stroke ? { points: stroke, zone: st.tool === "zone", tint: st.zoneStyle.tint } : undefined,
       gaze: gaze?.readouts.map((r) => ({ from: gaze.eye, to: r.point, visible: r.visibility.fraction >= 0.5 })),
+      highlights: st.highlights, ballPaths,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, st.version, st.time, st.selectedToken, st.selectedZone, st.gaze, st.pov, st.povYaw, st.povPitch, st.tool,
-      st.zoneStyle, drag, stroke, themeKey, netHeight]);
+  }, [ready, st.version, st.time, st.selectedToken, st.selectedZone, st.gaze, st.gazeTargets, st.pov, st.povYaw, st.povPitch,
+      st.tool, st.zoneStyle, st.highlights, drag, stroke, themeKey, netHeight]);
+
+  // The strips over the bottom of the board: shift the picture up by half their height (a view offset, so picking
+  // and the eye view stay exact).
+  useEffect(() => {
+    const b = boardRef.current;
+    if (!ready || !b) return;
+    const w = b.canvas.clientWidth, h = b.canvas.clientHeight;
+    if (inset > 0 && w > 0 && h > inset) b.camera.setViewOffset(w, h, 0, inset / 2, w, h);
+    else b.camera.clearViewOffset();
+  }, [ready, inset, size?.w, size?.h]);
 
   // Into the player's eyes and back out (Section 5.1).
   useEffect(() => {
@@ -174,6 +193,7 @@ export function StudioBoard3D({ themeKey, netHeight, onBoard }: {
       if (s.playing) s.togglePlay();
       if (s.pov) { gesture.current = { kind: "look", last: { x, y } }; return true; }
       const w = b.floorPoint(x, y);
+      if (s.aimingLanding) { gesture.current = null; return false; }
       if (s.tool !== "move") {
         if (!w) return false;
         gesture.current = { kind: "stroke" };
@@ -238,11 +258,16 @@ export function StudioBoard3D({ themeKey, netHeight, onBoard }: {
         return;
       }
       if (moved) return;
-      // A tap: pick a player (in eye view, another player to switch to), else a zone, else clear the selection.
-      const id = players.pick(x, y);
-      if (s.pov) { if (id && id !== s.pov) s.select(id, undefined); return; }
-      if (id) { s.select(id, undefined); return; }
+      // A tap: aim the ball's landing, or pick a player (in eye view another player becomes a sight-line target and
+      // can be switched to), else a zone, else clear the selection.
       const w = b.floorPoint(x, y);
+      if (w && s.tapFloor(w)) return;
+      const id = players.pick(x, y);
+      if (s.pov) {
+        if (id && id !== s.pov) { s.toggleGazeTarget(id); s.select(id, undefined); }
+        return;
+      }
+      if (id) { s.select(id, undefined); return; }
       const zone = w ? s.frame().zoneAt(w) : undefined;
       s.select(undefined, zone?.id);
     },

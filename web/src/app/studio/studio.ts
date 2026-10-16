@@ -1,10 +1,12 @@
 import { create } from "zustand";
 import type { FloorPoint, Side } from "../../core/match/court";
 import { InkStroke } from "../../core/match/liveTypes";
-import { PlayerBodies } from "../../core/spatial";
+import { Gaze, PlayerBodies, posedPlayers, type GazeAim, type PosedPlayer, type Posture } from "../../core/spatial";
 import {
-  PlacementAssist, SceneEditor, SceneSetup, TacticalScene, ZoneBuilder, ZoneStyle, sceneTimeline, templateRotations,
-  type AttackOption, type BallPlan, type RallyPhase, type SceneFrame, type Zone, type ZonePattern, type ZoneTint,
+  ContactKind, PlacementAssist, SceneEditor, SceneSetup, SmartGeometry, TacticalScene, Zone, ZoneBuilder, ZoneSnapping, ZoneStyle,
+  ZoneTag, sceneTimeline, templateRotations,
+  type AttackOption, type BallContact, type BallPlan, type RallyPhase, type SceneFrame, type ShapeKind, type SnapTarget,
+  type ZonePattern, type ZoneTint,
 } from "../../core/zones";
 import { loadTemplate } from "../../core/zones/templateAccess";
 import { all, get, put, remove } from "../store/db";
@@ -18,6 +20,9 @@ export interface BoardRecord {
 }
 
 export type StudioTool = "move" | "pen" | "zone";
+
+/** The markers "Animate by phase" adds, serve to defence. */
+const RallyPhaseOrder: readonly RallyPhase[] = ["serve", "receive", "set", "attack", "cover", "defence"];
 
 /** Seconds per phase interval during playback (as on the iPad). */
 const secondsPerPhase = 1.1;
@@ -50,8 +55,20 @@ interface StudioState {
   povPitch: number;
   /** Whose sight lines are shown (Advanced). */
   gaze?: string;
-  /** Style for the next zone drawn. */
+  /** Explicit sight-line targets of the gaze player; undefined uses the read cues (setter's head, hitters' shoulders). */
+  gazeTargets?: Record<string, GazeAim>;
+  /** Style, tag and shape (undefined: recognized) for the next zone drawn. */
   zoneStyle: ZoneStyle;
+  zoneTag: ZoneTag;
+  forcedShape?: ShapeKind;
+  /** Drop help: zones snap to the court and players to the formation's spots (Advanced can turn it off). */
+  snapping: boolean;
+  /** The next floor tap sets where the last ball flight lands. */
+  aimingLanding: boolean;
+  /** The one-tap alternative after an uncertain recognition (4 s). */
+  alternative?: { kind: ShapeKind; stroke: FloorPoint[]; zoneId: string; anchor: FloorPoint };
+  /** What a drop or a zone snapped to, shown briefly. */
+  highlights: SnapTarget[];
   /** Home on the left of the 2D court (Swap ends turns it). */
   flipped: boolean;
   open(boardId?: string): Promise<void>;
@@ -63,7 +80,7 @@ interface StudioState {
   ball(): { x: number; y: number; z: number } | undefined;
   currentPhase(): RallyPhase | undefined;
   rotations(side: Side): number[];
-  set(change: Partial<Pick<StudioState, "tool" | "view3D" | "flipped">>): void;
+  set(change: Partial<Pick<StudioState, "tool" | "view3D" | "flipped" | "snapping">>): void;
   changeSetup(change: (s: SceneSetup) => SceneSetup): void;
   rotate(side: Side, forward: boolean): void;
   playRally(attack: AttackOption): void;
@@ -77,6 +94,41 @@ interface StudioState {
   clearInk(): void;
   addZone(stroke: FloorPoint[]): void;
   updateStyle(pattern?: ZonePattern, tint?: ZoneTint): void;
+  /** Changes the selected zone's style, or the defaults for the next zone. */
+  editStyle(change: (s: ZoneStyle) => ZoneStyle): void;
+  /** The style and tag the zone strip shows: the selected zone's, or the defaults. */
+  stripStyle(): ZoneStyle;
+  stripTag(): ZoneTag;
+  setTag(tag: ZoneTag): void;
+  /** A shape for the next zone (undefined: recognized); with a zone selected, its outline is refitted. */
+  setShape(kind?: ShapeKind): void;
+  acceptAlternative(): void;
+  enableTimeline(): void;
+  disableTimeline(): void;
+  /** Whether the selected player or zone has a keyframe at a marker. */
+  selectionHasKey(phase: RallyPhase): boolean;
+  /** Keeps the selected player or zone at the current marker as shown. */
+  pinSelection(): void;
+  clearSelectionKey(): void;
+  toggleZoneVisibility(): void;
+  /** The posture set by hand for the selected player at the current marker (undefined: automatic). */
+  selectedPosture(): Posture | undefined;
+  setPosture(posture?: Posture): void;
+  currentContact(): BallContact | undefined;
+  currentContactIsLast(): boolean;
+  /** The selected player plays the ball at the current marker (its default kind), or changes the kind. */
+  setContact(kind?: ContactKind): void;
+  removeContact(): void;
+  aimLanding(): void;
+  /** The flight in the air now, in words ("HIGH SET · apex 5.9 m · 1.48 s"). */
+  ballSummary(): string | undefined;
+  /** A tap on the floor; true when it was taken (aiming the ball's landing). */
+  tapFloor(p: FloorPoint): boolean;
+  /** Renames a player (a shirt number shows on their jersey in 3D). */
+  setLabel(id: string, label: string): void;
+  /** Adds or removes a player as a sight-line target of the gaze player. */
+  toggleGazeTarget(id: string): void;
+  gazeTargetList(players: readonly PosedPlayer[]): [string, GazeAim][];
   deleteSelection(): void;
   undo(): void;
   redo(): void;
@@ -97,6 +149,8 @@ function serially(job: () => Promise<void>): Promise<void> {
 }
 
 let tween: number | undefined;
+let alternativeTimer: number | undefined;
+let highlightTimer: number | undefined;
 
 function stopTween() {
   if (tween !== undefined) cancelAnimationFrame(tween);
@@ -156,7 +210,25 @@ export const useStudio = create<StudioState>((set, getState) => {
 
   const resetPlayers = () => {
     stopTween();
-    set({ time: 0, playing: false, pov: undefined, gaze: undefined });
+    set({ time: 0, playing: false, pov: undefined, gaze: undefined, gazeTargets: undefined, aimingLanding: false });
+  };
+
+  const show = (hits: SnapTarget[]) => {
+    if (highlightTimer !== undefined) clearTimeout(highlightTimer);
+    set({ highlights: hits });
+    if (hits.length) highlightTimer = window.setTimeout(() => set({ highlights: [] }), 700);
+  };
+
+  const offerAlternative = (alt: StudioState["alternative"]) => {
+    if (alternativeTimer !== undefined) clearTimeout(alternativeTimer);
+    set({ alternative: alt });
+    if (alt) alternativeTimer = window.setTimeout(() => set({ alternative: undefined }), 4000);
+  };
+
+  /** The selected zone as shown at this moment (keyframes and morphs applied). */
+  const shownZone = (): Zone | undefined => {
+    const s = getState();
+    return s.selectedZone ? s.frame().zones.find((z) => z.id === s.selectedZone) : undefined;
   };
 
   return {
@@ -167,7 +239,11 @@ export const useStudio = create<StudioState>((set, getState) => {
     view3D: false,
     povYaw: 0,
     povPitch: 0,
-    zoneStyle: { ...ZoneStyle.create(), pattern: "diagonal", tint: "pink" },
+    zoneStyle: ZoneStyle.create(),
+    zoneTag: "custom",
+    snapping: true,
+    aimingLanding: false,
+    highlights: [],
     flipped: false,
 
     open(boardId) {
@@ -280,6 +356,7 @@ export const useStudio = create<StudioState>((set, getState) => {
     },
 
     select(token, zone) {
+      offerAlternative(undefined);
       set({ selectedToken: token, selectedZone: zone });
     },
 
@@ -288,9 +365,14 @@ export const useStudio = create<StudioState>((set, getState) => {
       const scene = s.editor!.scene;
       const token = scene.tokens.find((t) => t.id === id);
       if (!token) return;
-      const others = s.frame().tokens;
-      const spots = PlacementAssist.spots(token.side, scene.setup);
-      const { point } = PlacementAssist.adjust(p, id, token.side, others, spots);
+      let point = p;
+      if (s.snapping) {
+        // Onto a formation spot when close, and never inside a teammate.
+        const others = s.frame().tokens.filter((t) => t.side === token.side);
+        const r = PlacementAssist.adjust(p, id, token.side, others, PlacementAssist.spots(token.side, scene.setup));
+        point = r.point;
+        if (r.snapped) show([{ kind: "point", point: r.snapped }]);
+      }
       s.editor!.moveToken(id, point, s.currentPhase());
       edited();
     },
@@ -314,25 +396,231 @@ export const useStudio = create<StudioState>((set, getState) => {
 
     addZone(stroke) {
       const s = getState();
-      const scene = s.editor!.scene;
+      if (stroke.length < 6) return;
+      const frame = s.frame();
       const built = ZoneBuilder.build(stroke, {
-        style: s.zoneStyle, tokens: s.frame().tokens.map((t) => t.point), otherZones: scene.zones,
+        forced: s.forcedShape, tag: s.zoneTag, style: s.zoneStyle, snapping: s.snapping,
+        tokens: frame.tokens.map((t) => t.point), otherZones: frame.zones,
       });
       if (!built) return;
       s.editor!.addZone(built.zone);
       edited();
       set({ selectedZone: built.zone.id, selectedToken: undefined });
+      show(built.snapped);
+      offerAlternative(built.alternative
+        ? { kind: built.alternative, stroke: [...stroke], zoneId: built.zone.id, anchor: Zone.centroid(built.zone) }
+        : undefined);
+    },
+
+    acceptAlternative() {
+      const s = getState();
+      const alt = s.alternative;
+      const old = alt ? s.editor!.scene.zones.find((z) => z.id === alt.zoneId) : undefined;
+      offerAlternative(undefined);
+      if (!alt || !old) return;
+      const built = ZoneBuilder.build(alt.stroke, {
+        forced: alt.kind, tag: old.semantic.tag, style: old.style, snapping: s.snapping,
+        tokens: s.frame().tokens.map((t) => t.point), otherZones: s.editor!.scene.zones.filter((z) => z.id !== old.id),
+      });
+      if (!built) return;
+      s.editor!.replaceZone({ ...built.zone, id: old.id });
+      edited();
+      show(built.snapped);
+    },
+
+    stripStyle() {
+      const s = getState();
+      return (s.selectedZone && s.editor?.scene.zones.find((z) => z.id === s.selectedZone)?.style) || s.zoneStyle;
+    },
+
+    stripTag() {
+      const s = getState();
+      return (s.selectedZone && s.editor?.scene.zones.find((z) => z.id === s.selectedZone)?.semantic.tag) || s.zoneTag;
+    },
+
+    editStyle(change) {
+      const s = getState();
+      const zone = s.selectedZone ? s.editor!.scene.zones.find((z) => z.id === s.selectedZone) : undefined;
+      if (zone) {
+        s.editor!.setStyle(change({ ...zone.style }), zone.id);
+        edited();
+      } else set({ zoneStyle: change({ ...s.zoneStyle }) });
+    },
+
+    setTag(tag) {
+      const s = getState();
+      if (s.selectedZone) {
+        s.editor!.setTag(tag, s.selectedZone);
+        edited();
+      } else set({ zoneTag: tag, zoneStyle: { ...ZoneTag.defaultStyle(tag), tint: s.zoneStyle.tint } });
+    },
+
+    setShape(kind) {
+      set({ forcedShape: kind });
+      const s = getState();
+      const zone = shownZone();
+      if (!kind || !zone) return;
+      const pts = Zone.outline(zone).map((p) => ({ x: p.x, y: p.z }));
+      const geometry = ZoneBuilder.geometry(kind, pts, SmartGeometry.recognize(pts));
+      if (!geometry) return;
+      let z: Zone = { ...zone, geometry };
+      if (s.snapping) {
+        const frame = s.frame();
+        const [snapped, hits] = ZoneSnapping.snap(z, frame.tokens.map((t) => t.point), frame.zones.filter((o) => o.id !== zone.id));
+        z = snapped;
+        show(hits);
+      }
+      s.editor!.setGeometry(z.geometry, z.id, s.currentPhase());
+      edited();
+    },
+
+    enableTimeline() {
+      resetPlayers();
+      getState().editor!.setPhases([...RallyPhaseOrder]);
+      edited();
+    },
+
+    disableTimeline() {
+      resetPlayers();
+      getState().editor!.setPhases(undefined);
+      edited();
+    },
+
+    selectionHasKey(phase) {
+      const s = getState();
+      const scene = s.editor!.scene;
+      if (s.selectedToken) return !!scene.tokens.find((t) => t.id === s.selectedToken)?.keys?.some((k) => k.phase === phase);
+      if (s.selectedZone) return !!scene.zones.find((z) => z.id === s.selectedZone)?.keys?.some((k) => k.phase === phase);
+      return false;
+    },
+
+    pinSelection() {
+      const s = getState();
+      const phase = s.currentPhase();
+      if (!phase) return;
+      const token = s.selectedToken ? s.frame().tokens.find((t) => t.id === s.selectedToken) : undefined;
+      const zone = shownZone();
+      if (token) s.editor!.moveToken(token.id, token.point, phase);
+      else if (zone) s.editor!.setGeometry(zone.geometry, zone.id, phase);
+      else return;
+      edited();
+    },
+
+    clearSelectionKey() {
+      const s = getState();
+      const phase = s.currentPhase(), id = s.selectedToken ?? s.selectedZone;
+      if (!phase || !id) return;
+      s.editor!.clearKey(id, phase);
+      edited();
+    },
+
+    toggleZoneVisibility() {
+      const s = getState();
+      const phase = s.currentPhase(), id = s.selectedZone;
+      if (!phase || !id || sceneTimeline(s.editor!.scene).indexOf(phase) <= 0) return;
+      const shown = s.frame().intensities.get(id) ?? 1;
+      s.editor!.setIntensity(shown > 0.5 ? 0 : 1, id, phase);
+      edited();
+    },
+
+    selectedPosture() {
+      const s = getState();
+      const t = s.selectedToken ? s.editor?.scene.tokens.find((tok) => tok.id === s.selectedToken) : undefined;
+      if (!t) return undefined;
+      const phase = s.currentPhase();
+      if (phase && sceneTimeline(s.editor!.scene).indexOf(phase) > 0) return t.keys?.find((k) => k.phase === phase)?.posture;
+      return t.posture;
+    },
+
+    setPosture(posture) {
+      const s = getState();
+      if (!s.selectedToken) return;
+      s.editor!.setPosture(posture, s.selectedToken, s.currentPhase());
+      edited();
+    },
+
+    currentContact() {
+      const s = getState();
+      const phase = s.currentPhase();
+      return phase ? s.editor?.scene.contacts?.find((c) => c.phase === phase) : undefined;
+    },
+
+    currentContactIsLast() {
+      const s = getState();
+      const c = s.currentContact();
+      const line = sceneTimeline(s.editor!.scene);
+      if (!c) return false;
+      const i = line.indexOf(c.phase);
+      return !(s.editor!.scene.contacts ?? []).some((o) => line.indexOf(o.phase) > i);
+    },
+
+    setContact(kind) {
+      const s = getState();
+      const phase = s.currentPhase();
+      if (!phase || !s.selectedToken) return;
+      s.editor!.setContact({ phase, player: s.selectedToken, kind: kind ?? ContactKind.choices(phase)[0] }, phase);
+      edited();
+    },
+
+    removeContact() {
+      const s = getState();
+      const phase = s.currentPhase();
+      if (!phase) return;
+      s.editor!.setContact(undefined, phase);
+      edited();
+    },
+
+    aimLanding() {
+      set({ aimingLanding: !getState().aimingLanding });
+    },
+
+    ballSummary() {
+      const s = getState();
+      const scene = s.editor?.scene;
+      if (!scene || !sceneTimeline(scene).length) return undefined;
+      return ballPlanOf(scene).segment(s.time)?.summary(PlayerBodies.netHeight);
+    },
+
+    tapFloor(p) {
+      const s = getState();
+      offerAlternative(undefined);
+      if (!s.aimingLanding) return false;
+      set({ aimingLanding: false });
+      s.editor!.setBallLanding(p);
+      edited();
+      return true;
+    },
+
+    setLabel(id, label) {
+      const l = label.trim();
+      if (!l) return;
+      getState().editor!.setLabel(l, id);
+      edited();
+    },
+
+    toggleGazeTarget(id) {
+      const s = getState();
+      if (!s.gaze || id === s.gaze) return;
+      const players = posedPlayers(s.frame());
+      const targets = { ...(s.gazeTargets ?? Object.fromEntries(s.gazeTargetList(players))) };
+      if (targets[id]) delete targets[id];
+      else {
+        const role = s.editor!.scene.tokens.find((t) => t.id === id)?.role ?? "";
+        targets[id] = ["S", "S1", "S2"].includes(role) ? "head" : "hittingShoulder";
+      }
+      set({ gazeTargets: targets });
+    },
+
+    gazeTargetList(players) {
+      const s = getState();
+      const viewer = s.gaze ? players.find((p) => p.id === s.gaze) : undefined;
+      if (!viewer) return [];
+      if (s.gazeTargets) return Object.entries(s.gazeTargets).sort(([a], [b]) => a.localeCompare(b));
+      return Gaze.defaultTargets(viewer, players);
     },
 
     updateStyle(pattern, tint) {
-      const s = getState();
-      const next: ZoneStyle = { ...s.zoneStyle, ...(pattern ? { pattern } : {}), ...(tint ? { tint } : {}) };
-      set({ zoneStyle: next });
-      const zone: Zone | undefined = s.selectedZone ? s.editor!.scene.zones.find((z) => z.id === s.selectedZone) : undefined;
-      if (zone) {
-        s.editor!.setStyle({ ...zone.style, ...(pattern ? { pattern } : {}), ...(tint ? { tint } : {}) }, zone.id);
-        edited();
-      }
+      getState().editStyle((st) => ({ ...st, ...(pattern ? { pattern } : {}), ...(tint ? { tint } : {}) }));
     },
 
     deleteSelection() {
@@ -344,12 +632,14 @@ export const useStudio = create<StudioState>((set, getState) => {
     },
 
     undo() {
+      offerAlternative(undefined);
       resetPlayers();
       getState().editor!.undo();
       edited();
     },
 
     redo() {
+      offerAlternative(undefined);
       resetPlayers();
       getState().editor!.redo();
       edited();
@@ -366,11 +656,14 @@ export const useStudio = create<StudioState>((set, getState) => {
       const s = getState();
       const who = id ?? s.selectedToken;
       if (!who) return;
-      set({ view3D: true, pov: who, gaze: s.gaze ? who : undefined, selectedToken: who, povYaw: 0, povPitch: 0 });
+      // In eye view the sight lines follow the viewer (Section 5.6); a new viewer starts from the read cues.
+      set({ view3D: true, pov: who, gaze: who, gazeTargets: s.pov === who ? s.gazeTargets : undefined, selectedToken: who,
+        povYaw: 0, povPitch: 0 });
     },
 
     exitPOV() {
-      set({ pov: undefined, povYaw: 0, povPitch: 0 });
+      // The eye view turned the sight lines on; they go with it (Advanced turns them on again by hand).
+      set({ pov: undefined, povYaw: 0, povPitch: 0, gaze: undefined, gazeTargets: undefined });
     },
 
     look(dx, dy) {
@@ -383,7 +676,7 @@ export const useStudio = create<StudioState>((set, getState) => {
     toggleGaze() {
       const s = getState();
       if (s.gaze && s.gaze === s.selectedToken) set({ gaze: undefined });
-      else if (s.selectedToken) set({ gaze: s.selectedToken });
+      else if (s.selectedToken) set({ gaze: s.selectedToken, gazeTargets: s.gaze === s.selectedToken ? s.gazeTargets : undefined });
     },
   };
 });
