@@ -118,7 +118,7 @@ enum VideoDemo {
     static func scene(seconds: Double = 6.0) -> VideoScene {
         var rally = TacticalScene.placed(title: "Video rally", setup: SceneSetup())
         rally.playOut(.left)
-        let plan = rally.ballPlan()
+        let plan = rally.ballPlan(netHeight: PlayerBodies.netHeight)
         let cam = camera
         let markers = Double(max(rally.timeline.count - 1, 1))
         var frames: [VideoFrameObservation] = []
@@ -144,7 +144,8 @@ enum VideoDemo {
         }
         return VideoReconstructor.reconstruct(frames: frames, camera: cam,
                                               homeLabels: [.p1: "8", .p2: "12", .p3: "4", .p4: "9", .p5: "14", .p6: "2"],
-                                              title: "Sample rally", environment: VideoPipeline.environment(for: cam))
+                                              netHeight: PlayerBodies.netHeight, title: "Sample rally",
+                                              environment: VideoPipeline.environment(for: cam))
     }
 
     /// The sample rally saved like an imported one (scene, plate and a clip of it), for the demo screens.

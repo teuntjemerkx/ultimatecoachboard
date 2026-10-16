@@ -265,8 +265,8 @@ final class StudioController {
 
     var gazeReadouts: [GazeReadout] { gazeAnalysis(frame)?.readouts ?? [] }
 
-    /// Net height for POV and line of sight: 2.43 m (men); 2.24 m (women) is a setting to come.
-    var netHeight = 2.43
+    /// Net height for POV, line of sight and the ball: 2.24 m women, 2.43 m men (Settings > Players).
+    var netHeight: Double { video?.netHeight ?? PlayerBodies.netHeight }
 
     // MARK: - Ball (Section 5.4)
 

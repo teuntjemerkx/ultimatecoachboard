@@ -17,19 +17,31 @@ public struct PosedPlayer: Sendable {
     public var hittingShoulder: V3 { joints[Joint.rShoulder.rawValue].translation }
 }
 
+/// Whose bodies the defaults describe: women or men (the research library's "elite_women" and "elite_men" figures,
+/// and the net height that goes with them). The app sets it once from its settings.
+public enum PlayerBodies {
+    nonisolated(unsafe) public static var women = false
+
+    public static var group: String { women ? "elite_women" : "elite_men" }
+
+    /// The net: 2.24 m women, 2.43 m men.
+    public static var netHeight: Double { women ? 2.24 : 2.43 }
+}
+
 extension SceneToken {
-    /// Default stature by role when none is set (metres): the research library's elite men's figure for the
-    /// position when it has one, else liberos shortest and middles tallest.
+    /// Default stature by role when none is set (metres): the research library's elite figure for the position
+    /// (women or men, see `PlayerBodies`) when it has one, else liberos shortest and middles tallest.
     public static func defaultStature(role: String) -> Double {
         if let position = PostureLibrary.position(forRole: role),
-           let h = PostureLibrary.shared.positions[position]?.traits?.stature_m?["elite_men"], (1.5...2.3).contains(h) {
+           let h = PostureLibrary.shared.positions[position]?.traits?.stature_m?[PlayerBodies.group], (1.5...2.3).contains(h) {
             return h
         }
+        let shift = PlayerBodies.women ? -0.13 : 0
         switch role {
-        case "L": return 1.80
-        case "S", "S1", "S2": return 1.90
-        case "MB", "MB1", "MB2", "M", "M1", "M2": return 2.02
-        default: return 1.95
+        case "L": return 1.80 + shift
+        case "S", "S1", "S2": return 1.90 + shift
+        case "MB", "MB1", "MB2", "M", "M1", "M2": return 2.02 + shift
+        default: return 1.95 + shift
         }
     }
 

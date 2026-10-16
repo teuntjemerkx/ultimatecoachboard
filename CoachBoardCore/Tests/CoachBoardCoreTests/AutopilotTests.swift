@@ -89,6 +89,22 @@ final class AutopilotTests: XCTestCase {
         }
     }
 
+    func testWomensRallyClearsTheLowerNet() {
+        PlayerBodies.women = true
+        defer { PlayerBodies.women = false }
+        XCTAssertEqual(PlayerBodies.netHeight, 2.24)
+        XCTAssertEqual(SceneToken.defaultStature(role: "MB1"), 1.90, accuracy: 1e-9)
+        for attack in AttackOption.allCases {
+            var scene = TacticalScene.placed(title: "women", setup: SceneSetup())
+            scene.playOut(attack)
+            let plan = scene.ballPlan(netHeight: PlayerBodies.netHeight)
+            for k in [0, 3] {
+                let crossing = plan.segments[k].trajectory?.netCrossing(netHeight: PlayerBodies.netHeight)
+                XCTAssertTrue(crossing?.clears ?? false, "\(attack) segment \(k): \(String(describing: crossing))")
+            }
+        }
+    }
+
     func testPlayersFaceTheBall() {
         var scene = TacticalScene.placed(title: "rally", setup: SceneSetup())
         scene.playOut(.left)

@@ -171,6 +171,15 @@ final class ThemeStore {
         UserDefaults.standard.set(on, forKey: "advancedMode")
     }
 
+    /// Women or men: player heights in 3D and the net (2.24 m or 2.43 m).
+    private(set) var women: Bool
+
+    func setWomen(_ on: Bool) {
+        women = on
+        PlayerBodies.women = on
+        UserDefaults.standard.set(on, forKey: "playersWomen")
+    }
+
     func select(_ theme: Theme) {
         self.theme = theme
         UserDefaults.standard.set(theme.id, forKey: "themeID")
@@ -189,5 +198,7 @@ final class ThemeStore {
         theme = Theme.all.first { $0.id == id } ?? .hall
         courtOrientation = CourtOrientation(rawValue: UserDefaults.standard.string(forKey: "courtOrientation") ?? "") ?? .auto
         advanced = args.contains("-advanced") || UserDefaults.standard.bool(forKey: "advancedMode")
+        women = args.contains("-men") ? false : (UserDefaults.standard.object(forKey: "playersWomen") as? Bool ?? true)
+        PlayerBodies.women = women
     }
 }

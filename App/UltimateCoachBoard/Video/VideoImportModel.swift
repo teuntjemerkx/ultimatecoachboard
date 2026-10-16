@@ -131,7 +131,7 @@ final class VideoImportModel {
         }
         calibration = r
         fit = r.quality == .good ? .good : (r.quality == .rough ? .rough : .unknown)
-        courtLines = Self.courtSegments().compactMap { a, b in
+        courtLines = Self.courtSegments(netHeight: PlayerBodies.netHeight).compactMap { a, b in
             guard let pa = r.camera.project(a), let pb = r.camera.project(b) else { return nil }
             return (CGPoint(x: pa.x, y: pa.y), CGPoint(x: pb.x, y: pb.y))
         }
@@ -186,8 +186,9 @@ final class VideoImportModel {
             let camera = calibration.camera.scaled(toWidth: Double(size.width), height: Double(size.height))
             let observations = VideoPipeline.observations(frames, ball: ball, camera: camera)
             let title = "Video \(Date().formatted(date: .abbreviated, time: .shortened))"
+            let netHeight = PlayerBodies.netHeight
             var scene = await Task.detached(priority: .userInitiated) {
-                VideoReconstructor.reconstruct(frames: observations, camera: camera, netHeight: 2.43, title: title,
+                VideoReconstructor.reconstruct(frames: observations, camera: camera, netHeight: netHeight, title: title,
                                                environment: VideoPipeline.environment(for: camera))
             }.value
             guard !scene.players.isEmpty else {

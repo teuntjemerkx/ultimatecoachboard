@@ -223,6 +223,20 @@ struct SettingsView: View {
                 }
                 .listRowBackground(Tokens.surface.color)
                 Section {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ChoiceBar(options: [(value: true, title: "Women"), (value: false, title: "Men")],
+                                  selection: Binding(get: { store.women }, set: { store.setWomen($0) }))
+                        Text(store.women ? "Net 2.24 m; player heights of women's teams in 3D."
+                                         : "Net 2.43 m; player heights of men's teams in 3D.")
+                            .font(.scaled(.body))
+                            .foregroundStyle(Tokens.textSecondary.color)
+                    }
+                    .padding(.vertical, 6)
+                } header: {
+                    sectionHeader("Players")
+                }
+                .listRowBackground(Tokens.surface.color)
+                Section {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 14)], spacing: 14) {
                         ForEach(Theme.all) { theme in
                             ThemeCard(theme: theme, selected: store.theme.id == theme.id) { store.select(theme) }
