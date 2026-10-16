@@ -1,0 +1,62 @@
+<!doctype html>
+<html><body style="margin:0;background:#111">
+<canvas id="c"></canvas>
+<script type="module">
+import { FilesetResolver, PoseLandmarker, ObjectDetector } from "/node_modules/@mediapipe/tasks-vision/vision_bundle.mjs";
+const params = new URLSearchParams(location.search);
+const img = new Image();
+img.src = "/tools/frames/" + (params.get("img") || "back0.png");
+await img.decode();
+const vision = await FilesetResolver.forVisionTasks("/mediapipe");
+const det = await ObjectDetector.createFromOptions(vision, {
+  baseOptions: { modelAssetPath: "/models/" + (params.get("det") || "efficientdet_lite2") + ".tflite", delegate: "CPU" },
+  runningMode: "IMAGE", scoreThreshold: +(params.get("thr") || 0.15), categoryAllowlist: (params.get("cats") || "person").split(","), maxResults: 40,
+});
+const pose = await PoseLandmarker.createFromOptions(vision, {
+  baseOptions: { modelAssetPath: "/models/pose_landmarker_" + (params.get("model") || "full") + ".task", delegate: "CPU" },
+  runningMode: "IMAGE", numPoses: 1, minPoseDetectionConfidence: 0.2, minPosePresenceConfidence: 0.2,
+});
+const t0 = performance.now();
+// Tiles: the frame upscaled 2x and cut into overlapping halves so small players are big enough for the detector.
+const S = +(params.get("scale") || 2);
+const big = document.createElement("canvas"); big.width = img.width * S; big.height = img.height * S;
+big.getContext("2d").drawImage(img, 0, 0, big.width, big.height);
+const boxes = [];
+const tiles = [];
+const tw = Math.round(big.width * 0.6), th = big.height;
+for (const x0 of [0, big.width - tw]) tiles.push([x0, 0, tw, th]);
+for (const [x0, y0, w, h] of tiles) {
+  const t = document.createElement("canvas"); t.width = w; t.height = h;
+  t.getContext("2d").drawImage(big, x0, y0, w, h, 0, 0, w, h);
+  for (const d of det.detect(t).detections) {
+    const b = d.boundingBox;
+    if (d.categories[0].categoryName === "sports ball") { (window.__balls ||= []).push({ x: (b.originX + b.width/2 + x0) / S, y: (b.originY + b.height/2 + y0) / S, s: d.categories[0].score }); continue; }
+    boxes.push({ x: (b.originX + x0) / S, y: (b.originY + y0) / S, w: b.width / S, h: b.height / S, score: d.categories[0].score });
+  }
+}
+// Merge duplicates from the overlap (IoU > 0.5).
+const iou = (a, b) => { const ix = Math.max(0, Math.min(a.x+a.w, b.x+b.w) - Math.max(a.x, b.x)), iy = Math.max(0, Math.min(a.y+a.h, b.y+b.h) - Math.max(a.y, b.y)); const i = ix*iy; return i / (a.w*a.h + b.w*b.h - i); };
+boxes.sort((a, b) => b.score - a.score);
+const kept = [];
+for (const b of boxes) if (!kept.some((k) => iou(k, b) > 0.5)) kept.push(b);
+// Pose per person crop, the crop scaled so the person is ~256 px tall.
+const poses = [];
+for (const b of kept) {
+  const m = 0.25, cx = b.x + b.w / 2, cy = b.y + b.h / 2, side = Math.max(b.w, b.h) * (1 + 2 * m);
+  const k = 256 / side;
+  const crop = document.createElement("canvas"); crop.width = 256; crop.height = 256;
+  crop.getContext("2d").drawImage(img, cx - side / 2, cy - side / 2, side, side, 0, 0, 256, 256);
+  const r = pose.detect(crop);
+  if (r.landmarks.length) poses.push(r.landmarks[0].map((p) => ({ x: cx - side / 2 + p.x * side, y: cy - side / 2 + p.y * side, v: p.visibility })));
+}
+const ms = performance.now() - t0;
+const c = document.getElementById("c"); c.width = img.width * 2; c.height = img.height * 2;
+const g = c.getContext("2d"); g.drawImage(img, 0, 0, c.width, c.height); g.scale(2, 2);
+g.lineWidth = 1;
+for (const b of kept) { g.strokeStyle = "#ffcc00"; g.strokeRect(b.x, b.y, b.w, b.h); }
+const bones = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
+for (const p of poses) { g.strokeStyle = "#00ff88"; for (const [a,b2] of bones) { g.beginPath(); g.moveTo(p[a].x, p[a].y); g.lineTo(p[b2].x, p[b2].y); g.stroke(); } }
+window.__result = { people: kept.length, poses: poses.length, ms: Math.round(ms), balls: window.__balls || [] };
+document.title = "done";
+</script>
+</body></html>

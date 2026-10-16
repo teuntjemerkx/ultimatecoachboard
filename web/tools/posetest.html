@@ -1,0 +1,29 @@
+<!doctype html>
+<html><body style="margin:0;background:#111">
+<canvas id="c"></canvas>
+<script type="module">
+import { FilesetResolver, PoseLandmarker } from "/node_modules/@mediapipe/tasks-vision/vision_bundle.mjs";
+const params = new URLSearchParams(location.search);
+const img = new Image();
+img.src = "/tools/frames/" + (params.get("img") || "back0.png");
+await img.decode();
+const vision = await FilesetResolver.forVisionTasks("/mediapipe");
+const lm = await PoseLandmarker.createFromOptions(vision, {
+  baseOptions: { modelAssetPath: "/models/pose_landmarker_" + (params.get("model") || "full") + ".task", delegate: params.get("gpu") ? "GPU" : "CPU" },
+  runningMode: "IMAGE", numPoses: 12, minPoseDetectionConfidence: +(params.get("conf") || 0.2), minPosePresenceConfidence: 0.2, minTrackingConfidence: 0.2,
+});
+const t0 = performance.now();
+const res = lm.detect(img);
+const ms = performance.now() - t0;
+const c = document.getElementById("c"); c.width = img.width; c.height = img.height;
+const g = c.getContext("2d"); g.drawImage(img, 0, 0);
+g.lineWidth = Math.max(1, img.width / 400);
+const bones = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
+for (const p of res.landmarks) {
+  g.strokeStyle = "#00ff88";
+  for (const [a,b] of bones) { g.beginPath(); g.moveTo(p[a].x*img.width, p[a].y*img.height); g.lineTo(p[b].x*img.width, p[b].y*img.height); g.stroke(); }
+}
+window.__result = { poses: res.landmarks.length, ms: Math.round(ms) };
+document.title = "done";
+</script>
+</body></html>
