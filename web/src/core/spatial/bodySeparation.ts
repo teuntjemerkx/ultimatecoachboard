@@ -202,6 +202,31 @@ function apartAt(A: Float64Array, B: Float64Array, ox: number, oz: number, margi
   return true;
 }
 
+/**
+ * The smallest move along (ux, uz) from B's shift (ox, oz) that leaves two bodies clear (`clear` of B's shift), metres:
+ * doubling from 2 cm until they are clear, then halving the bracket; Infinity when they are not clear by `limit`.
+ */
+function clearingMove(clear: (ox: number, oz: number) => boolean, ox: number, oz: number, ux: number, uz: number,
+  limit: number): number {
+  const clearAt = (s: number) => clear(ox + s * ux, oz + s * uz);
+  let lo = 0, hi = 0.02;
+  while (!clearAt(hi)) {
+    if (hi >= limit) return Infinity;
+    lo = hi;
+    hi *= 2;
+  }
+  for (let k = 0; k < 12; k++) {
+    const mid = (lo + hi) / 2;
+    if (clearAt(mid)) hi = mid; else lo = mid;
+  }
+  return hi;
+}
+
+/** A push longer than this (metres) also tries moves turned away from its direction (see `relax`). */
+const sideStepFrom = 0.04;
+/** The turns tried, radians: 22.5 to 90 degrees either way. */
+const sideTurns = [1, -1, 2, -2, 3, -3, 4, -4].map((k) => (k * Math.PI) / 8);
+
 /** Horizontal reach of a body's capsules from its pelvis (for skipping pairs that cannot touch). */
 function reachOf(caps: readonly BodyCapsule[], c: V3): number {
   let r = 0;
@@ -285,8 +310,9 @@ interface Ahead {
  * Slides bodies apart on the floor (whole bodies, poses unchanged), starting from `start` offsets: until no two bodies
  * overlap and no trunk or head reaches through the net. Each touching pair moves apart just far enough along the line
  * between their pelvises; when they are running into each other it leans sideways, so they slide past each other on
- * the side they were already drifting to instead of pushing head-on. The push is shared by their weights, and a
- * player held by the net passes its share on. Returns the offset of every player.
+ * the side they were already drifting to instead of pushing head-on. When that way only clears them far off, they
+ * take the shortest way a little to either side of it instead. The push is shared by their weights, and a player held
+ * by the net passes its share on. Returns the offset of every player.
  */
 function relax(players: readonly PosedPlayer[], start: Offsets | undefined,
   options: SeparationOptions & { ahead?: Ahead; elapsed?: number },
@@ -296,15 +322,27 @@ function relax(players: readonly PosedPlayer[], start: Offsets | undefined,
   const margin = options.margin ?? 0.01;
   const anticipation = options.anticipation ?? 0;
   const caps = players.map(playerCapsules);
+  // A player taking steps is kept apart by the step cycle's turning points (playerCapsules), and by the pose of the
+  // moment as well: between the turning points a swinging foot or hand reaches well outside them (a lifted foot up to
+  // a quarter metre). Only against the others' poses of the moment, so a limb swinging into the room another's steps
+  // might take moves nobody, and nobody is pushed about at every step.
+  const poses = players.map((p, i) => (p.strideEnvelope.length > 0
+    ? playerCapsules(new PosedPlayer(p.token, p.skeleton, p.joints)) : caps[i]));
   const flat = caps.map(packed);
+  const poseFlat = poses.map((c, i) => (c === caps[i] ? flat[i] : packed(c)));
+  const apart = (i: number, j: number, ox: number, oz: number, room: number) => apartAt(flat[i], flat[j], ox, oz, room)
+    && ((poseFlat[i] === flat[i] && poseFlat[j] === flat[j]) || apartAt(poseFlat[i], poseFlat[j], ox, oz, room));
   const centre = players.map((p) => p.joints[Joint.pelvis].translation);
-  const reach = caps.map((c, i) => reachOf(c, centre[i]));
+  const reach = caps.map((c, i) => Math.max(reachOf(c, centre[i]), poses[i] === c ? 0 : reachOf(poses[i], centre[i])));
   const weight = players.map((p) => Math.max(0, options.weight?.(p) ?? 1));
   const velocity = players.map((p) => options.velocity?.(p));
   const dx = players.map((p) => start?.get(p.id)?.x ?? 0), dz = players.map((p) => start?.get(p.id)?.z ?? 0);
   // Within the posts, how far each body may move toward the net (moving along the net does not change it):
   // home keeps dz >= low, the opponent dz <= high.
-  const net = players.map((p, i) => netClearance(p, caps[i]));
+  const net = players.map((p, i) => {
+    const a = netClearance(p, caps[i]), b = poses[i] === caps[i] ? a : netClearance(p, poses[i]);
+    return a === undefined || b === undefined ? undefined : Math.min(a, b);
+  });
   const low = players.map((p, i) => (net[i] === undefined || p.token.side !== "home" ? -Infinity : margin - net[i]!));
   const high = players.map((p, i) => (net[i] === undefined || p.token.side === "home" ? Infinity : net[i]! - margin));
   const clampZ = (i: number) => { dz[i] = Math.min(high[i], Math.max(low[i], dz[i])); };
@@ -382,6 +420,15 @@ function relax(players: readonly PosedPlayer[], start: Offsets | undefined,
           sides?.set(passKey, side * flip);
           sides?.set(key, side * flip);
         }
+        const wantKey = `${key}|want`;
+        const opened = sides?.get(wantKey) ?? 0;
+        if (side * across < -Math.max(0.02, opened)) {
+          // Their paths have turned (a player setting off, a run curving): they now pass further apart on the other side
+          // than the room opened so far on this one, so they pass on that side instead of being swung across.
+          side = Math.sign(across);
+          sides?.set(passKey, side * flip);
+          sides?.set(key, side * flip);
+        }
         met.add(passKey);
         met.add(key);
         // The room they need: how far apart across their bodies, as posed now, clear each other side by side (at most
@@ -403,8 +450,6 @@ function relax(players: readonly PosedPlayer[], start: Offsets | undefined,
         }
         // The room opens no faster than `passingRate` (a pass that comes into view all at once, say a player starting
         // to walk toward a teammate standing close by, eases open instead of pushing them apart in one frame).
-        const wantKey = `${key}|want`;
-        const opened = sides?.get(wantKey) ?? 0;
         const want = Math.min(opened + passingRate * (options.elapsed ?? Infinity),
           need * pace * pace * (3 - 2 * pace) * x * x * (3 - 2 * x));
         sides?.set(wantKey, want);
@@ -445,7 +490,7 @@ function relax(players: readonly PosedPlayer[], start: Offsets | undefined,
         const room = margin + Math.min(0.25, anticipation * Math.max(0, closing));
         if (dist >= reach[i] + reach[j] + room) continue;
         const ox = dx[j] - dx[i], oz = dz[j] - dz[i];
-        if (apartAt(flat[i], flat[j], ox, oz, room)) continue;
+        if (apart(i, j, ox, oz, room)) continue;
         touching = true;
         let ux = nx, uz = nz;
         if (closing > 0) {
@@ -463,19 +508,29 @@ function relax(players: readonly PosedPlayer[], start: Offsets | undefined,
             sides?.set(key, side * toMotion * flip);
           } else side = kept * flip * toMotion;
           met.add(key);
-          const lean = Math.min(1, closing / 0.8);
+          // Less on every round: a player caught between two others is pushed out between them instead of sliding off
+          // sideways a little further on every round.
+          const lean = Math.min(1, closing / 0.8) / 2 ** iteration;
           const bx = nx + lean * side * tx, bz = nz + lean * side * tz;
           const l = Math.hypot(bx, bz);
           ux = bx / l;
           uz = bz / l;
         }
-        // The smallest move along u that clears them: double until clear, then halve the bracket.
-        const clearAt = (s: number) => apartAt(flat[i], flat[j], ox + s * ux, oz + s * uz, room);
-        let lo = 0, hi = 0.02;
-        while (!clearAt(hi) && hi < 4) { lo = hi; hi *= 2; }
-        for (let k = 0; k < 12; k++) {
-          const mid = (lo + hi) / 2;
-          if (clearAt(mid)) hi = mid; else lo = mid;
+        // The smallest move along u that clears them.
+        const clear = (x: number, z: number) => apart(i, j, x, z, room);
+        let hi = Math.min(4, clearingMove(clear, ox, oz, ux, uz, 4));
+        if (hi > sideStepFrom) {
+          // Along u they may only come clear far off: an arm or a leg lying across the other's (seen from above) is
+          // dragged along its whole length. Then the shortest move a little to either side of u instead (turning away
+          // from u counts against it), so they do not jump apart.
+          const fx = ux, fz = uz;
+          let best = hi;
+          for (const a of sideTurns) {
+            const c = Math.cos(a), sn = Math.sin(a), cost = 2 - c;
+            const wx = fx * c - fz * sn, wz = fx * sn + fz * c;
+            const s = clearingMove(clear, ox, oz, wx, wz, best / cost);
+            if (s * cost < best) { best = s * cost; hi = s; ux = wx; uz = wz; }
+          }
         }
         let wi = weight[i], wj = weight[j];
         if (wi + wj <= 0) { wi = 1; wj = 1; }

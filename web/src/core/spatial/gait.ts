@@ -85,9 +85,10 @@ export function strideParams(base: PoseParams, skeleton: SkeletonModel, motion: 
 
 /**
  * Web addition: the step cycle's turning points for `motion` (each foot forward and back, each foot lifted, the arms at
- * both ends of their swing), as `strideParams` poses them; empty when no steps show. Every pose of the cycle lies
- * within these, so the body separation keeps them apart instead of the pose of the moment: the arms and legs then
- * never swing into anyone, and nobody is pushed about at every step.
+ * both ends of their swing), as `strideParams` poses them; empty when no steps show. The body separation keeps these
+ * apart, so nobody is pushed about at every step. Most of the cycle lies within them, but not all: between the
+ * turning points a swinging foot or hand reaches out further (a lifted foot up to a quarter metre), so the separation
+ * keeps the poses of the moment apart as well.
  */
 export function strideEnvelope(base: PoseParams, skeleton: SkeletonModel, motion: StrideMotion, weight = 1): PoseParams[] {
   const speed = Math.min(Stride.maxSpeed, Math.hypot(motion.forward, motion.left));

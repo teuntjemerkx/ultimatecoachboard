@@ -92,7 +92,11 @@ describe("Body separation", () => {
   it("a rally played out never shows two bodies in each other, and nobody jumps", () => {
     for (const women of [true, false]) {
       PlayerBodies.women = women;
-      for (const [rotation, homeServes, attack] of [[1, true, "left"], [4, false, "middle"], [5, true, "right"]] as const) {
+      // Every rotation, every attack twice, both teams serving: setters and middles switching at the start of the rally
+      // (rotations 2, 3, 4 and 6), a libero overtaking her outside hitter (5, right), three players crossing in front of
+      // the net (1, middle).
+      for (const [rotation, homeServes, attack] of [[1, true, "middle"], [2, false, "left"], [3, true, "right"],
+        [4, false, "middle"], [5, true, "right"], [6, false, "left"]] as const) {
         const setup = SceneSetup.create({ homeRotation: rotation, opponentRotation: rotation, homeServes, attack: attack as AttackOption });
         const scene = TacticalScene.playOut(TacticalScene.placed("t", setup), attack as AttackOption);
         // As the Studio plays it (studioBodies): in real time (sceneClock), players taking steps as they run
@@ -133,5 +137,5 @@ describe("Body separation", () => {
       }
     }
     PlayerBodies.women = false;
-  }, 120000);
+  }, 240000);
 });

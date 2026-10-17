@@ -71,7 +71,7 @@ export class PosedPlayer {
     readonly joints: Rigid[],
     /**
      * Web addition: for a player taking steps, the joints at the step cycle's turning points (gait.ts,
-     * `strideEnvelope`); the body separation keeps all of them apart instead of the pose of the moment.
+     * `strideEnvelope`); the body separation keeps all of them apart, and the pose of the moment as well.
      */
     readonly strideEnvelope: readonly Rigid[][] = [],
   ) {}
