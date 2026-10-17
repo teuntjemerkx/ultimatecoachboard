@@ -177,10 +177,10 @@ function AboutSection() {
       </p>
       <p className="muted" style={{ margin: 0 }}>
         The 3D players are made with <a href="http://www.makehumancommunity.org" target="_blank" rel="noreferrer">MakeHuman</a>:
-        bodies, skins, hair and shirts are CC0. Shorts: “Swimming trunks” by Mindfront (Sweden),{" "}
-        <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>. Shoes:
-        “Tennis shoes” by punkduck, <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>.
-        Both are fitted to the players and recoloured.
+        bodies, skins, hair and eyes are CC0, and the kit is cut from the bodies. Shoes: “Running shoes” with the colours
+        of “Tennis shoes”, both by punkduck,{" "}
+        <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>, fitted to the
+        players and recoloured.
       </p>
     </>
   );
