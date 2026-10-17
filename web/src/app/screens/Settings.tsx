@@ -96,6 +96,7 @@ function BackupSection() {
   const advanced = useSettings((s) => s.advanced);
   const [usage, setUsage] = useState<string>("");
   const [message, setMessage] = useState<string>("");
+  const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -106,32 +107,46 @@ function BackupSection() {
   }, []);
 
   async function backup(withVideos: boolean) {
+    if (busy) return;
+    setBusy(true);
     setMessage("Making the backup…");
-    const data = JSON.stringify(await makeBackup(withVideos));
-    const name = `coach-board-${new Date().toISOString().slice(0, 10)}.json`;
-    const file = new File([data], name, { type: "application/json" });
     try {
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: "Coach Board backup" });
-        setMessage("Backup ready. Save it in Files or send it to yourself.");
-        return;
-      }
-    } catch { /* the share sheet was closed; fall back to a download */ }
-    const url = URL.createObjectURL(file);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
-    setMessage("Backup downloaded.");
+      const data = JSON.stringify(await makeBackup(withVideos));
+      const name = `coach-board-${new Date().toISOString().slice(0, 10)}.json`;
+      const file = new File([data], name, { type: "application/json" });
+      try {
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file], title: "Coach Board backup" });
+          setMessage("Backup ready. Save it in Files or send it to yourself.");
+          return;
+        }
+      } catch { /* the share sheet was closed; fall back to a download */ }
+      const url = URL.createObjectURL(file);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      setMessage("Backup downloaded.");
+    } catch {
+      setMessage(withVideos ? "The backup did not work. Try it without video clips (Advanced)." : "The backup did not work.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function restore(file: File) {
+    if (!confirm(`Restore "${file.name}"? Players, matches, boards and videos from the file are added; newer ones on this iPad stay.`)) return;
+    setBusy(true);
+    setMessage("Restoring…");
     try {
       const n = await restoreBackup(JSON.parse(await file.text()) as Backup);
-      setMessage(`Restored ${n} items.`);
+      setMessage(`Restored ${n} items. Restarting…`);
+      // Every screen reads its data again, and the settings from the file take effect.
+      setTimeout(() => location.reload(), 1200);
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "That file could not be read.");
+      setMessage(e instanceof SyntaxError ? "That file could not be read." : e instanceof Error ? e.message : "That file could not be read.");
+      setBusy(false);
     }
   }
 
@@ -142,9 +157,9 @@ function BackupSection() {
         {usage ? ` ${usage}.` : ""}
       </p>
       <div className="stack" style={{ gap: 12, maxWidth: 520 }}>
-        <button className="btn primary" onClick={() => backup(true)}><Icon name="download" /> Back up everything</button>
-        {advanced && <button className="btn big" onClick={() => backup(false)}>Back up without video clips</button>}
-        <button className="btn secondary big" onClick={() => fileRef.current?.click()}><Icon name="upload" /> Restore a backup</button>
+        <button className="btn primary" disabled={busy} onClick={() => backup(true)}><Icon name="download" /> Back up everything</button>
+        {advanced && <button className="btn big" disabled={busy} onClick={() => backup(false)}>Back up without video clips</button>}
+        <button className="btn secondary big" disabled={busy} onClick={() => fileRef.current?.click()}><Icon name="upload" /> Restore a backup</button>
         <input ref={fileRef} id="restore-file" type="file" accept="application/json,.json" hidden
                onChange={(e) => { const f = e.target.files?.[0]; if (f) restore(f); e.target.value = ""; }} />
       </div>

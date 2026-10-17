@@ -7,6 +7,7 @@ import { useSchedule } from "../schedule/useSchedule";
 import { fixture, ourTeam, upcoming, when } from "../schedule/schedule";
 import { PrizmCard } from "../ui/PrizmCard";
 import { roleChip, type Player } from "./Players";
+import { useUpdate } from "../updates";
 
 interface MatchRow { id: string; createdAt: string; opponent: string; finished: boolean; score?: string; sets?: string; setsWon?: { home: number; opponent: number } }
 
@@ -28,6 +29,7 @@ export function Home() {
     all<Player>("players").then((p) => setPlayers(p.sort((a, b) => a.number - b.number))).catch(() => {});
   }, []);
 
+  const update = useUpdate();
   const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
   const last = matches.find((m) => m.finished);
   const lastResult = last?.setsWon ? `${last.setsWon.home > last.setsWon.opponent ? "Won" : "Lost"} ${last.setsWon.home}–${last.setsWon.opponent}` : undefined;
@@ -42,15 +44,20 @@ export function Home() {
           </div>
           <h1 className="home-team">{teamName || "Your team"}</h1>
         </div>
-        <button className="btn secondary settings-btn" onClick={() => go({ name: "settings" })}>
-          <Icon name="settings" size={24} /> Settings
-        </button>
+        <div className="row" style={{ gap: 10, flexWrap: "nowrap" }}>
+          {update.ready && (
+            <button className="btn primary" onClick={update.apply}><Icon name="download" /> New version · restart</button>
+          )}
+          <button className="btn secondary settings-btn" onClick={() => go({ name: "settings" })}>
+            <Icon name="settings" size={24} /> Settings
+          </button>
+        </div>
       </header>
 
       {!standalone && !hideInstall && (
         <div className="install-strip">
           <Icon name="share" size={24} />
-          <span style={{ flex: 1, minWidth: 0 }}><strong>Full screen and offline:</strong> in Safari tap Share, then “Add to Home Screen”.</span>
+          <span style={{ flex: 1, minWidth: 0 }}><strong>Full screen and offline:</strong> in Safari tap Share, then “Add to Home Screen”. Do it before your first match: the home-screen app keeps its own data.</span>
           <button className="btn small" onClick={() => { setHideInstall(true); try { localStorage.setItem("coachboard.installHint", "hidden"); } catch { /* ignore */ } }}>
             Got it
           </button>
@@ -66,7 +73,7 @@ export function Home() {
                 text={advanced ? "Rebuild a rally from video; see it through any player's eyes" : "Turn a rally video into 3D"}
                 onClick={() => go({ name: "video" })} />
         <Locker area="players" num="03" icon="shirt" title="Players" note={players.length ? `${players.length} on the team` : undefined}
-                text="Your team as Prizm cards" onClick={() => go({ name: "players" })}>
+                text="Your team as trading cards" onClick={() => go({ name: "players" })}>
           {players.length > 0 && (
             <div className="locker-fan" aria-hidden="true">
               {players.slice(0, 3).map((p, k) => (
@@ -106,7 +113,7 @@ function GameDay({ matches }: { matches: MatchRow[] }) {
           <div>
             <div className="gameday-vs">Playing now</div>
             <h2 className="gameday-opponent" style={{ fontSize: fitSize(`vs ${unfinished.opponent}`) }}>vs {unfinished.opponent}</h2>
-            {unfinished.score && <div className="gameday-when">{unfinished.score}</div>}
+            {unfinished.score && <div className="gameday-when">{unfinished.sets && unfinished.sets !== "0–0" ? `Sets ${unfinished.sets} · ` : ""}this set {unfinished.score}</div>}
           </div>
         ) : next ? (
           <div style={{ minWidth: 0 }}>

@@ -123,7 +123,7 @@ export class MatchSession {
     writer.commit();
     const state = new LiveState({ setup: payload, profile, template: homeTemplate, opponentTemplate, nextSeq: writer.nextSeq });
     const session = new MatchSession(id, state, writer, new Date().toISOString());
-    await session.save();
+    await session.write();
     return session;
   }
 
@@ -153,6 +153,29 @@ export class MatchSession {
     return haptics;
   }
 
+  /** True while the last save failed: the match is on screen but not yet stored on the iPad. */
+  unsaved = false;
+  /** Called when `unsaved` changes, so the screen can show it. */
+  onSaveChange?: () => void;
+  private saving: Promise<void> = Promise.resolve();
+
+  /**
+   * Saves now; the database keeps writes in the order they were made, so an older state never lands last. A failure
+   * shows on screen instead of vanishing.
+   */
+  save(): Promise<void> {
+    this.saving = this.write().then(
+      () => { if (this.unsaved) { this.unsaved = false; this.onSaveChange?.(); } },
+      () => { if (!this.unsaved) { this.unsaved = true; this.onSaveChange?.(); } },
+    );
+    return this.saving;
+  }
+
+  /** Stores everything now, including notes the reducer would commit with the next rally (the app is going away). */
+  flush(): Promise<void> {
+    return this.writer.commit().length || this.unsaved ? this.save() : this.saving;
+  }
+
   /** The label on a player's token: the jersey number, else the role. */
   label(player: PlayerID, role: string): string {
     const n = this.state.setup.jerseys?.[player];
@@ -161,7 +184,8 @@ export class MatchSession {
 
   name(player: PlayerID): string | undefined { return this.state.setup.names?.[player]; }
 
-  async save() {
+  /** One write of the match record. */
+  async write() {
     const m = this.state.match;
     const sets = `${m.setsWon("home")}–${m.setsWon("opponent")}`;
     const record: MatchRecord = {
@@ -186,7 +210,10 @@ interface MatchStore {
 
 export const useMatch = create<MatchStore>((set, getState) => ({
   version: 0,
-  open(session) { set({ session, version: getState().version + 1 }); },
+  open(session) {
+    session.onSaveChange = () => set({ version: getState().version + 1 });
+    set({ session, version: getState().version + 1 });
+  },
   dispatch(event) {
     const s = getState().session;
     if (!s) return;

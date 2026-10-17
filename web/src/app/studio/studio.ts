@@ -205,7 +205,7 @@ export const useStudio = create<StudioState>((set, getState) => {
     const keepZone = s.selectedZone && scene.zones.some((z) => z.id === s.selectedZone) ? s.selectedZone : undefined;
     set({ version: s.version + 1, selectedToken: keepToken, selectedZone: keepZone });
     if (saveTimer !== undefined) clearTimeout(saveTimer);
-    saveTimer = window.setTimeout(() => { saveTimer = undefined; void save(); }, 500);
+    saveTimer = window.setTimeout(() => { saveTimer = undefined; void save().catch(() => {}); }, 500);
   };
 
   const save = async () => {
@@ -214,6 +214,18 @@ export const useStudio = create<StudioState>((set, getState) => {
     const record: BoardRecord = { id: scene.id, title: scene.title, modifiedAt: new Date().toISOString(), scene: TacticalScene.encode(scene) };
     await put("boards", record);
   };
+
+  // Going to the background saves a waiting edit at once: iOS may close the app without warning.
+  if (typeof document !== "undefined") {
+    const flush = () => {
+      if (saveTimer === undefined) return;
+      clearTimeout(saveTimer);
+      saveTimer = undefined;
+      void save().catch(() => {});
+    };
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
+    window.addEventListener("pagehide", flush);
+  }
 
   /** Moves the time to `target` over `duration` seconds; `at` maps the fraction done to the time (default: evenly). */
   const tweenTo = (target: number, duration: number, playback = false, at?: (f: number) => number) => {

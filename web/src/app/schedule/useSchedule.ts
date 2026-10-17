@@ -81,7 +81,10 @@ export const useSchedule = create<ScheduleState>((set, get) => ({
     set({ loading: true, error: undefined });
     try {
       const next = await fetchSchedule(schedule.url);
-      if (schedule.team) next.team = schedule.team;
+      // The coach linked another feed or removed it while this one loaded: theirs wins.
+      const now = get().schedule;
+      if (now?.url !== schedule.url) return set({ loading: false });
+      if (now.team) next.team = now.team;
       store(next);
       set({ schedule: next, loading: false });
     } catch (e) {

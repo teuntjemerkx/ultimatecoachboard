@@ -25,12 +25,14 @@
   /* Prizm values until applyTheme runs. */
   --c-bg: #0D0C18; --c-wall: #151326; --c-surface: #1E1E37; --c-surface2: #262545; --c-hairline: rgba(160,150,240,0.16);
   --c-text: #FFFFFF; --c-text2: #A3A2BC; --c-accent: #9C85FF; --c-onAccent: #0D0C18; --c-primary: #9C85FF;
-  --c-onPrimary: #0D0C18; --c-plate: #0D0C18; --c-plateText: #EACC88; --c-fault: #FF7A7A; --c-home: #56B4E9;
-  --c-opponent: #E69F00; --c-focus: #9C85FF; --c-band: #0D0C18; --c-bandText: #FFFFFF; --c-bandSoft: #A3A2BC; --c-led: #9C85FF;
-  --c-eyebrow: #EACC88; --c-strip: transparent; --c-seam: transparent; --c-onHome: #04121F; --c-onOpponent: #1A0F00;
+  --c-onPrimary: #0D0C18; --c-plate: #0D0C18; --c-plateText: #EACC88; --c-fault: #FF7A7A; --c-home: #9C85FF;
+  --c-opponent: #E8B84A; --c-focus: #9C85FF; --c-band: #0D0C18; --c-bandText: #FFFFFF; --c-bandSoft: #A3A2BC; --c-led: #9C85FF;
+  --c-eyebrow: #EACC88; --c-strip: transparent; --c-seam: transparent; --c-onHome: #0D0C18; --c-onOpponent: #0D0C18;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+/* A quick second tap is a second tap, never a zoom (iOS ignores user-scalable=no). */
+button, [role="button"], a, input, select, label { touch-action: manipulation; }
 html, body, #root { height: 100%; }
 body {
   margin: 0;
@@ -279,6 +281,12 @@ button { font: inherit; color: inherit; }
   color: var(--c-text2); font-weight: 600; box-shadow: 0 8px 20px -8px rgba(0,0,0,0.4); border: 1px solid var(--c-hairline);
 }
 
+/* Live: the match is on screen but the iPad has not stored it. */
+.unsaved-pill {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 2; cursor: pointer; white-space: nowrap;
+  font: 700 18px/1 var(--font); color: var(--c-text); border-color: var(--c-fault); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-fault) 30%, transparent);
+}
+
 .empty { text-align: center; padding: 40px 16px; color: var(--c-text2); display: flex; flex-direction: column; gap: 16px; align-items: center; justify-content: center; font-size: 19px; }
 
 .toast {
@@ -436,6 +444,7 @@ button { font: inherit; color: inherit; }
 /* The number grows with the slot (a container): big in a roomy landscape lineup, still clear in a short portrait one. */
 .slot { container-type: size; position: relative; }
 .slot .no { font: 800 clamp(26px, 52cqh, 64px)/1 var(--font-athletic); }
+.slot .nm { position: absolute; bottom: 8px; left: 12px; right: 12px; text-align: left; font: 700 clamp(12px, 11cqh, 17px)/1.1 var(--font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .slot .pos { position: absolute; top: 8px; left: 12px; font: 800 13px/1 var(--font-athletic); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-text2); }
 .slot .tag {
   position: absolute; bottom: 8px; right: 10px; padding: 4px 8px 3px; border-radius: 6px;
@@ -456,14 +465,23 @@ button { font: inherit; color: inherit; }
   background: #02060E; color: #FFFFFF; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12), 0 0 22px -6px var(--c-led);
   text-shadow: 0 0 14px color-mix(in srgb, var(--c-led) 70%, transparent);
 }
+/* A point button in its team's colour, filled, with a sheen of light across it like the foil on the cards. */
 .point-btn {
+  --team: var(--c-home); --on-team: var(--c-onHome);
+  position: relative; overflow: hidden; isolation: isolate;
   flex: 1; min-height: 130px; border: 0; border-radius: var(--radius-card); cursor: pointer;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-  font: 400 48px/1 var(--font-display-big); text-transform: uppercase; letter-spacing: 0.02em;
-  box-shadow: 0 16px 34px -18px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.3);
+  font: 400 52px/1 var(--font-display-big); text-transform: uppercase; letter-spacing: 0.04em; color: var(--on-team);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--team) 82%, #fff) 0%, var(--team) 42%, color-mix(in srgb, var(--team) 78%, #000) 100%);
+  box-shadow: 0 18px 36px -18px color-mix(in srgb, var(--team) 75%, transparent), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(0,0,0,0.18);
+  transition: transform 0.08s ease, filter 0.15s ease;
 }
-.point-btn small { font: 700 19px/1 var(--font); text-transform: none; opacity: 0.85; }
-.point-btn:active { transform: scale(0.98); }
+.point-btn::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(115deg, transparent 28%, rgba(255,255,255,0.28) 44%, rgba(255,255,255,0.06) 52%, transparent 62%);
+}
+.point-btn small { font: 700 19px/1 var(--font); text-transform: none; letter-spacing: 0; color: var(--on-team); opacity: 0.8; }
+.point-btn:active { transform: scale(0.98); filter: brightness(1.08); }
 .point-btn:disabled { opacity: 0.4; }
 
 /* Match log: one card per rally. */
@@ -642,12 +660,12 @@ button { font: inherit; color: inherit; }
   display: flex; flex-direction: column; gap: 3.5cqw; color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
 }
 .pcard-backside h3 { margin: 0; font: 400 15cqw/0.9 var(--font-display-big); text-transform: uppercase; }
-.pcard-backside .facts { display: flex; flex-direction: column; gap: 0; font-size: 6.4cqw; }
+.pcard-backside .facts { display: flex; flex-direction: column; gap: 0; font-size: clamp(12px, 7cqw, 18px); }
 .pcard-backside .facts div { display: flex; justify-content: space-between; gap: 3cqw; padding: 2.4cqw 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
 .pcard-backside .facts span { color: #A3A2BC; }
 .pcard-backside .facts b { font-weight: 700; }
 .pcard-backside .eyebrow { font: 800 4.6cqw/1 var(--font-athletic); color: #EACC88; letter-spacing: 0.18em; text-transform: uppercase; }
-.pcard-backside .btn { min-height: 13cqw; font-size: 6cqw; padding: 0 5cqw; margin-top: auto; }
+.pcard-backside .btn { min-height: max(44px, 16cqw); font-size: clamp(14px, 7cqw, 19px); padding: 0 5cqw; margin-top: auto; }
 @media (prefers-reduced-motion: reduce) { .pcard { transition: none; animation: none; } }
 
 /* Card grids: the team's cards, and the cards to pick a player from. */
@@ -685,4 +703,6 @@ button { font: inherit; color: inherit; }
 .slot.filled .no { position: relative; z-index: 1; color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,0.6); }
 .slot.filled .pos { color: #EACC88; z-index: 1; background: #0D0C18; padding: 4px 7px 3px; border-radius: 6px; top: 6px; left: 8px; }
 .slot.filled .tag { z-index: 1; }
+.slot.filled .nm { z-index: 1; color: #fff; text-shadow: 0 1px 8px rgba(0,0,0,0.7); }
+.slot.filled:has(.tag) .nm { right: 96px; }
 .slot.filled.picking { box-shadow: inset 0 0 0 3px var(--c-focus), 0 0 0 3px color-mix(in srgb, var(--c-focus) 40%, transparent); }

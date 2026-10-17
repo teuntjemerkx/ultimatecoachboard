@@ -76,15 +76,16 @@ export function Court2D({ tokens, vertical, flipped = false, onPointer, children
       {tokens.map((t) => {
         const p = view(t.x, t.z);
         const r = 0.36;
-        const fill = "var(--c-tokenFill)";
         const ring = t.side === "home" ? "var(--c-home)" : "var(--c-opponent)";
+        // Tinted with the team colour, so a pale colour (gold) still stands out on the light court.
+        const tint = { fill: `color-mix(in srgb, ${ring} 30%, var(--c-tokenFill))` };
         const dir = t.facing !== undefined ? view(t.x + Math.sin(t.facing), t.z + Math.cos(t.facing)) : undefined;
         return (
           <g key={t.id} transform={`translate(${p.u} ${p.v})`}>
             {t.selected && <circle r={r + 0.2} fill="var(--c-led, var(--c-focus))" opacity={0.25} />}
             {t.side === "home"
-              ? <circle r={r} fill={fill} stroke={ring} strokeWidth={0.08} />
-              : <rect x={-r * 0.9} y={-r * 0.9} width={r * 1.8} height={r * 1.8} transform="rotate(45)" fill={fill} stroke={ring} strokeWidth={0.08} />}
+              ? <circle r={r} style={tint} stroke={ring} strokeWidth={0.1} />
+              : <rect x={-r * 0.9} y={-r * 0.9} width={r * 1.8} height={r * 1.8} transform="rotate(45)" style={tint} stroke={ring} strokeWidth={0.1} />}
             {t.isLibero && <circle r={r - 0.12} fill="none" stroke={ring} strokeWidth={0.04} />}
             {dir && <circle cx={(dir.u - p.u) * (r + 0.14)} cy={(dir.v - p.v) * (r + 0.14)} r={0.07} fill={ring} />}
             {t.isServer && <rect x={-0.12} y={r + 0.12} width={0.24} height={0.08} fill={ring} />}

@@ -23,8 +23,8 @@ export function seasonOf(d = new Date()): string {
 export const roleChip = (role: string) => role || undefined;
 
 /**
- * The team as trading cards: a tap turns a card over (its facts, and remove). Adding on the right, with the new card
- * filling in as you type.
+ * The team as trading cards: a tap turns a card over (its facts, and Edit). Adding and changing on the right, with the
+ * card filling in as you type.
  */
 export function Players() {
   const advanced = useSettings((s) => s.advanced);
@@ -35,26 +35,55 @@ export function Players() {
   const [role, setRole] = useState("");
   const [height, setHeight] = useState("");
   const [error, setError] = useState("");
-  const [removing, setRemoving] = useState<string | null>(null);
+  /** The card being changed in the form, else the form makes a new one. */
+  const [editing, setEditing] = useState<Player | null>(null);
+  const [removing, setRemoving] = useState(false);
   const line = `${teamName || "Your team"} · ${seasonOf()}`;
   const rack = useRef<HTMLDivElement>(null);
   const fit = useFitColumns(rack, players.length);
 
   const reload = () => all<Player>("players").then((p) => setPlayers(p.sort((a, b) => a.number - b.number)));
   useEffect(() => { reload(); }, []);
+  // An armed Remove goes back to safe after a few seconds.
+  useEffect(() => {
+    if (!removing) return;
+    const t = setTimeout(() => setRemoving(false), 4000);
+    return () => clearTimeout(t);
+  }, [removing]);
 
-  async function add() {
+  function reset() {
+    setNumber(""); setName(""); setHeight(""); setError(""); setEditing(null); setRemoving(false);
+  }
+
+  function edit(p: Player) {
+    setEditing(p);
+    setNumber(String(p.number)); setName(p.name); setRole(p.role); setHeight(p.height ? p.height.toFixed(2) : "");
+    setError(""); setRemoving(false);
+  }
+
+  async function save() {
     const n = Number(number);
     if (number.trim() === "" || !Number.isInteger(n) || n < 0 || n > 99) return setError("Use a number from 0 to 99.");
-    if (players.some((p) => p.number === n)) return setError(`#${n} is already on the team.`);
+    if (players.some((p) => p.number === n && p.id !== editing?.id)) return setError(`#${n} is already on the team.`);
     const h = height ? Number(height.replace(",", ".")) : undefined;
     if (h !== undefined && !(h >= 1.2 && h <= 2.25)) return setError("Height must be between 1.20 and 2.25 m.");
-    await put<Player>("players", { id: crypto.randomUUID(), number: n, name: name.trim(), role, height: h });
-    setNumber(""); setName(""); setHeight(""); setError("");
+    const player: Player = { id: editing?.id ?? crypto.randomUUID(), number: n, name: name.trim(), role, height: h ?? (advanced ? undefined : editing?.height) };
+    // The form empties before the write, so the next player can be typed at once without losing letters.
+    reset();
+    await put<Player>("players", player);
     reload();
   }
 
-  // Buttons on a card's back act without turning the card over again.
+  async function removeEditing() {
+    if (!editing) return;
+    if (!removing) return setRemoving(true);
+    const id = editing.id;
+    reset();
+    await remove("players", id);
+    reload();
+  }
+
+  // A button on a card's back acts without turning the card over again.
   const keep = { onPointerDown: (e: React.PointerEvent) => e.stopPropagation(), onPointerUp: (e: React.PointerEvent) => e.stopPropagation() };
 
   return (
@@ -85,18 +114,10 @@ export function Players() {
                                    <h3>#{p.number} {p.name}</h3>
                                    <div className="facts">
                                      <div><span>Role</span><b>{roleName}</b></div>
-                                     <div><span>Number</span><b>{p.number}</b></div>
                                      {p.height && <div><span>Height</span><b>{p.height.toFixed(2)} m</b></div>}
-                                     <div><span>Team</span><b>{teamName || "Your team"}</b></div>
                                    </div>
-                                   <button className={`btn ${removing === p.id ? "danger" : "secondary"}`} {...keep}
-                                           onClick={async () => {
-                                             if (removing !== p.id) return setRemoving(p.id);
-                                             await remove("players", p.id);
-                                             setRemoving(null);
-                                             reload();
-                                           }}>
-                                     <Icon name="trash" /> {removing === p.id ? "Tap again" : "Remove"}
+                                   <button className="btn secondary" {...keep} onClick={() => edit(p)}>
+                                     <Icon name="pen" /> Edit
                                    </button>
                                  </>
                                )} />
@@ -107,12 +128,14 @@ export function Players() {
           </div>
         </section>
 
-        <form className="locker-card" onSubmit={(e) => { e.preventDefault(); add(); }}>
-          <div className="plate-head"><span className="plate"><Icon name="plus" size={20} /> New card</span></div>
+        <form className="locker-card" onSubmit={(e) => { e.preventDefault(); save(); }}>
+          <div className="plate-head">
+            <span className="plate"><Icon name={editing ? "pen" : "plus"} size={20} /> {editing ? `Edit #${editing.number}` : "New card"}</span>
+          </div>
           <div className="card-body">
             <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: 16, alignItems: "start" }}>
               <PrizmCard number={number.trim() === "" ? "?" : number.trim()} name={name.trim()} role={roleChip(role)} line={line}
-                         tier={number.trim() === "" ? "base" : "prizm"} label="The new card" />
+                         tier={number.trim() === "" ? "base" : "prizm"} label={editing ? "The card you are changing" : "The new card"} />
               <div className="stack" style={{ gap: 12 }}>
                 <label className="field">
                   <span className="label">Number</span>
@@ -141,7 +164,19 @@ export function Players() {
               </label>
             )}
             {error && <p role="alert" style={{ margin: 0, color: "var(--c-fault)", fontWeight: 600 }}>{error}</p>}
-            <button className="btn primary wide" type="submit" style={{ marginTop: "auto" }}><Icon name="plus" /> Add player</button>
+            {editing ? (
+              <div className="stack" style={{ gap: 10, marginTop: "auto" }}>
+                <button className="btn primary wide" type="submit"><Icon name="check" /> Save changes</button>
+                <div className="row" style={{ gap: 10 }}>
+                  <button className="btn big secondary" type="button" style={{ flex: 1 }} onClick={reset}>Cancel</button>
+                  <button className={`btn big ${removing ? "danger" : "secondary"}`} type="button" style={{ flex: 1 }} onClick={removeEditing}>
+                    <Icon name="trash" /> {removing ? "Tap again" : "Remove"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button className="btn primary wide" type="submit" style={{ marginTop: "auto" }}><Icon name="plus" /> Add player</button>
+            )}
           </div>
         </form>
       </main>

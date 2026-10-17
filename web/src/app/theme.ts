@@ -10,7 +10,8 @@ export interface Theme {
 /**
  * The default: Prizm, after the trading cards. Near-black ink with a violet glow, cards in deep indigo, violet for the
  * one big action, gold for the small lettering, players as chrome, prism and gold cards. A lit court in a dark arena
- * on the boards (FIVB: a light court, a free zone in another colour); home sky blue against orange (Okabe-Ito).
+ * on the boards (FIVB: a light court, a free zone in another colour); home violet against gold, the card colours (and
+ * apart for colour-blind eyes too: they differ along blue–yellow, which every common colour blindness keeps).
  */
 const prizm: Theme = {
   id: "prizm",
@@ -18,14 +19,14 @@ const prizm: Theme = {
   summary: "Trading-card look: deep indigo, a violet glow, gold lettering and holographic player cards.",
   dark: true,
   colors: {
-    onHome: "#04121F", onOpponent: "#1A0F00", eyebrow: "#EACC88", strip: "transparent", seam: "transparent",
+    onHome: "#0D0C18", onOpponent: "#0D0C18", eyebrow: "#EACC88", strip: "transparent", seam: "transparent",
     bg: "#0D0C18", wall: "#151326", surface: "#1E1E37", surface2: "#262545", hairline: "rgba(160,150,240,0.16)",
     text: "#FFFFFF", text2: "#A3A2BC", accent: "#9C85FF", onAccent: "#0D0C18", primary: "#9C85FF", onPrimary: "#0D0C18",
-    plate: "#0D0C18", plateText: "#EACC88", fault: "#FF7A7A", home: "#56B4E9", opponent: "#E69F00",
+    plate: "#0D0C18", plateText: "#EACC88", fault: "#FF7A7A", home: "#9C85FF", opponent: "#E8B84A",
     tokenFill: "#FFFFFF", tokenLabel: "#0D0C18", hallFloor: "#0D0C18", freeZone: "#2B2652", court: "#F3EEE2",
     courtLine: "#0D0C18", net: "#0D0C18", ink: "#5AEBF3", ball: "#FFE14D", skin: "#C9A68A", shorts: "#1E1E37",
     pads: "#262545", shoes: "#FFFFFF", hair: "#2B2118", focus: "#9C85FF",
-    band: "#0D0C18", bandText: "#FFFFFF", bandSoft: "#A3A2BC", led: "#9C85FF", zoneA: "#56B4E9", zoneB: "#E69F00",
+    band: "#0D0C18", bandText: "#FFFFFF", bandSoft: "#A3A2BC", led: "#9C85FF", zoneA: "#9C85FF", zoneB: "#E8B84A",
   },
 };
 

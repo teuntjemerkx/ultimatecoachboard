@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "../ui/Icon";
 import { Choice } from "../ui/Choice";
 import { Court2D, type CourtToken } from "../ui/Court2D";
@@ -14,14 +14,33 @@ export function Live({ matchId }: { matchId: string }) {
   const portrait = usePortrait();
   const [flipped, setFlipped] = useState(false);
   const [missing, setMissing] = useState(false);
+  const lastPoint = useRef(0);
 
   useEffect(() => {
     if (session?.id === matchId) return;
-    MatchSession.open(matchId).then((s) => (s ? open(s) : setMissing(true)));
+    MatchSession.open(matchId).then((s) => (s ? open(s) : setMissing(true)), () => setMissing(true));
   }, [matchId, session?.id, open]);
 
+  // Store everything the moment the app goes to the background: iOS may close it without warning.
+  useEffect(() => {
+    if (!session) return;
+    const away = () => { if (document.visibilityState === "hidden") void session.flush(); };
+    const leave = () => void session.flush();
+    document.addEventListener("visibilitychange", away);
+    window.addEventListener("pagehide", leave);
+    return () => { document.removeEventListener("visibilitychange", away); window.removeEventListener("pagehide", leave); void session.flush(); };
+  }, [session]);
+
+  // One point per tap: a finger that bounces on the glass does not score twice.
+  const point = (side: Side) => {
+    const t = performance.now();
+    if (t - lastPoint.current < 250) return;
+    lastPoint.current = t;
+    dispatch(LiveEvent.pointSwipe(side));
+  };
+
   if (missing) return <div className="screen"><div className="empty" style={{ flex: 1 }}>This match could not be opened.<button className="btn big" onClick={() => go({ name: "home" })}>Home</button></div></div>;
-  if (!session || session.id !== matchId) return <div className="screen"><div className="empty" style={{ flex: 1 }}>Opening the match…</div></div>;
+  if (!session || session.id !== matchId) return <div className="screen"><div className="empty" style={{ flex: 1 }}>Opening the match…<button className="btn big" onClick={() => go({ name: "home" })}>Home</button></div></div>;
 
   const st = session.state;
   const m = st.match;
@@ -58,7 +77,12 @@ export function Live({ matchId }: { matchId: string }) {
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: portrait ? "column" : "row" }}>
         <div style={{ flex: 1, minWidth: 0, minHeight: 0, position: "relative" }}>
           <Court2D tokens={tokens} vertical={portrait} flipped={flipped} />
-          {status && (
+          {session.unsaved && (
+            <button className="hint-pill unsaved-pill" onClick={() => void session.save()}>
+              Not saved on this iPad yet · tap to try again
+            </button>
+          )}
+          {status && !session.unsaved && (
             <div className="hint-pill" style={{ position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)", color: "var(--c-text)", fontWeight: 800, fontSize: 20 }}>
               {status.p === "matchPoint" ? "Match point" : "Set point"} for {status.s === "home" ? home : away}
             </div>
@@ -70,11 +94,11 @@ export function Live({ matchId }: { matchId: string }) {
           borderLeft: portrait ? 0 : "1px solid var(--c-hairline)", borderTop: portrait ? "1px solid var(--c-hairline)" : 0,
           paddingBottom: `calc(18px + env(safe-area-inset-bottom, 0px))`,
         }}>
-          <button className="point-btn" disabled={setOver} onClick={() => dispatch(LiveEvent.pointSwipe("home"))} style={{ background: "var(--c-home)", color: "var(--c-onHome)" }}>
+          <button className="point-btn" disabled={setOver} onClick={() => point("home")} style={{ ["--team" as string]: "var(--c-home)", ["--on-team" as string]: "var(--c-onHome)" }}>
             Point
             <small>{home}</small>
           </button>
-          <button className="point-btn" disabled={setOver} onClick={() => dispatch(LiveEvent.pointSwipe("opponent"))} style={{ background: "var(--c-opponent)", color: "var(--c-onOpponent)" }}>
+          <button className="point-btn" disabled={setOver} onClick={() => point("opponent")} style={{ ["--team" as string]: "var(--c-opponent)", ["--on-team" as string]: "var(--c-onOpponent)" }}>
             Point
             <small>{away}</small>
           </button>
@@ -137,6 +161,7 @@ function SetBreak({ session, onDone, onLog }: { session: MatchSession; onDone: (
           <div className="row">
             <button className="btn primary" onClick={onDone}>Done</button>
             <button className="btn big secondary" onClick={onLog}>Match log</button>
+            <button className="btn big secondary" onClick={() => dispatch(LiveEvent.undo)}><Icon name="undo" /> Undo last point</button>
           </div>
         ) : (
           <>

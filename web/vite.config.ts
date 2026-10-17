@@ -26,16 +26,16 @@ export default defineConfig({
     react(),
     scheduleService(),
     VitePWA({
-      registerType: "autoUpdate",
-      includeAssets: ["icon-192.png", "icon-512.png", "apple-touch-icon.png"],
+      // A new version waits until the coach restarts into it (src/app/updates.ts), never mid-match.
+      registerType: "prompt",
       manifest: {
         name: "Coach Board",
         short_name: "Coach Board",
         description: "Volleyball coaching board: live match, tactics in 2D and 3D, and video to 3D with eye views.",
         display: "standalone",
         orientation: "any",
-        background_color: "#F3F5F8",
-        theme_color: "#0F1B2D",
+        background_color: "#0D0C18",
+        theme_color: "#0D0C18",
         start_url: "/",
         icons: [
           { src: "icon-192.png", sizes: "192x192", type: "image/png" },
@@ -45,9 +45,15 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,png,svg,json,wasm,task,tflite,woff2,glb}"],
-        globIgnores: ["**/vision_wasm_nosimd_internal.*", "tools/**"],
-        maximumFileSizeToCacheInBytes: 40 * 1024 * 1024,
+        // MediaPipe (34 MB) is only for Video to 3D: kept when it is first used, not downloaded with the app.
+        globIgnores: ["**/vision_wasm_nosimd_internal.*", "tools/**", "mediapipe/**", "models/**"],
+        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         navigateFallbackDenylist: [/^\/api\//],
+        runtimeCaching: [{
+          urlPattern: ({ url }) => /^\/(mediapipe|models)\//.test(url.pathname),
+          handler: "CacheFirst",
+          options: { cacheName: "mediapipe-v1", cacheableResponse: { statuses: [200] } },
+        }],
       },
     }),
   ],

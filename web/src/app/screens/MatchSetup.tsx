@@ -45,6 +45,7 @@ export function MatchSetup() {
   const [picking, setPicking] = useState<number | "libero" | null>(null);
   const [typed, setTyped] = useState("");
   const [error, setError] = useState("");
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => { all<Player>("players").then((p) => setRoster(p.sort((a, b) => a.number - b.number))); }, []);
 
@@ -54,7 +55,11 @@ export function MatchSetup() {
 
   function place(p: PlayerRef) {
     let following: number | null = null;
-    if (picking === "libero") setLibero(p);
+    if (picking === "libero") {
+      // The libero comes off court: one player cannot be both.
+      setSlots(slots.map((s) => (s?.number === p.number ? null : s)));
+      setLibero(p);
+    }
     else if (typeof picking === "number") {
       const next = slots.map((s) => (s?.number === p.number ? null : s));
       next[picking - 1] = p;
@@ -72,6 +77,8 @@ export function MatchSetup() {
 
   async function start() {
     if (!ready) return setError("Put six players on court.");
+    if (starting) return;
+    setStarting(true);
     const setup = {
       homeName: settings.teamName || "Us", opponentName: opponent.trim() || "Opponent", system, slots, libero,
       bench: roster.filter((r) => !used.has(r.number)).map((r) => ({ id: r.id.toUpperCase(), number: r.number, name: r.name || undefined })),
@@ -85,6 +92,7 @@ export function MatchSetup() {
       go({ name: "live", matchId: session.id });
     } catch (e) {
       setError(e instanceof Error ? e.message : "The match could not start.");
+      setStarting(false);
     }
   }
 
@@ -119,6 +127,7 @@ export function MatchSetup() {
                               aria-label={p ? `Position ${pos}: number ${p.number}` : `Position ${pos}: choose a player`}>
                         <span className="pos">Position {pos}</span>
                         <span className="no">{p ? p.number : <Icon name="plus" size={40} />}</span>
+                        {p?.name && <span className="nm">{p.name}</span>}
                         {hasSetter && p && setter === pos && <span className="tag">Setter</span>}
                       </button>
                     );
@@ -128,7 +137,7 @@ export function MatchSetup() {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: hasSetter ? "auto 1fr" : "1fr", gap: 14, alignItems: "end" }}>
               <button className={`btn big ${libero ? "on" : "secondary"}`} onClick={() => setPicking("libero")} style={{ minWidth: 150 }}>
-                Libero {libero ? `#${libero.number}` : <Icon name="plus" />}
+                Libero {libero ? `#${libero.number}${libero.name ? ` ${libero.name}` : ""}` : <Icon name="plus" />}
               </button>
               {hasSetter && (
                 <div className="stack" style={{ gap: 6 }}>
@@ -146,7 +155,7 @@ export function MatchSetup() {
 
         <section className="locker-card">
           <div className="plate-head"><span className="plate"><Icon name="whistle" size={20} /> The match</span></div>
-          <div className="card-body">
+          <div className="card-body" style={{ overflowY: "auto" }}>
             <label className="field">
               <span className="label">Opponent</span>
               <input id="opponent-name" value={opponent} placeholder="Dynamo" onChange={(e) => setOpponent(e.target.value)} />
@@ -191,7 +200,7 @@ export function MatchSetup() {
             </div>
             <div className="stack" style={{ gap: 8, marginTop: "auto" }}>
               {error && <p role="alert" style={{ margin: 0, color: "var(--c-fault)", fontWeight: 600 }}>{error}</p>}
-              <button className="btn primary wide" disabled={!ready} onClick={start}><Icon name="play" /> Start match</button>
+              <button className="btn primary wide" disabled={!ready || starting} onClick={start}><Icon name="play" /> Start match</button>
               <p className="muted" style={{ margin: 0, textAlign: "center" }}>
                 {ready ? `Net ${netHeight(settings.women).toFixed(2)} m (${settings.women ? "women" : "men"}; change in Settings).` : `Put 6 players on court (${slots.filter(Boolean).length} of 6).`}
               </p>
@@ -203,7 +212,8 @@ export function MatchSetup() {
       {picking !== null && (
         <PickSheet title={picking === "libero" ? "Who is the libero?" : `Who plays position ${picking}?`} roster={roster}
                    onCourt={(n) => slots.some((s) => s?.number === n)} libero={libero?.number} line={line}
-                   typed={typed} setTyped={setTyped} onPick={place} onClose={() => setPicking(null)} />
+                   typed={typed} setTyped={setTyped} onPick={place} onClose={() => setPicking(null)}
+                   onClear={picking === "libero" && libero ? () => { setLibero(undefined); setPicking(null); } : undefined} />
       )}
     </div>
   );
@@ -213,9 +223,11 @@ export function MatchSetup() {
  * Picking a player: the team as cards, filling the sheet (no scrolling); a player already on court shows chrome, the
  * libero gold. A number typed in works for a player not in the team.
  */
-function PickSheet({ title, roster, onCourt, libero, line, typed, setTyped, onPick, onClose }: {
+function PickSheet({ title, roster, onCourt, libero, line, typed, setTyped, onPick, onClose, onClear }: {
   title: string; roster: Player[]; onCourt: (n: number) => boolean; libero?: number; line: string;
   typed: string; setTyped: (t: string) => void; onPick: (p: PlayerRef) => void; onClose: () => void;
+  /** Shown as "No libero": takes the choice away. */
+  onClear?: () => void;
 }) {
   const rack = useRef<HTMLDivElement>(null);
   const fit = useFitColumns(rack, roster.length);
@@ -224,7 +236,10 @@ function PickSheet({ title, roster, onCourt, libero, line, typed, setTyped, onPi
       <div className="card stack pick-sheet" style={{ gap: 16 }}>
         <div className="row" style={{ justifyContent: "space-between" }}>
           <h2 className="group-title" style={{ margin: 0, fontSize: 40 }}>{title}</h2>
-          <button className="btn big secondary" type="button" onClick={onClose}><Icon name="close" /> Cancel</button>
+          <div className="row" style={{ gap: 10 }}>
+            {onClear && <button className="btn big" type="button" onClick={onClear}>No libero</button>}
+            <button className="btn big secondary" type="button" onClick={onClose}><Icon name="close" /> Cancel</button>
+          </div>
         </div>
         {roster.length > 0 && (
           <div className="card-rack" ref={rack}

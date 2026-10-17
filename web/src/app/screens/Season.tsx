@@ -23,7 +23,8 @@ export function Season() {
       const out: MatchLine[] = [];
       const allRallies: RallyRecord[] = [];
       for (const r of recs) {
-        const s = await MatchSession.open(r.id);
+        // One damaged match must not blank the season: it is left out.
+        const s = await MatchSession.open(r.id).catch(() => undefined);
         if (!s) continue;
         const rs = s.state.rallies;
         allRallies.push(...rs);
@@ -37,7 +38,7 @@ export function Season() {
       }
       setLines(out);
       setRallies(allRallies);
-    })();
+    })().catch(() => setLines([]));
   }, []);
 
   if (lines === null || lines.length === 0) {
@@ -64,7 +65,9 @@ export function Season() {
   const perRotation = RotationStats.records(rallies, "home");
   const perPage = portrait ? 4 : 5;
   const pages = Math.max(1, Math.ceil(lines.length / perPage));
-  const shown = lines.slice(page * perPage, page * perPage + perPage);
+  // Turning the iPad changes the page size; stay on a page that exists.
+  const at = Math.min(page, pages - 1);
+  const shown = lines.slice(at * perPage, at * perPage + perPage);
 
   return (
     <div className="screen">
@@ -109,9 +112,9 @@ export function Season() {
             </div>
             {pages > 1 && (
               <div className="pager">
-                <button className="btn big" disabled={page === 0} onClick={() => setPage(page - 1)} aria-label="Newer matches"><Icon name="chevronLeft" /> Newer</button>
-                <span>{page + 1} / {pages}</span>
-                <button className="btn big" disabled={page >= pages - 1} onClick={() => setPage(page + 1)} aria-label="Older matches">Older <Icon name="chevronRight" /></button>
+                <button className="btn big" disabled={at === 0} onClick={() => setPage(at - 1)} aria-label="Newer matches"><Icon name="chevronLeft" /> Newer</button>
+                <span>{at + 1} / {pages}</span>
+                <button className="btn big" disabled={at >= pages - 1} onClick={() => setPage(at + 1)} aria-label="Older matches">Older <Icon name="chevronRight" /></button>
               </div>
             )}
           </div>
