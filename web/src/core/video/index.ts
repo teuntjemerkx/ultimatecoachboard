@@ -10,7 +10,7 @@ export {
 } from "./playerTracking";
 export {
   PoseFitter, skeletonKeypoints, defaultPoseFitterSettings,
-  type PoseEstimate, type PoseTrackFrame, type PoseTrackResult, type PoseFitterSettings, type FrameRun,
+  type PoseEstimate, type PoseTrackFrame, type PoseTrackResult, type PoseFitterSettings, type FrameRun, type SizePlacement,
 } from "./poseFitting";
 export {
   BallSegment, BallAnchor, BallReconstruction, ballSize, defaultBallSettings,

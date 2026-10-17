@@ -357,6 +357,8 @@ export const VideoReconstructor = {
     }
 
     progress?.(0.2, "Reading body positions");
+    // Web addition: the size bodies show where their feet are in this clip, for placing jumpers by their size.
+    const bodySize = new PoseFitter(SceneToken.defaultStature("")).sizeBaseline(frames.flatMap((f) => f.detections), camera);
     const fitters = new Map<string, PoseFitter>();
     const players: VideoPlayerTrack[] = [];
     tracked.forEach((tr, n) => {
@@ -369,7 +371,11 @@ export const VideoReconstructor = {
         fitters.set(key, fitter);
       }
       const poseFrames = tr.samples.map((s) => ({ time: s.time, floor: s.floor, measured: s.measured, keypoints: s.keypoints }));
-      const fit = fitter.fitTrack(poseFrames, camera, tr.side === "home" ? Math.PI : 0);
+      const facing = tr.side === "home" ? Math.PI : 0;
+      let fit = fitter.fitTrack(poseFrames, camera, facing);
+      // Web addition: jumpers the feet misplace stand where their size puts them, and are fitted again there.
+      const placed = fitter.placeJumpers(poseFrames, fit.estimates, camera, bodySize);
+      if (placed) fit = fitter.fitTrack(placed, camera, facing);
       // Web addition: positions smoothed through the gaps with the camera's own uncertainty, jumps only where and as
       // long as volleyball jumps happen (TrackCleanup): no gliding, wobbling or flying players.
       const samples = TrackCleanup.clean(tr.samples.map((s, k) => {

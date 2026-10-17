@@ -11,8 +11,8 @@ import { SceneToken } from "../zones/tacticalScene";
 import { BallAnchor, BallReconstruction, BallSegment, defaultBallSettings, type BallObservation } from "./ballReconstruction";
 import { CourtCalibration, CourtLandmark, VideoCamera } from "./courtCalibration";
 import { CleanPlate, HallEnvironment } from "./environment";
-import { PersonDetection, PlayerTracker, type TrackedPlayer, type VideoFrameObservation } from "./playerTracking";
-import { PoseFitter, type PoseTrackFrame } from "./poseFitting";
+import { PersonDetection, PlayerTracker, type Keypoints, type TrackedPlayer, type VideoFrameObservation } from "./playerTracking";
+import { PoseFitter, type PoseTrackFrame, type PoseTrackResult } from "./poseFitting";
 import { SplitMix64, Synth, chance, gaussian, shuffled, uniform, unit } from "./testSupport";
 import { Hungarian, ImagePoint, LevenbergMarquardt, LinearAlgebra, Matrix3, wrappedAngle } from "./videoMath";
 import { VideoPlayerSample, VideoPlayerTrack, VideoReconstructor, VideoScene, type ReconstructionStage } from "./videoScene";
@@ -481,6 +481,67 @@ describe("PoseVideoTests", () => {
     const long = PoseFitter.correctAirborneFloor(floor, times.map((t) => t * 5), airborne);
     expect(long).toEqual(floor);
   });
+
+  it("a jump server near a low camera stands where his size puts him, not his feet", () => {
+    // The OK Hoče camera, 2.6 m up behind the end line. The server holds the ball up (armCock, airborne in the library)
+    // for 1.5 s with his feet below the frame, then jump-serves: 0.5 m up from 1.6 to 2.2 s, drifting into the court.
+    const cam = VideoCamera.lookingAt(new V3(-1.9, 2.6, 23.1), new V3(0.97, 2.16, 0), 360 / Math.tan(deg(10)), 1280, 720);
+    const fitter = new PoseFitter(1.95);
+    const takeOff = 1.6, landing = 2.2, top = 0.5;
+    const lift = (t: number) => (t > takeOff && t < landing ? (4 * top * (t - takeOff) * (landing - t)) / (landing - takeOff) ** 2 : 0);
+    const where = (t: number) => ({ x: -3.3 + 0.2 * Math.max(0, t - takeOff), z: t < takeOff ? 9.9 : 9.9 - 2.4 * (t - takeOff) });
+    const inPicture = (kp: Keypoints): Keypoints => Object.fromEntries(Object.entries(kp).filter(([, o]) => cam.contains(o!.point)));
+    for (let seed = 1; seed <= 8; seed++) {
+      const rng = new SplitMix64(1200 + seed);
+      const label = `seed ${seed}`;
+      // A player of his own size, not the model's.
+      const s = new SkeletonModel(new BodyMetrics(uniform(rng, 1.86, 2.0)));
+      const frames: PoseTrackFrame[] = strideThrough(0, 2.6, 0.1).map((t) => {
+        const posture: Posture = t < takeOff ? "armCock" : t < landing ? "jumpServe" : "landing";
+        const kp = inPicture(Synth.keypoints(s, posture, where(t), Math.PI, cam, rng, { totalJump: lift(t), noise: 2, drop: 0.05 }));
+        const d = PersonDetection.fromKeypoints(kp, 0.9, cam);
+        return { time: t, floor: d?.floor ?? where(t), measured: d?.floor, keypoints: kp };
+      });
+      const peak = frames.findIndex((f) => Math.abs(f.time - 1.9) < 1e-6);
+      const off = (fit: PoseTrackResult, k: number) => Math.hypot(fit.floor[k].x - where(frames[k].time).x, fit.floor[k].z - where(frames[k].time).z);
+      // As the clip went: the posture is airborne all along, too long for a take-off-to-landing line, and the jump is
+      // measured above a floor point taken from the same feet in the air.
+      const before = fitter.fitTrack(frames, cam, Math.PI);
+      expect(off(before, peak), `${label}: the feet put him metres into the court`).toBeGreaterThan(2);
+      expect(before.estimates[peak].jump, `${label}: no jump`).toBeLessThan(0.15);
+      const placed = fitter.placeJumpers(frames, before.estimates, cam);
+      expect(placed, label).toBeDefined();
+      placed!.forEach((f, k) => {
+        if (lift(f.time) === 0) expect(f.placed, `${label}: ${f.time.toFixed(1)} s, on the floor, keeps its feet`).toBeUndefined();
+      });
+      const after = fitter.fitTrack(placed!, cam, Math.PI);
+      frames.forEach((f, k) => {
+        if (lift(f.time) === 0) return;
+        expect(off(after, k), `${label}: ${f.time.toFixed(1)} s where he is`).toBeLessThan(0.7);
+        expectClose(after.estimates[k].jump, lift(f.time), 0.15, `${label}: ${f.time.toFixed(1)} s jump`);
+      });
+    }
+
+    // Players standing in an airborne posture (arms up at the net, an attack read on a standing player) are not moved:
+    // only feet the size puts well above the floor are. Players of 1.80 to 2.05 m, on any camera.
+    let moved = 0, tried = 0;
+    const rng = new SplitMix64(1300);
+    for (const camera of [cam, Synth.tripod, Synth.stands]) {
+      for (let i = 0; i < 60; i++) {
+        const s = new SkeletonModel(new BodyMetrics(uniform(rng, 1.8, 2.05)));
+        const posture: Posture = (["block", "attack", "jumpServe", "armCock"] as const)[i % 4];
+        const at = { x: uniform(rng, -4, 4), z: uniform(rng, -8, 9) };
+        const kp = Synth.keypoints(s, posture, at, uniform(rng, -Math.PI, Math.PI), camera, rng, { totalJump: 0, noise: 2, drop: 0.05 });
+        const d = PersonDetection.fromKeypoints(kp, 0.9, camera);
+        const e = d && fitter.fit(kp, d.floor, camera);
+        if (!d || !e || !fitter.isAirborne(e.posture)) continue;
+        tried += 1;
+        if (fitter.placeJumper(e.posture, e.yaw, kp, d.floor, camera)) moved += 1;
+      }
+    }
+    expect(tried).toBeGreaterThan(100);
+    expect(moved, `standing players moved, of ${tried}`).toBe(0);
+  }, 60_000);
 
   it("detection from keypoints stands on the feet", () => {
     const rng = new SplitMix64(34);

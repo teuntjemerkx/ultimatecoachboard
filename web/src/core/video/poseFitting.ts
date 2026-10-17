@@ -57,6 +57,11 @@ export interface PoseTrackFrame {
    */
   measured?: FloorPoint;
   keypoints?: Keypoints;
+  /**
+   * Web addition: the floor points are where the body's size puts a jumper (`PoseFitter.placeJumpers`), not where the
+   * feet do, so they hold in the air too: no take-off-to-landing line replaces them.
+   */
+  placed?: boolean;
 }
 
 /** The fit of a whole track. */
@@ -84,12 +89,41 @@ export interface PoseFitterSettings {
   robustScale: number;
   /** Airborne runs longer than this are not jumps (misclassified) and keep their floor points. */
   maxAirTime: number;
+  /**
+   * Web addition, placing a body by its size in the picture (`placeBySize`): the keypoints it reads (confidence), how
+   * much a body's size at a given distance varies (a fraction: players' statures, and postures the library holds only
+   * roughly), how many standard deviations above the floor its feet must be before the size, not the feet, places a
+   * jumper (`placeJumper`), and how many for the frames of the same jump, within `jumpSpan` seconds of such a frame
+   * (`placeJumpers`).
+   */
+  sizeConfidence: number;
+  sizeSpread: number;
+  sizeSigmas: number;
+  sizeSigmasInJump: number;
+  jumpSpan: number;
 }
 
 export const defaultPoseFitterSettings: Readonly<PoseFitterSettings> = {
   turnPenalty: 0.005, maxTurnRate: 4 * Math.PI, switchPenalty: 0.006, facingPriorWeight: 0.0003, minConfidence: 0.05,
-  robustScale: 0.1, maxAirTime: 1.5,
+  robustScale: 0.1, maxAirTime: 1.5, sizeConfidence: 0.5, sizeSpread: 0.07, sizeSigmas: 2.5, sizeSigmasInJump: 1, jumpSpan: 0.5,
 };
+
+/** Where a body's size in the picture puts it (`PoseFitter.placeBySize`). */
+export interface SizePlacement {
+  /** The pelvis over the floor, as `SkeletonModel.pose` stands a body. */
+  floor: FloorPoint;
+  /** The floor under the ankles, as a detection's floor point (`PersonDetection.floor`). */
+  feet: FloorPoint;
+  /** Feet above their standing contact (metres), as `PoseEstimate.jump`; negative when the size puts them below it. */
+  jump: number;
+  /** One standard deviation of `jump` from how uncertain the size is. */
+  sigma: number;
+  /** The body's size in the picture over that of the posed model at the floor point it was placed from. */
+  scale: number;
+}
+
+/** The highest the feet of a jump get (metres); a size that puts them higher is a misreading. */
+const highestFeet = 1.2;
 
 /** Costs of every (posture, yaw bin) for one frame, and the weight (0...1) of the frame's evidence. */
 class Costs {
@@ -280,6 +314,201 @@ export class PoseFitter {
   }
 
   /**
+   * Web addition: where the body's size in the picture puts the player along the viewing ray of the legs. The posture
+   * at that facing, posed at `floor`, is projected and scaled onto the confident keypoints (`sizeConfidence`, at least
+   * six, head and legs among them); a body s times the model's size stands at 1/s of its depth (`expected` is the size a
+   * body shows where its feet are, e.g. a clip's own, see `sizeBaseline`). The ankles (else knees) are then on their
+   * ray at that depth: their height less the posture's standing height is the jump, the floor under them the place.
+   * The jump's sigma is the size's (`sizeSpread`, and two pixels of keypoint noise over the body's height) times the
+   * camera's height above the legs: along a ray a fraction e nearer, a point is e of that higher. Undefined without the
+   * keypoints for it.
+   */
+  placeBySize(posture: Posture, yaw: number, keypoints: Keypoints, floor: FloorPoint, camera: VideoCamera, expected = 1):
+    SizePlacement | undefined {
+    const p = PoseFitter.index(posture);
+    const r = camera.matrix, m = r.mul(Matrix3.yaw(yaw));
+    const base = r.apply(V3.fromFloor(floor, 0).sub(camera.center));
+    const f = camera.focalLength, least = this.settings.sizeConfidence;
+    const ox: number[] = [], oy: number[] = [], qx: number[] = [], qy: number[] = [], qz: number[] = [], ws: number[] = [];
+    let head = false, legs = false;
+    PoseFitter.keypointList.forEach((k, i) => {
+      const o = keypoints[k];
+      if (!o || !(o.confidence >= least)) return;
+      const c = base.add(m.apply(this.model[p][i]));
+      if (!(c.z > 0.3)) return;
+      ox.push(o.point.x);
+      oy.push(o.point.y);
+      qx.push((f * c.x) / c.z);
+      qy.push((f * c.y) / c.z);
+      qz.push(c.z);
+      ws.push(o.confidence);
+      if (PoseFitter.headKeypoints.has(k)) head = true;
+      if (PoseFitter.legKeypoints.has(k)) legs = true;
+    });
+    if (ws.length < 6 || !head || !legs) return undefined;
+    let w = 0, mox = 0, moy = 0, mqx = 0, mqy = 0, mz = 0;
+    for (let i = 0; i < ws.length; i++) {
+      w += ws[i];
+      mox += ws[i] * ox[i];
+      moy += ws[i] * oy[i];
+      mqx += ws[i] * qx[i];
+      mqy += ws[i] * qy[i];
+      mz += ws[i] * qz[i];
+    }
+    mox /= w;
+    moy /= w;
+    mqx /= w;
+    mqy /= w;
+    mz /= w;
+    // Least-squares scale of the model's layout onto the keypoints', both about their centroids.
+    let num = 0, den = 0, top = Infinity, bottom = -Infinity;
+    for (let i = 0; i < ws.length; i++) {
+      const ax = qx[i] - mqx, ay = qy[i] - mqy;
+      num += ws[i] * (ax * (ox[i] - mox) + ay * (oy[i] - moy));
+      den += ws[i] * (ax * ax + ay * ay);
+      top = Math.min(top, oy[i]);
+      bottom = Math.max(bottom, oy[i]);
+    }
+    if (!(den > 0) || !(num > 0)) return undefined;
+    const scale = num / den;
+    const depth = (mz * expected) / scale;
+    const spread = Math.hypot(this.settings.sizeSpread, 2 / Math.max(bottom - top, 1));
+    const rot = Matrix3.yaw(yaw);
+    for (const group of PoseFitter.legGroups) {
+      let sx = 0, sy = 0, gw = 0;
+      let v = new V3(0, 0, 0);
+      for (const k of group) {
+        const o = keypoints[k];
+        if (!o || !(o.confidence >= least)) continue;
+        sx += o.confidence * o.point.x;
+        sy += o.confidence * o.point.y;
+        gw += o.confidence;
+        v = v.add(this.model[p][PoseFitter.keypointList.indexOf(k)].mul(o.confidence));
+      }
+      if (!(gw > 0)) continue;
+      v = v.mul(1 / gw);
+      // The legs' depth: the body's, plus how far the posture holds them in front of or behind its middle.
+      const legDepth = depth + base.add(m.apply(v)).z - mz;
+      const ray = camera.ray({ x: sx / gw, y: sy / gw });
+      const along = ray.direction.dot(camera.forward);
+      if (!(legDepth > 0.3) || !(along > 1e-6)) return undefined;
+      const point = ray.origin.add(ray.direction.mul(legDepth / along));
+      const offset = rot.apply(new V3(v.x, 0, v.z)), feet = rot.apply(this.footOffset[p]);
+      const pelvis = { x: point.x - offset.x, z: point.z - offset.z };
+      return { floor: pelvis, feet: { x: pelvis.x + feet.x, z: pelvis.z + feet.z }, jump: point.y - (v.y - this.libraryJumps[p]),
+        sigma: spread * Math.max(0, camera.center.y - point.y), scale };
+    }
+    return undefined;
+  }
+
+  /**
+   * Web addition: a jumper the feet misplace. Seen from a low camera, feet in the air read as a floor point farther
+   * along their ray: 0.5 m up, from 2.6 m up, puts a jump server on the OK Hoče clip 3.3 m into the court. The body's
+   * size does not move with the feet. So a frame the track's fit holds airborne (`posture`, `yaw`) is placed by its
+   * size (`placeBySize`), its posture fitted again there (it was chosen at the feet's floor point, for a body of the
+   * wrong size), and placed again: when the feet are then at least `sigmas` of the size's standard deviations above the
+   * floor (so the size places the body better than the feet, by as much) and no higher than a jump gets, that
+   * placement. `expected` is the size a body shows where its feet are (`standingSize`, `sizeBaseline`).
+   */
+  placeJumper(posture: Posture, yaw: number, keypoints: Keypoints, floor: FloorPoint, camera: VideoCamera, expected = 1,
+    sigmas = this.settings.sizeSigmas): SizePlacement | undefined {
+    if (!this.isAirborne(posture) || !this.sizable(keypoints)) return undefined;
+    const rough = this.placeBySize(posture, yaw, keypoints, floor, camera, expected);
+    if (!rough || !(rough.jump > 0)) return undefined;
+    const there = this.fit(keypoints, rough.floor, camera);
+    const placed = there && this.placeBySize(there.posture, there.yaw, keypoints, rough.floor, camera, expected);
+    if (!placed || !(placed.jump > sigmas * placed.sigma) || !(placed.jump <= highestFeet)) return undefined;
+    return placed;
+  }
+
+  /**
+   * Web addition: a track's frames with each jumper its feet misplace (`placeJumper`, airborne in `estimates`, the
+   * track's fit) where the body's size puts it, the detection's floor point and the track's: fitted again, the posture
+   * is read there and the jump measured above the floor where the player is (the tracker ran on the feet's floor
+   * points, and their leap along the view is how it took them). The size a body shows where its feet are is the
+   * player's own when the track stands on the floor in sight often enough (`standingSize`), else `expected`. A frame
+   * the size puts `sizeSigmas` up starts a jump; the airborne frames within `jumpSpan` seconds of it need only
+   * `sizeSigmasInJump` (the take-off and the landing are lower). Undefined when there is none.
+   */
+  placeJumpers(frames: readonly PoseTrackFrame[], estimates: readonly PoseEstimate[], camera: VideoCamera, expected = 1):
+    PoseTrackFrame[] | undefined {
+    const settings = this.settings;
+    const size = this.standingSize(frames, estimates, camera) ?? expected;
+    const found = frames.map((f, k) => {
+      const e = estimates[k];
+      return e && f.keypoints && f.measured
+        ? this.placeJumper(e.posture, e.yaw, f.keypoints, f.measured, camera, size, settings.sizeSigmasInJump) : undefined;
+    });
+    const jumps = found.flatMap((p, k) => (p && p.jump > settings.sizeSigmas * p.sigma ? [frames[k].time] : []));
+    if (jumps.length === 0) return undefined;
+    return frames.map((f, k) => {
+      const p = found[k];
+      if (!p || !jumps.some((t) => Math.abs(t - f.time) <= settings.jumpSpan)) return f;
+      return { ...f, floor: p.feet, measured: p.feet, placed: true };
+    });
+  }
+
+  /**
+   * Web addition: the size a track's body shows where its feet are, for `placeBySize`: the median scale over its frames
+   * standing in sight (grounded posture in `estimates`, ankles seen) when there are at least three; else undefined.
+   */
+  standingSize(frames: readonly PoseTrackFrame[], estimates: readonly PoseEstimate[], camera: VideoCamera): number | undefined {
+    const scales = frames.flatMap((f, k) => {
+      const e = estimates[k];
+      const scale = e && f.keypoints && f.measured ? this.standingScale(f.keypoints, f.measured, camera, e) : undefined;
+      return scale === undefined ? [] : [scale];
+    });
+    return scales.length >= 3 ? PoseFitter.median(scales) : undefined;
+  }
+
+  /**
+   * Web addition: the size bodies show where their feet are, for `placeBySize`: the median scale of the detections
+   * standing on the floor (grounded posture, ankles seen) that the size can place, when there are at least
+   * `minCount`; else 1. It takes out what all of a clip's bodies share: a focal length a little off, players shorter or
+   * taller than the model.
+   */
+  sizeBaseline(detections: readonly { floor: FloorPoint; keypoints: Keypoints }[], camera: VideoCamera, minCount = 20): number {
+    const scales = detections.flatMap((d) => {
+      const scale = this.standingScale(d.keypoints, d.floor, camera);
+      return scale === undefined ? [] : [scale];
+    });
+    return scales.length >= minCount ? PoseFitter.median(scales) : 1;
+  }
+
+  /**
+   * The scale (`placeBySize`) of a body standing at `floor` with its ankles seen, in its posture (`estimate`, else the
+   * single frame's fit); undefined when that posture is airborne or the keypoints do not do.
+   */
+  private standingScale(keypoints: Keypoints, floor: FloorPoint, camera: VideoCamera, estimate?: PoseEstimate): number | undefined {
+    const least = this.settings.sizeConfidence;
+    if (!this.sizable(keypoints) || !PoseFitter.legGroups[0].some((k) => (keypoints[k]?.confidence ?? 0) >= least)) return undefined;
+    const e = estimate ?? this.fit(keypoints, floor, camera);
+    if (!e || this.isAirborne(e.posture)) return undefined;
+    return this.placeBySize(e.posture, e.yaw, keypoints, floor, camera)?.scale;
+  }
+
+  private static median(values: readonly number[]): number {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  }
+
+  /** Whether the keypoints are enough for `placeBySize`: six confident ones, head and legs among them. */
+  private sizable(keypoints: Keypoints): boolean {
+    let n = 0, head = false, legs = false;
+    for (const k of PoseFitter.keypointList) {
+      if (!((keypoints[k]?.confidence ?? 0) >= this.settings.sizeConfidence)) continue;
+      n += 1;
+      if (PoseFitter.headKeypoints.has(k)) head = true;
+      if (PoseFitter.legKeypoints.has(k)) legs = true;
+    }
+    return n >= 6 && head && legs;
+  }
+
+  private static readonly headKeypoints: ReadonlySet<BodyKeypoint> = new Set(["nose", "leftEye", "rightEye", "leftEar", "rightEar"]);
+  private static readonly legGroups: readonly (readonly BodyKeypoint[])[] = [["leftAnkle", "rightAnkle"], ["leftKnee", "rightKnee"]];
+  private static readonly legKeypoints: ReadonlySet<BodyKeypoint> = new Set(PoseFitter.legGroups.flat());
+
+  /**
    * Fits a whole track with temporal smoothing: a Viterbi pass over facing bins (each bin scored by its best posture,
    * turning costs `turnPenalty` per radian and is limited to `maxTurnRate`), then a Viterbi pass over postures at the
    * chosen facings (`switchPenalty` per change); the facing is refined by a parabola around the chosen bin. Floor
@@ -393,13 +622,15 @@ export class PoseFitter {
     // frames (the tracker's smoothed path has their bias smeared into take-off and landing).
     const airborne = estimates.map((e) => this.isAirborne(e.posture));
     const times = frames.map((f) => f.time);
+    // Web addition: a jumper placed by its size stands where it is in the air too (`PoseTrackFrame.placed`).
+    const offFloor = airborne.map((a, t) => a && frames[t].placed !== true);
     const root = (feet: FloorPoint, t: number): FloorPoint => {
-      if (airborne[t]) return feet;
+      if (offFloor[t]) return feet;
       const o = Matrix3.yaw(estimates[t].yaw).apply(this.footOffset[postureIndex[t]]);
       return { x: feet.x - o.x, z: feet.z - o.z };
     };
-    const floor = PoseFitter.correctAirborneFloor(frames.map((f, k) => root(f.floor, k)), times, airborne, settings.maxAirTime);
-    const runs = PoseFitter.airborneRuns(times, airborne, settings.maxAirTime);
+    const floor = PoseFitter.correctAirborneFloor(frames.map((f, k) => root(f.floor, k)), times, offFloor, settings.maxAirTime);
+    const runs = PoseFitter.airborneRuns(times, offFloor, settings.maxAirTime);
     let first = -1, last = -1;
     frames.forEach((f, k) => { if (f.measured) { if (first < 0) first = k; last = k; } });
     if (first >= 0 && first < last) {
