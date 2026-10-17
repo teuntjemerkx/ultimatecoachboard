@@ -76,7 +76,7 @@
   text-shadow: 0 0 3px #000;
 }
 
-/* Step 3 */
+/* Step 4: building */
 .video-building { flex: 1; justify-content: center; }
 .video-progress { width: min(420px, 80vw); height: 8px; border-radius: 4px; background: var(--c-hairline); overflow: hidden; }
 .video-progress span { display: block; height: 100%; background: var(--c-led); transition: width 0.2s; }
@@ -140,4 +140,17 @@
   .video-switch button { min-width: 56px; font-size: 16px; }
   .video-time { min-width: 90px; font-size: 13px; }
   .video-media.corner { width: 46%; }
+}
+
+/* Step 3: tapping the players to follow */
+.video-people rect { fill: transparent; stroke-width: 2; }
+.video-people rect.free { stroke: rgba(255, 255, 255, 0.55); stroke-dasharray: 5 4; }
+.video-people rect.picked { stroke-width: 3; }
+.video-people rect.picked.home { stroke: var(--c-home); fill: color-mix(in srgb, var(--c-home) 22%, transparent); }
+.video-people rect.picked.opponent { stroke: var(--c-opponent); fill: color-mix(in srgb, var(--c-opponent) 22%, transparent); }
+.video-people rect.tapped { stroke-dasharray: 2 3; }
+.video-finding {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 80%; padding: 12px 18px; border-radius: 999px;
+  background: color-mix(in srgb, var(--c-bg) 82%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  color: var(--c-text); font-weight: 600; text-align: center; pointer-events: none;
 }

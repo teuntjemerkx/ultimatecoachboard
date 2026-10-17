@@ -1,5 +1,5 @@
 import {
-  PersonDetection, VideoScene, type ImagePoint, type Keypoints, type VideoCamera, type VideoFrameObservation,
+  PersonDetection, VideoScene, type ImagePoint, type Keypoints, type TrackLock, type VideoCamera, type VideoFrameObservation,
 } from "../../core/video";
 import { grabFrame, type Clip } from "./clip";
 import { Detector, type FrameDetections } from "./detect";
@@ -71,17 +71,24 @@ export function jerseyColour(p: Person, pixels: Uint8ClampedArray, width: number
   return n > 0 ? [r / n / 255, g / n / 255, b / n / 255] : undefined;
 }
 
-/** People in a detector frame as the core's detections, standing where their feet meet the floor. */
+/**
+ * People in a detector frame as the core's detections, standing where their feet meet the floor. The pose model reads
+ * a crop around each person's box, and on a far, small player it now and then puts joints on a neighbour or on the
+ * floor beside them, metres away on the court: a keypoint outside the person's box (with a little room) is left out,
+ * and the feet are read from joints the model is fairly sure of (0.3), else from the bottom of the box.
+ */
 export function observation(time: number, d: FrameDetections, camera: VideoCamera, ball?: ImagePoint,
   appearance?: readonly (number[] | undefined)[]): VideoFrameObservation {
   const detections: PersonDetection[] = [];
   for (const [i, p] of d.people.entries()) {
     const kp: Keypoints = {};
+    const mx = 0.25 * p.box.w, my = 0.08 * p.box.h;
     for (const [name, k] of Object.entries(p.keypoints) as [keyof Keypoints, { x: number; y: number; confidence: number }][]) {
-      if (k.confidence > 0.1) kp[name] = { point: { x: k.x, y: k.y }, confidence: k.confidence };
+      const inBox = k.x >= p.box.x - mx && k.x <= p.box.x + p.box.w + mx && k.y >= p.box.y - my && k.y <= p.box.y + p.box.h + my;
+      if (k.confidence > 0.1 && inBox) kp[name] = { point: { x: k.x, y: k.y }, confidence: k.confidence };
     }
     const det = PersonDetection.fromKeypoints(kp, p.score, camera, {
-      boxHeight: p.box.h, boxBottom: { x: p.box.x + p.box.w / 2, y: p.box.y + p.box.h }, appearance: appearance?.[i],
+      boxHeight: p.box.h, boxBottom: { x: p.box.x + p.box.w / 2, y: p.box.y + p.box.h }, appearance: appearance?.[i], minConfidence: 0.3,
     });
     if (det) detections.push(det);
   }
@@ -150,6 +157,28 @@ export function pickBalls(frames: readonly { time: number; balls: BallCandidates
     if (!choice) return undefined;
     path.push({ t: f.time, p: { x: choice.x, y: choice.y } });
     return { x: choice.x, y: choice.y };
+  });
+}
+
+/** Whether a person's box stands near the court: only they get the pose model (the stands and the benches keep their box). */
+export function standsNearCourt(camera: VideoCamera) {
+  return (box: { x: number; y: number; w: number; h: number }) => {
+    const p = camera.floorPoint({ x: box.x + box.w / 2, y: box.y + box.h });
+    return p !== undefined && Math.abs(p.x) <= 7.5 && Math.abs(p.z) <= 12.5;
+  };
+}
+
+/**
+ * The people on one frame (the still the coach taps the players on), found as a build finds them, so a tap on one
+ * of them is the detection the build sees in that frame.
+ */
+export async function peopleOnStill(still: HTMLCanvasElement, camera: VideoCamera):
+  Promise<{ detection: PersonDetection; box: { x: number; y: number; w: number; h: number } }[]> {
+  const det = await loadDetector();
+  const found = det.detect(still, still.width, still.height, standsNearCourt(camera));
+  return found.people.flatMap((p) => {
+    const [detection] = observation(0, { people: [p], balls: [] }, camera).detections;
+    return detection ? [{ detection, box: p.box }] : [];
   });
 }
 
@@ -237,6 +266,8 @@ const BALL_FRAME_COST = 0.3;
  */
 export async function buildRally(options: {
   clip: Clip; start: number; end: number; camera: VideoCamera; netHeight: number; women: boolean; title: string;
+  /** The players the coach tapped (times from `start`), followed through the whole clip. */
+  locks?: TrackLock[];
   onProgress: (fraction: number, stage: string) => void; signal?: AbortSignal;
 }): Promise<BuildResult> {
   const { clip, start, end, camera, signal, onProgress } = options;
@@ -249,11 +280,7 @@ export async function buildRally(options: {
   const plateCount = Math.min(24, count);
   const plateEvery = count / plateCount;
   const pw = Math.min(960, clip.width), ph = Math.round((pw * clip.height) / clip.width);
-  // Only people standing near the court get the pose model; the stands and the benches keep their boxes.
-  const nearCourt = (box: { x: number; y: number; w: number; h: number }) => {
-    const p = camera.floorPoint({ x: box.x + box.w / 2, y: box.y + box.h });
-    return p !== undefined && Math.abs(p.x) <= 7.5 && Math.abs(p.z) <= 12.5;
-  };
+  const nearCourt = standsNearCourt(camera);
   const work = document.createElement("canvas");
   const small = document.createElement("canvas");
   small.width = pw;
@@ -336,7 +363,7 @@ export async function buildRally(options: {
   });
   observations.push(...sampled.map((f, k) => observation(f.time, f.detections, camera, ballAt.get(k), f.appearance)));
   observations.sort((a, b) => a.time - b.time);
-  if (import.meta.env.DEV) (globalThis as { __videoDebug?: unknown }).__videoDebug = { observations, camera: camera.encode() };
+  if (import.meta.env.DEV) (globalThis as { __videoDebug?: unknown }).__videoDebug = { observations, camera: camera.encode(), locks: options.locks };
   const people = sampled.map((f) => f.detections.people.length), posed = sampled.map((f) =>
     f.detections.people.filter((p) => Object.keys(p.keypoints).length > 0).length);
   let report = `${count} frames and ${ballOnly.length} for the ball alone (${repeats} repeated frames skipped), `
@@ -346,12 +373,13 @@ export async function buildRally(options: {
 
   onProgress(0.7, "Tracking players");
   const reply = await runWorker({ kind: "reconstruct", frames: observations, camera: camera.encode(), netHeight: options.netHeight,
-    women: options.women, title: options.title }, [], signal, (f, stage) => onProgress(0.7 + 0.3 * f, stage));
+    women: options.women, title: options.title, locks: options.locks }, [], signal, (f, stage) => onProgress(0.7 + 0.3 * f, stage));
   if (reply.kind !== "scene") throw new BuildError("The rebuild did not finish.");
   const scene = VideoScene.decode(reply.scene);
   scene.clipStart = start;
   scene.plateFile = plate ? "plate.jpg" : undefined;
   report += `; rebuilt ${scene.players.length} players (${scene.players.filter((p) => p.side === "home").length} home, `
-    + `${scene.players.filter((p) => p.side === "opponent").length} away), ${scene.ball.length} ball flights over ${scene.duration.toFixed(1)} s`;
+    + `${scene.players.filter((p) => p.side === "opponent").length} away, ${options.locks?.length ?? 0} tapped), `
+    + `${scene.ball.length} ball flights over ${scene.duration.toFixed(1)} s`;
   return { scene, plate, report };
 }

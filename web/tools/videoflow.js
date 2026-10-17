@@ -48,7 +48,17 @@ export async function markCorners(targets = [[142, 136.5], [463.5, 136.5], [554.
   return document.querySelector(".video-badge")?.textContent;
 }
 
+/** On to tapping the players (from the court step), and waits until the people on the still are found. */
+export async function toPlayers() {
+  if (document.querySelector(".video-dot")) document.querySelector(".video-mark-foot .btn.primary").click();
+  await wait(300);
+  while (document.querySelector(".video-finding")?.textContent.startsWith("Finding")) await wait(300);
+  return document.querySelector(".video-mark-foot .video-badge")?.textContent;
+}
+
+/** Builds with the players picked (from the court step: those inside the lines). */
 export async function build() {
+  await toPlayers();
   document.querySelector(".video-mark-foot .btn.primary").click();
   const t0 = performance.now();
   await wait(1500);

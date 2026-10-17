@@ -5,7 +5,7 @@ export {
   type VideoCameraJSON, type CalibrationQuality, type CalibrationResult,
 } from "./courtCalibration";
 export {
-  BodyKeypoint, PersonDetection, TrackedPlayer, PlayerTracker, defaultTrackerSettings,
+  BodyKeypoint, PersonDetection, TrackedPlayer, PlayerTracker, defaultTrackerSettings, type TrackLock,
   type Keypoint2D, type Keypoints, type VideoFrameObservation, type TrackSample, type PlayerTrackerSettings,
 } from "./playerTracking";
 export {

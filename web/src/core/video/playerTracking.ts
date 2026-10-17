@@ -126,6 +126,14 @@ export interface TrackSample {
   occluded: boolean;
 }
 
+/** A player the coach tapped on one frame of the clip (web addition), to be followed through the whole clip. */
+export interface TrackLock {
+  /** Seconds from the start of the clip of the frame tapped. */
+  time: number;
+  /** The player's feet in that frame, pixels. */
+  foot: ImagePoint;
+}
+
 /** A player followed through the clip. */
 export interface TrackedPlayer {
   id: string;
@@ -416,6 +424,142 @@ export class PlayerTracker {
   }
 
   /**
+   * Web addition: follows the players the coach tapped (`locks`) through the whole clip, forward and backward from the
+   * frame each was tapped on. A lock starts from the detection whose feet are nearest the tap (within 3% of the frame
+   * width), else from the tapped point itself. It never ends: while its player is not detected it coasts (the velocity
+   * carries it for half a second, then it waits where it was), and it takes them back when they are, within the
+   * physical gate of the time unseen. Everyone else gets a passing track of their own, as in `track`, that competes
+   * for the detections: a lock waiting for its player does not take a person standing nearby, who is already someone
+   * else's. Each detection counts with the camera's own uncertainty at that spot (`floorNoise`), not a fixed 10 cm:
+   * from a low camera a far player's floor point wanders metres along the view, and such a player would otherwise be
+   * lost every few frames. Returns the locks' tracks (spanning the clip, unseen frames occluded) and the detections
+   * they took.
+   */
+  follow(input: readonly VideoFrameObservation[], locks: readonly TrackLock[], camera: VideoCamera):
+    { tracks: TrackedPlayer[]; taken: Set<PersonDetection> } {
+    const settings = this.settings;
+    const taken = new Set<PersonDetection>();
+    const frames = input.filter((f) => f.detections.length > 0).sort((a, b) => a.time - b.time);
+    if (frames.length === 0 || locks.length === 0) return { tracks: [], taken };
+    const times = frames.map((f) => f.time);
+    const r = settings.measurementNoise * settings.measurementNoise, q = settings.accelerationNoise;
+    const radius = Math.max(12, 0.03 * camera.width);
+    const seeds: { frame: number; det: PersonDetection }[] = [];
+    for (const lock of locks) {
+      let frame = 0;
+      times.forEach((t, k) => { if (Math.abs(t - lock.time) < Math.abs(times[frame] - lock.time)) frame = k; });
+      const near = frames[frame].detections.map((d) => ({ d, gap: ImagePoint.distance(d.footImage, lock.foot) }))
+        .filter((c) => c.gap <= radius).sort((a, b) => a.gap - b.gap)[0];
+      if (near) {
+        // A second tap on the same person is the same player.
+        if (taken.has(near.d)) continue;
+        taken.add(near.d);
+        seeds.push({ frame, det: near.d });
+        continue;
+      }
+      if (seeds.some((s) => s.frame === frame && ImagePoint.distance(s.det.footImage, lock.foot) < radius / 2)) continue;
+      const floor = camera.floorPoint(lock.foot);
+      if (floor) seeds.push({ frame, det: PersonDetection.create(floor, lock.foot, { confidence: 0.3 }) });
+    }
+    const locked = seeds.map((s) => new Work(CourtFrame.side(s.det.floor), s.det, s.frame, times[s.frame], r));
+    const found = seeds.map(() => [] as { frame: number; det: PersonDetection }[]);
+    const forbidden = 1e9;
+    const miss = settings.missGate + 2 * Math.log(0.15 * 0.15);
+    for (const forward of [true, false]) {
+      // Each pass starts from the seeds, with no one else yet.
+      locked.forEach((w, i) => {
+        const s = seeds[i];
+        w.detections = [{ frame: s.frame, det: s.det }];
+        w.appearance = s.det.appearance;
+        w.x = new Axis(s.det.floor.x, 0, r, 0, 9);
+        w.z = new Axis(s.det.floor.z, 0, r, 0, 9);
+        w.lastTime = times[s.frame];
+      });
+      const others: Work[] = [];
+      const ahead = (k: number, frame: number) => (forward ? k > frame : k < frame);
+      for (let n = 0; n < frames.length; n++) {
+        const k = forward ? n : frames.length - 1 - n;
+        const t = times[k];
+        // From the first seed on (the seed's own frame already has its detection).
+        if (!seeds.some((s) => s.frame === k || ahead(k, s.frame))) continue;
+        const locks = locked.filter((_, i) => ahead(k, seeds[i].frame));
+        const active = [...locks, ...others.filter((w) => Math.abs(t - w.lastTime) <= settings.maxCoast)];
+        const dets = frames[k].detections.filter((d) => !taken.has(d) && d.confidence >= settings.minConfidence && this.onCourt(d.floor));
+        if (dets.length === 0) continue;
+        const nt = active.length, nd = dets.length;
+        const cost = Array.from({ length: nt + nd }, () => new Array<number>(nd + nt).fill(forbidden));
+        for (let j = 0; j < nd; j++) cost[nt + j][j] = 0;
+        for (let i = nt; i < nt + nd; i++) for (let j = nd; j < nd + nt; j++) cost[i][j] = 0;
+        const noise = dets.map((d) => PlayerTracker.floorNoise(d.floor, camera, r));
+        const predicted = active.map((w) => {
+          const dt = Math.abs(t - w.lastTime);
+          const px = w.x.predicted(dt, q), pz = w.z.predicted(dt, q);
+          // A player unseen for a while has most likely stopped: the velocity carries them half a second at most.
+          const lead = Math.min(dt, 0.5);
+          px.p = w.x.p + w.x.v * lead;
+          pz.p = w.z.p + w.z.v * lead;
+          return { dt, px, pz };
+        });
+        active.forEach((w, i) => {
+          const { dt, px, pz } = predicted[i];
+          const tentative = i >= locks.length && w.detections.length < 3 ? settings.tentativePenalty : 0;
+          cost[i][nd + i] = miss + tentative;
+          dets.forEach((d, j) => {
+            if (!this.allowed(w.side, d, camera)) return;
+            const [rx, rz] = noise[j];
+            // The physical gate, widened by twice the reading's own uncertainty.
+            const gate = settings.maxSpeed * dt + settings.gateSlack + 2 * Math.sqrt(Math.max(rx, rz));
+            if (!(Math.hypot(d.floor.x - w.x.p, d.floor.z - w.z.p) <= gate)) return;
+            const sx = px.ppp + rx, sz = pz.ppp + rz;
+            const ex = d.floor.x - px.p, ez = d.floor.z - pz.p;
+            cost[i][j] = (ex * ex) / sx + (ez * ez) / sz + Math.log(sx * sz) + tentative
+              + this.appearanceCost(w.appearance, d.appearance) + this.keypointCost(w, d, dt);
+          });
+        });
+        const assigned = new Array<boolean>(nd).fill(false);
+        Hungarian.solve(cost).forEach((j, i) => {
+          if (i >= nt || j === undefined || j >= nd || !(cost[i][j] < forbidden)) return;
+          const w = active[i], { px, pz } = predicted[i];
+          w.x = px;
+          w.z = pz;
+          w.x.update(dets[j].floor.x, noise[j][0]);
+          w.z.update(dets[j].floor.z, noise[j][1]);
+          w.lastTime = t;
+          w.detections.push({ frame: k, det: dets[j] });
+          w.blendAppearance(dets[j].appearance);
+          assigned[j] = true;
+          if (i < locks.length) taken.add(dets[j]);
+        });
+        const matched = dets.filter((_, j) => assigned[j]).map((d) => d.floor);
+        dets.forEach((d, j) => {
+          if (assigned[j] || matched.some((m) => Math.hypot(m.x - d.floor.x, m.z - d.floor.z) < settings.duplicateRadius)) return;
+          others.push(new Work(CourtFrame.side(d.floor), d, k, t, r));
+        });
+      }
+      locked.forEach((w, i) => found[i].push(...w.detections.slice(1)));
+    }
+    const tracks = locked.map((w, i) => {
+      w.detections = [{ frame: seeds[i].frame, det: seeds[i].det }, ...found[i]].sort((a, b) => a.frame - b.frame);
+      return this.smooth(w, times, Infinity);
+    });
+    return { tracks, taken };
+  }
+
+  /**
+   * Web addition: the variance (x, z) of a floor point read from a person's feet in the picture, for a few pixels of
+   * error at the feet: d/f metres per pixel across the view and d²/(f h) along it (a camera h up, d away over the
+   * floor), split onto the court's axes by the direction of the view; never below `least`.
+   */
+  static floorNoise(p: FloorPoint, camera: VideoCamera, least: number, pixels = 5): [number, number] {
+    const c = camera.center, f = camera.focalLength;
+    const d = Math.max(2, Math.hypot(p.x - c.x, p.z - c.z)), h = Math.max(1, c.y);
+    const across = (pixels * d) / f, along = (pixels * d * d) / (f * h);
+    const ux = (p.x - c.x) / d, uz = (p.z - c.z) / d;
+    const x = across * uz, xa = along * ux, z = across * ux, za = along * uz;
+    return [Math.max(least, x * x + xa * xa), Math.max(least, z * z + za * za)];
+  }
+
+  /**
    * Web addition: joins tracks that follow one person at the same time (a person detected twice, or two tracks taking
    * turns on one player), which would show as two bodies inside each other: same side, at least three frames in which
    * both were detected, and in at least 70% of them their detections closer than `sameBodyDistance`. The track with
@@ -541,8 +685,11 @@ export class PlayerTracker {
     return Array.from({ length: n }, (_, i) => ({ x: xs[i], z: zs[i] }));
   }
 
-  /** Kalman filter over every frame of the track's span (missing frames only predict), then the RTS smoother. */
-  private smooth(track: Work, times: readonly number[]): TrackedPlayer {
+  /**
+   * Kalman filter over every frame of the track's span (missing frames only predict), then the RTS smoother. Frames
+   * before and after the span, up to `hold` seconds, keep the nearest position.
+   */
+  private smooth(track: Work, times: readonly number[], hold = this.settings.maxCoast): TrackedPlayer {
     const s = this.settings;
     const first = track.firstFrame, last = track.lastFrame;
     const byFrame = new Map<number, PersonDetection>();
@@ -570,13 +717,13 @@ export class PlayerTracker {
     // Short gaps at the clip's ends hold the nearest position, so players do not pop in and out.
     const head = samples[0];
     if (head) {
-      for (let k = first - 1; k >= 0 && head.time - times[k] <= s.maxCoast; k--) {
+      for (let k = first - 1; k >= 0 && head.time - times[k] <= hold; k--) {
         samples.unshift({ time: times[k], floor: head.floor, occluded: true });
       }
     }
     const tail = samples[samples.length - 1];
     if (tail) {
-      for (let k = last + 1; k < times.length && times[k] - tail.time <= s.maxCoast; k++) {
+      for (let k = last + 1; k < times.length && times[k] - tail.time <= hold; k++) {
         samples.push({ time: times[k], floor: tail.floor, occluded: true });
       }
     }

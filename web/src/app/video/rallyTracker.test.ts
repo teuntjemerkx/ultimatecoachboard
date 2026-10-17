@@ -35,6 +35,36 @@ describe("Video to 3D tracking on real footage", () => {
     for (const t of tracks) expect(t.samples.every((s) => s.floor.z < 9.5), "no track behind the home end line").toBe(true);
   });
 
+  it("follows exactly the tapped players: not the coach by the sideline, not a double tap", () => {
+    // The same rally seen by a camera behind the home end line, and the coach walking the home sideline (stepping in
+    // now and then). Three home players and two opponents tapped at 0.2 s, one of them twice (two boxes on one
+    // person) and one missed by the detector for 1.5 s.
+    const camera = VideoCamera.lookingAt(new V3(0, 6, 16), new V3(0, 0, 0), 1100, 1280, 720);
+    const frames = rally().map((f) => ({
+      ...f,
+      detections: [
+        ...f.detections.filter((d) => !(Math.hypot(d.floor.x - 3, d.floor.z - 7) < 0.6 && f.time > 1 && f.time < 2.5)),
+        PersonDetection.create({ x: 4.7 - (Math.round(f.time * 10) % 8 === 0 ? 0.4 : 0), z: 2 + f.time }, { x: 0, y: 0 }),
+      ].map((d) => PersonDetection.create(d.floor, camera.project(V3.fromFloor(d.floor, 0))!)),
+    }));
+    const at02 = frames[2].detections;
+    const foot = (x: number, z: number) => at02.find((d) => Math.hypot(d.floor.x - x, d.floor.z - z) < 0.6)!.footImage;
+    const locks = [[3, 7], [0, 2], [-3, 7], [-3, -1.5], [0, -6.5]].map(([x, z]) => ({ time: 0.2, foot: foot(x, z) }));
+    const twice = { time: 0.2, foot: { x: locks[1].foot.x + 3, y: locks[1].foot.y - 2 } };
+    const tracks = RallyTracker.forCamera(camera, [...locks, twice]).track(frames, camera);
+    expect(tracks.length).toBe(5);
+    expect(tracks.filter((t) => t.side === "home").length).toBe(3);
+    for (const t of tracks) {
+      expect(t.samples.length).toBe(40);
+      expect(t.samples.every((s) => s.floor.x < 4.2), "never the coach").toBe(true);
+    }
+    expect(Math.hypot(tracks[0].samples[39].floor.x - 3, tracks[0].samples[39].floor.z - 7)).toBeLessThan(0.6);
+    // Without taps: twelve players, and the coach (inside the lines one frame in eight) left out.
+    const auto = RallyTracker.forCamera(camera).track(frames, camera);
+    expect(auto.length).toBe(12);
+    for (const t of auto) expect(t.samples.filter((s) => s.measured && s.measured.x > 4.2).length).toBeLessThan(3);
+  });
+
   it("cuts the jump allowance for a far, low camera", () => {
     const broadcast = VideoCamera.lookingAt(new V3(0, 9.4, 38.9), new V3(0, 0, -4.8), 1743, 600, 338);
     const stands = VideoCamera.lookingAt(new V3(1.5, 8, 21), new V3(0, 0, -1), 1500, 1920, 1080);

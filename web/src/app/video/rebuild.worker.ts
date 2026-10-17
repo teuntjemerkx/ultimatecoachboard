@@ -2,13 +2,15 @@
 // reconstruction (tracking, pose fitting, the ball), so the progress bar keeps moving.
 import { PlayerBodies, defaultStature } from "../../core/spatial";
 import {
-  CleanPlate, VideoCamera, VideoReconstructor, type VideoCameraJSON, type VideoFrameObservation, type VideoSceneJSON,
+  CleanPlate, VideoCamera, VideoReconstructor, type TrackLock, type VideoCameraJSON, type VideoFrameObservation, type VideoSceneJSON,
 } from "../../core/video";
 import { RallyTracker } from "./rallyTracker";
 
 export type RebuildRequest =
   | { kind: "plate"; frames: Uint8Array[]; masks: Uint8Array[]; width: number; height: number }
-  | { kind: "reconstruct"; frames: VideoFrameObservation[]; camera: VideoCameraJSON; netHeight: number; women: boolean; title: string };
+  | { kind: "reconstruct"; frames: VideoFrameObservation[]; camera: VideoCameraJSON; netHeight: number; women: boolean; title: string;
+      /** The players the coach tapped, followed through the whole clip. */
+      locks?: TrackLock[] };
 
 export type RebuildReply =
   | { kind: "plate"; pixels: Uint8Array }
@@ -33,7 +35,7 @@ scope.onmessage = (e: MessageEvent<RebuildRequest>) => {
       PlayerBodies.women = msg.women;
       const camera = VideoCamera.decode(msg.camera);
       const scene = VideoReconstructor.reconstruct(msg.frames, camera, {
-        netHeight: msg.netHeight, title: msg.title, tracker: RallyTracker.forCamera(camera),
+        netHeight: msg.netHeight, title: msg.title, tracker: RallyTracker.forCamera(camera, msg.locks),
         progress: (fraction, stage) => reply({ kind: "progress", fraction, stage }),
       });
       // The statures the poses were fitted with (women or men), kept with the scene so it shows the same anywhere.

@@ -1,6 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { CourtFrame } from "../../core/match/court";
 import { V3 } from "../../core/spatial";
-import { CourtCalibration, type CalibrationResult, type ImagePoint } from "../../core/video";
+import {
+  CourtCalibration, type CalibrationResult, type ImagePoint, type PersonDetection, type TrackLock, type VideoCamera,
+} from "../../core/video";
 import { persist } from "../store/db";
 import { useNav } from "../store/nav";
 import { netHeight, useSettings } from "../store/settings";
@@ -8,11 +11,62 @@ import { Bar } from "../ui/Bar";
 import { Choice } from "../ui/Choice";
 import { Icon } from "../ui/Icon";
 import { grabFrame, openClip, type Clip } from "./clip";
-import { buildRally, loadDetector } from "./pipeline";
+import { buildRally, loadDetector, peopleOnStill } from "./pipeline";
 import { deleteVideo, listVideos, saveVideo, type StoredVideo } from "./videoStore";
 import "./video.css";
 
-type Step = { name: "choose" } | { name: "mark" } | { name: "building" } | { name: "failed"; message: string };
+type Step = { name: "choose" } | { name: "mark" } | { name: "players" } | { name: "building" } | { name: "failed"; message: string };
+
+/** The still the coach marks the court and taps the players on: this far into the rally, in seconds. */
+const stillAt = 0.2;
+
+/** The people found on the still and the players the coach picked: found people by index, and feet tapped by hand. */
+interface Picks {
+  people: { detection: PersonDetection; box: { x: number; y: number; w: number; h: number } }[];
+  finding: boolean;
+  failed: boolean;
+  picked: Set<number>;
+  extra: ImagePoint[];
+}
+
+const noPicks: Picks = { people: [], finding: false, failed: false, picked: new Set(), extra: [] };
+
+/**
+ * Standing inside the court's lines (15 cm of slack for the feet): a player, picked from the start. A coach at the
+ * sideline stands just outside and is left for the coach to tap, if anyone.
+ */
+const insideLines = (p: { x: number; z: number }) => Math.abs(p.x) <= CourtFrame.halfWidth + 0.15 && Math.abs(p.z) <= 9.15;
+
+/**
+ * The people picked from the start: those inside the lines, best detection first. Left out: a box much shorter than
+ * a person standing there (legs or a torso the detector boxed apart), and a second box the detector put on someone
+ * already picked (mostly inside theirs, standing on about the same spot); a player farther back, seen behind
+ * someone, stays.
+ */
+function preselect(people: Picks["people"], camera: VideoCamera): Set<number> {
+  const picked: number[] = [];
+  type Box = Picks["people"][number]["box"];
+  const overlap = (a: Box, b: Box) => {
+    const w = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+    const h = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+    return (w * h) / Math.min(a.w * a.h, b.w * b.h);
+  };
+  /** How tall someone of 1.75 m stands at a floor point in the picture, pixels. */
+  const tall = (p: { x: number; z: number }) => {
+    const feet = camera.project(V3.fromFloor(p, 0)), head = camera.project(V3.fromFloor(p, 1.75));
+    return feet && head ? feet.y - head.y : 0;
+  };
+  people.forEach((p, i) => {
+    const f = p.detection.floor;
+    if (!insideLines(f) || p.box.h < 0.55 * tall(f)) return;
+    const twin = picked.some((j) => {
+      const g = people[j].detection.floor;
+      return overlap(people[j].box, p.box) > 0.6 && Math.hypot(f.x - g.x, f.z - g.z) < 1.2;
+    });
+    if (!twin) picked.push(i);
+  });
+  return new Set(picked);
+}
 
 /**
  * What the coach marks: the court's four corners, or our half only (our two corners and where the net meets the
@@ -89,6 +143,7 @@ export function VideoImport() {
   const [corners, setCorners] = useState<Corner[]>([]);
   const [view, setView] = useState<MarkView>(storedMarkView);
   const [progress, setProgress] = useState({ fraction: 0, stage: "" });
+  const [picks, setPicks] = useState<Picks>(noPicks);
   const [stillVersion, setStillVersion] = useState(0);
   const stillRef = useRef<HTMLCanvasElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -137,7 +192,7 @@ export function VideoImport() {
       setFile(f);
       setClip(c);
       setStart(0);
-      await grabStill(c, 0.2);
+      await grabStill(c, stillAt);
       setCorners(defaultCorners(c.width, c.height, view));
       setStep({ name: "mark" });
       // Start loading the models while the coach marks the court.
@@ -161,10 +216,29 @@ export function VideoImport() {
   // A new start time shows the still there (after the slider rests briefly).
   useEffect(() => {
     if (!clip || step.name !== "mark") return;
-    const timer = setTimeout(() => { void grabStill(clip, start + 0.2); }, 150);
+    const timer = setTimeout(() => { void grabStill(clip, start + stillAt); }, 150);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [start]);
+
+  /** On to tapping the players: the people on the still, those inside the lines picked. */
+  const toPlayers = async () => {
+    const still = stillRef.current;
+    if (!calibration || !still) return;
+    setStep({ name: "players" });
+    setPicks({ ...noPicks, finding: true });
+    try {
+      const people = await peopleOnStill(still, calibration.camera);
+      setPicks({ ...noPicks, people, picked: preselect(people, calibration.camera) });
+    } catch {
+      setPicks({ ...noPicks, failed: true });
+    }
+  };
+
+  const locks: TrackLock[] = [
+    ...[...picks.picked].map((i) => ({ time: stillAt, foot: picks.people[i].detection.footImage })),
+    ...picks.extra.map((foot) => ({ time: stillAt, foot })),
+  ];
 
   const build = async () => {
     if (!clip || !file || !calibration) return;
@@ -174,7 +248,7 @@ export function VideoImport() {
     setStep({ name: "building" });
     try {
       const result = await buildRally({
-        clip, start, end, camera: calibration.camera, netHeight: net, women, title: videoTitle(), signal: ctrl.signal,
+        clip, start, end, camera: calibration.camera, netHeight: net, women, title: videoTitle(), signal: ctrl.signal, locks,
         onProgress: (fraction, stage) => setProgress({ fraction, stage }),
       });
       console.info(`Video to 3D: calibration ${calibration.quality} rms ${calibration.rmsError.toFixed(2)} px; ${result.report}`);
@@ -187,20 +261,20 @@ export function VideoImport() {
       void persist();
       go({ name: "watch", videoId: result.scene.id });
     } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") { setStep({ name: "mark" }); return; }
+      if (e instanceof DOMException && e.name === "AbortError") { setStep({ name: "players" }); return; }
       setStep({ name: "failed", message: `Building the 3D rally failed: ${e instanceof Error ? e.message : String(e)}` });
     } finally {
       abortRef.current = null;
     }
   };
 
-  const stepIndex = step.name === "choose" ? 0 : step.name === "mark" ? 1 : 2;
+  const stepIndex = step.name === "choose" ? 0 : step.name === "mark" ? 1 : step.name === "players" ? 2 : 3;
 
   return (
     <div className="screen video-screen">
       <Bar title="Video to 3D">
-        <div className="video-steps" aria-label={`Step ${stepIndex + 1} of 3`}>
-          {[0, 1, 2].map((i) => <span key={i} className={i === stepIndex ? "now" : i < stepIndex ? "done" : ""} />)}
+        <div className="video-steps" aria-label={`Step ${stepIndex + 1} of 4`}>
+          {[0, 1, 2, 3].map((i) => <span key={i} className={i === stepIndex ? "now" : i < stepIndex ? "done" : ""} />)}
         </div>
       </Bar>
       {step.name === "choose" && <ChooseStep loading={loading} onFile={(f) => void choose(f)} />}
@@ -237,7 +311,28 @@ export function VideoImport() {
               </label>
             )}
             <button className="btn quiet" onClick={() => { clip.close(); setClip(null); setStep({ name: "choose" }); }}>Other video</button>
-            <button className="btn primary" disabled={!canBuild} onClick={() => void build()}><Icon name="cube" /> Build 3D</button>
+            <button className="btn primary" disabled={!canBuild} onClick={() => void toPlayers()}>Next <Icon name="chevronRight" /></button>
+          </div>
+        </div>
+      )}
+      {step.name === "players" && clip && calibration && (
+        <div className="video-mark">
+          <div className="video-mark-head">
+            <strong>Tap the players to follow</strong>
+            <span className="muted">Only the players you pick are rebuilt. Those inside the lines are picked already: tap someone to add or drop them. No box around a player? Tap their feet.</span>
+          </div>
+          <PlayerStill still={stillRef.current} version={stillVersion} size={size} camera={calibration.camera} picks={picks}
+                       onChange={setPicks} />
+          <div className="video-mark-foot">
+            <span className="video-badge good"><Icon name="target" /> {pickedText(locks, calibration.camera)}</span>
+            <span className="spacer" />
+            <button className="btn quiet" onClick={() => setStep({ name: "mark" })}><Icon name="chevronLeft" /> Court</button>
+            <button className="btn quiet" disabled={picks.finding || picks.people.length === 0}
+                    onClick={() => setPicks((p) => ({ ...p, picked: preselect(p.people, calibration.camera) }))}>
+              All on court
+            </button>
+            <button className="btn quiet" disabled={locks.length === 0} onClick={() => setPicks((p) => ({ ...p, picked: new Set(), extra: [] }))}>None</button>
+            <button className="btn primary" disabled={picks.finding} onClick={() => void build()}><Icon name="cube" /> Build 3D</button>
           </div>
         </div>
       )}
@@ -255,7 +350,7 @@ export function VideoImport() {
         <div className="empty">
           <Icon name="close" size={44} className="video-fault" />
           <strong>{step.message}</strong>
-          <button className="btn secondary" onClick={() => setStep(clip ? { name: "mark" } : { name: "choose" })}>Try again</button>
+          <button className="btn secondary" onClick={() => setStep(!clip ? { name: "choose" } : calibration ? { name: "players" } : { name: "mark" })}>Try again</button>
         </div>
       )}
     </div>
@@ -435,6 +530,117 @@ function MarkStill({ still, version, size, corners, lines, onMove }: {
           <span>+</span>
         </div>
       )}
+    </div>
+  );
+}
+
+/** "Following 11: 6 ours, 5 theirs", or what a build does without any. */
+function pickedText(locks: readonly TrackLock[], camera: VideoCamera): string {
+  if (locks.length === 0) return "No one picked: the players are found automatically";
+  const ours = locks.filter((l) => {
+    const p = camera.floorPoint(l.foot);
+    return p !== undefined && CourtFrame.side(p) === "home";
+  }).length;
+  return `Following ${locks.length}: ${ours} ours, ${locks.length - ours} theirs`;
+}
+
+/**
+ * The still with a box around everyone the detector found: picked ones in their team's colour, the others dashed.
+ * A tap on a box picks or drops that person; a tap on the court where there is no box adds a player standing there
+ * (the tap is their feet), and a tap on such a player drops them again.
+ */
+function PlayerStill({ still, version, size, camera, picks, onChange }: {
+  still: HTMLCanvasElement | null;
+  version: number;
+  size: { w: number; h: number };
+  camera: VideoCamera;
+  picks: Picks;
+  onChange: (p: Picks) => void;
+}) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [box, setBox] = useState({ w: 0, h: 0 });
+
+  useLayoutEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setBox({ w: el.clientWidth, h: el.clientHeight }));
+    ro.observe(el);
+    setBox({ w: el.clientWidth, h: el.clientHeight });
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const c = canvasRef.current;
+    if (!c || !still) return;
+    c.width = still.width;
+    c.height = still.height;
+    c.getContext("2d")!.drawImage(still, 0, 0);
+  }, [still, version]);
+
+  const s = Math.min(box.w / size.w, box.h / size.h) || 0;
+  const fit = { w: size.w * s, h: size.h * s, x: (box.w - size.w * s) / 2, y: (box.h - size.h * s) / 2 };
+
+  /** At least this wide on screen, so a far player is a target a finger can hit. */
+  const wide = (b: { x: number; y: number; w: number; h: number }) => {
+    const w = Math.max(b.w, 22 / Math.max(s, 1e-3));
+    return { ...b, x: b.x + (b.w - w) / 2, w };
+  };
+  /** A player tapped by hand: feet at the tap, as tall as someone of 1.85 m stands there in the picture. */
+  const tapped = (foot: ImagePoint) => {
+    const floor = camera.floorPoint(foot);
+    const head = floor ? camera.project(V3.fromFloor(floor, 1.85)) : undefined;
+    const h = head ? Math.max(8, foot.y - head.y) : 40;
+    return wide({ x: foot.x - 0.2 * h, y: foot.y - h, w: 0.4 * h, h });
+  };
+  const people = picks.people.map((p) => wide(p.box));
+  const extras = picks.extra.map(tapped);
+  const sideOf = (foot: ImagePoint) => {
+    const p = camera.floorPoint(foot);
+    return p ? CourtFrame.side(p) : "home";
+  };
+
+  const tap = (e: ReactPointerEvent) => {
+    if (picks.finding || !(s > 0)) return;
+    const r = boxRef.current!.getBoundingClientRect();
+    const p = { x: (e.clientX - r.left - fit.x) / s, y: (e.clientY - r.top - fit.y) / s };
+    if (p.x < 0 || p.y < 0 || p.x > size.w || p.y > size.h) return;
+    // A box under the finger (a few points of slack); of several, the one whose middle is nearest.
+    const slack = 10 / s;
+    const hit = (b: { x: number; y: number; w: number; h: number }) =>
+      p.x >= b.x - slack && p.x <= b.x + b.w + slack && p.y >= b.y - slack && p.y <= b.y + b.h + slack
+        ? Math.abs(p.x - (b.x + b.w / 2)) / b.w + Math.abs(p.y - (b.y + b.h / 2)) / b.h : Infinity;
+    const best = [...people.map((b, i) => ({ kind: "person" as const, i, d: hit(b) })), ...extras.map((b, i) => ({ kind: "extra" as const, i, d: hit(b) }))]
+      .filter((c) => c.d < Infinity).sort((a, b) => a.d - b.d)[0];
+    if (best?.kind === "person") {
+      const picked = new Set(picks.picked);
+      if (picked.has(best.i)) picked.delete(best.i); else picked.add(best.i);
+      onChange({ ...picks, picked });
+    } else if (best?.kind === "extra") {
+      onChange({ ...picks, extra: picks.extra.filter((_, i) => i !== best.i) });
+    } else {
+      const floor = camera.floorPoint(p);
+      if (floor && Math.abs(floor.x) <= CourtFrame.halfWidth + 2 && Math.abs(floor.z) <= 11) onChange({ ...picks, extra: [...picks.extra, p] });
+    }
+  };
+
+  return (
+    <div className="video-still-box" ref={boxRef} onPointerUp={tap}>
+      <div className="video-still" style={{ left: fit.x, top: fit.y, width: fit.w, height: fit.h }}>
+        <canvas ref={canvasRef} />
+        <svg viewBox={`0 0 ${size.w} ${size.h}`} preserveAspectRatio="none" aria-hidden="true" className="video-people">
+          {people.map((b, i) => (
+            <rect key={`p${i}`} x={b.x} y={b.y} width={b.w} height={b.h} rx={Math.min(b.w / 2, 8 / Math.max(s, 1e-3))}
+                  className={picks.picked.has(i) ? `picked ${sideOf(picks.people[i].detection.footImage)}` : "free"} vectorEffect="non-scaling-stroke" />
+          ))}
+          {extras.map((b, i) => (
+            <rect key={`e${i}`} x={b.x} y={b.y} width={b.w} height={b.h} rx={Math.min(b.w / 2, 8 / Math.max(s, 1e-3))}
+                  className={`picked tapped ${sideOf(picks.extra[i])}`} vectorEffect="non-scaling-stroke" />
+          ))}
+        </svg>
+      </div>
+      {picks.finding && <div className="video-finding">Finding the players…</div>}
+      {picks.failed && <div className="video-finding">No one found on this frame. Tap the players' feet, or build without.</div>}
     </div>
   );
 }
