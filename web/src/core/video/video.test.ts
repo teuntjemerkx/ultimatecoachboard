@@ -831,6 +831,81 @@ describe("BallVideoTests", () => {
     }
   }, 60_000);
 
+  /**
+   * Web addition: the OK Hoče server jump-serves near the camera (2.6 m up, 14 m behind our end line). His feet were
+   * below the frame until he took off, so nothing showed the jump, and his feet in the air read as a floor point about
+   * 3 m into the court; his hand there was near the serve's ray and became the contact, and the serve fitted through
+   * it was dropped (its sizes did not fit). The ball's size places a near contact to about half a metre: a hand that
+   * far along the ray is no contact, the hand at the ball is.
+   */
+  it("a jump server read metres into the court is no contact", () => {
+    const cam = VideoCamera.lookingAt(new V3(-1.9, 2.6, 23.1), new V3(0.97, 2.16, 0), 360 / Math.tan(deg(10)), 1280, 720);
+    const size = (p: V3) => (cam.focalLength * 2 * BallFlight.radius) / p.sub(cam.center).length;
+    const t0 = 1, settings = defaultBallSettings;
+    const sceneOf = (at: FloorPoint, jump: number) => new VideoScene({ title: "Jump serve", duration: 3, camera: cam,
+      players: [VideoPlayerTrack.create({ side: "home", label: "1", stature: 1.9, samples: [0, 3].map((t) =>
+        VideoPlayerSample.create(t, at.x, at.z, Math.PI, "jumpServe", { jump })) })] });
+    const fingertip = (scene: VideoScene) => {
+      const p = scene.frame(t0).posedPlayers()[0];
+      return maxBy([p.skeleton.fingertip(p.joints, true), p.skeleton.fingertip(p.joints, false)], (q) => q.y)!;
+    };
+    let oldRule = 0;
+    for (let seed = 1; seed <= 8; seed++) {
+      const rng = new SplitMix64(1100 + seed);
+      const label = `seed ${seed}`;
+      // In the air behind the end line, the ball just above his hand, served over the net at 24 to 30 m/s.
+      const at = { x: uniform(rng, -3.5, -2.5), z: uniform(rng, 9.3, 10) };
+      const where = sceneOf(at, 0.5);
+      const contact = fingertip(where).add(new V3(0, 0.1, -0.1));
+      const serve = new SyntheticFlight(contact, SyntheticFlight.aim(contact, new V3(uniform(rng, -2, 0), 2.4, -4), uniform(rng, 24, 30), 0.03),
+        Aero.float, 0.65);
+      const obs = observe((t) => serve.position(t - t0), t0 + 0.04, t0 + serve.duration, 25, unit(rng), cam, rng)
+        .map((o) => ({ ...o, size: size(serve.position(o.time - t0)) * Math.exp(0.1 * gaussian(rng)) }));
+      const found = VideoReconstructor.contactAnchor(obs, where, true, undefined, obs);
+      expect(found, `${label}: where he is`).toBeDefined();
+      expect(found!.position.sub(contact).length, `${label}: at the ball`).toBeLessThan(0.5);
+      // Misread: his hand on the same ray 3 m farther along it.
+      const ray = cam.ray(cam.project(contact)!);
+      const far = ray.origin.add(ray.direction.mul(contact.sub(ray.origin).length + 3));
+      const tip = fingertip(sceneOf({ x: 0, z: 0 }, 0.5));
+      const misread = sceneOf({ x: far.x - tip.x, z: far.z - tip.z }, 0.5 + far.y - tip.y);
+      expect(VideoReconstructor.contactAnchor(obs, misread, true, undefined, obs), `${label}: misread`).toBeUndefined();
+      // The checks before this one would have taken that hand on most seeds: a believable flight through it reprojects.
+      const wrong = BallAnchor.hand(t0, far, 0.3);
+      expect(VideoReconstructor.imagePlaces(wrong, obs, cam), label).toBe(false);
+      const through = BallReconstruction.bestFit(obs, cam, [wrong], settings.drag, settings)!;
+      if (Math.sqrt(through.pixelCost / through.count) <= settings.rmsThreshold
+        && Math.sqrt(through.sizeCost / through.sizeCount) <= settings.sizeThreshold) oldRule += 1;
+    }
+    expect(oldRule, "misread hands the image alone accepted").toBeGreaterThan(4);
+
+    // The clip's own toss and serve (a clean 25 fps copy: frame times, pixels and box sizes from a build) and the
+    // build's three hand anchors: the toss's start, and its end and the serve's start at the hand 3 m into the court.
+    const clip = VideoCamera.decode({ focalLength: 2016.07, width: 1280, height: 720,
+      rotation: { x: 0.998115, y: 0.008468, z: 0.06008, w: -0.009192 }, center: { x: -1.94, y: 2.609, z: 23.131 } });
+    const points = (rows: number[][]): BallObservation[] => rows.map(([time, x, y, s]) => ({ time, image: { x, y }, size: s }));
+    const toss = points([[5.317, 189, 291.3, 28], [5.357, 190.3, 288, 27], [5.397, 194, 287.5, 26], [5.437, 198.8, 288, 20.5],
+      [5.477, 199.3, 287.8, 21.5]]);
+    const serve = points([[5.517, 232.8, 275.5, 30], [5.557, 263, 263, 28], [5.597, 290.5, 253.5, 28], [5.637, 315, 245.8, 28.5],
+      [5.677, 336, 239.3, 25.5], [5.757, 372, 233.8, 26.5], [5.797, 386.3, 233.3, 25.5], [5.837, 401.3, 236.3, 20.5],
+      [5.877, 410.3, 238.3, 22.5], [5.917, 421, 242.5, 20], [5.957, 429, 246.3, 18], [5.997, 437.8, 251.8, 18.5],
+      [6.037, 444, 258.5, 16], [6.077, 449.8, 264.3, 18.5], [6.117, 455.8, 270.8, 19.5], [6.157, 461.5, 281.8, 17.5]]);
+    const topspin = BallReconstruction.expectedAero("attack");
+    const tossStart = BallAnchor.hand(5.257, new V3(-3.5, 2.7, 7.6), 0.3, topspin);
+    const tossEnd = BallAnchor.hand(5.537, new V3(-3.5, 2.8, 6.2), 0.3);
+    const serveStart = BallAnchor.hand(5.485, new V3(-3.5, 2.8, 6.5), 0.3, topspin);
+    const isServe = (s: BallSegment) => s.t1 > 6;
+    expect(BallReconstruction.reconstruct([toss, serve], clip, [tossStart, tossEnd, serveStart]).some(isServe), "before").toBe(false);
+    expect(VideoReconstructor.imagePlaces(serveStart, serve, clip)).toBe(false);
+    expect(VideoReconstructor.imagePlaces(tossEnd, toss, clip), "the toss alone does not place its end").toBe(true);
+    const agreed = VideoReconstructor.agreedAnchors([tossStart, tossEnd, serveStart], [toss, serve], clip);
+    expect(agreed, "the serve's image puts the toss's end elsewhere too").toEqual([tossStart]);
+    const flight = BallReconstruction.reconstruct([toss, serve], clip, agreed).find(isServe);
+    expect(flight).toBeDefined();
+    expect(flight!.v0.length).toBeLessThanOrEqual(settings.maxSpeed);
+    expect(flight!.position(5.517).z, "from behind the end line").toBeGreaterThan(8.5);
+  }, 60_000);
+
   it("flight never goes below the floor", () => {
     const s = new BallSegment(0, 2, new V3(0, 1, 0), new V3(0, 0, 5));
     expect(s.position(2).y).toBe(BallFlight.radius);

@@ -308,6 +308,9 @@ interface HandOnRay {
 const rivalDistance = 1.0;
 const depthSpread = 1.0;
 
+/** Web addition: how many standard deviations a contact may be from where the image puts the ball (`imagePlaces`). */
+const contactSigmas = 3;
+
 /**
  * The video-to-3D pipeline the app calls after running the detector on sampled frames (Section 4): player tracking,
  * pose fitting with temporal smoothing, jump correction, ball segmentation and reconstruction, then labels and roles.
@@ -402,7 +405,7 @@ export const VideoReconstructor = {
         if (last && free && free.position(last.time).y < 0.4) anchors.push(BallAnchor.floor(last.time));
       }
     }
-    scene.ball = BallReconstruction.reconstruct(flights, camera, anchors);
+    scene.ball = BallReconstruction.reconstruct(flights, camera, VideoReconstructor.agreedAnchors(anchors, flights, camera));
     progress?.(1, "Done");
     return scene;
   },
@@ -420,6 +423,8 @@ export const VideoReconstructor = {
    * within `rmsThreshold`. And when another player's hand comes within `rivalDistance` of the ray more than
    * `depthSpread` nearer or farther along it, the image must fit the flight through the nearest hand clearly better
    * than through theirs: by nine times the per-coordinate pixel variance of that fit (three standard deviations).
+   * Nor where the image itself puts the ball elsewhere at that moment (`imagePlaces`): a near camera's view of a jump
+   * server reads his airborne feet as a floor point metres into the court, and the ball's size says it was not there.
    */
   contactAnchor(flight: readonly BallObservation[], scene: VideoScene, atStart: boolean, maxDistance = 0.6,
     track: readonly BallObservation[] = []): BallAnchor | undefined {
@@ -463,6 +468,7 @@ export const VideoReconstructor = {
     const chosen = best, through = fitThrough(best);
     if (!through || !(Math.sqrt(through.pixelCost / through.count) <= settings.rmsThreshold)
       || !(Math.sqrt(through.sizeCost / Math.max(through.sizeCount, 1)) <= settings.sizeThreshold)) return undefined;
+    if (!VideoReconstructor.imagePlaces(anchorAt(chosen), flight, scene.camera)) return undefined;
     const variance = Math.max(1, through.pixelCost / (2 * through.count));
     for (const c of nearest.values()) {
       if (c === chosen || !(c.d <= rivalDistance) || !(Math.abs(c.depth - chosen.depth) > depthSpread)) continue;
@@ -494,6 +500,38 @@ export const VideoReconstructor = {
       const q = camera.project(seg.unclamped(o.time));
       return q !== undefined && ImagePoint.distance(q, o.image) <= s.pointThreshold;
     });
+  },
+
+  /**
+   * Web addition: whether the image of a flight could put the ball at a contact: within `contactSigmas` standard
+   * deviations of where the flight fitted without anchors (bounded as in `BallReconstruction.reconstruct`) puts it at
+   * that moment, with the image's own (the Gauss-Newton position sigma times the fit's RMS, as for `placedSigma`) and
+   * the anchor's together. A ball whose image moves along the view of a far camera, or hardly moves, leaves the
+   * position free, and any hand near its ray will do; a near ball's size fixes it to about half a metre. On the OK
+   * Hoče clip the jump server's hand, read 3 m into the court from his feet in the air, was 3.1 m from where the
+   * serve's sizes put the ball (0.54 m).
+   */
+  imagePlaces(anchor: BallAnchor, flight: readonly BallObservation[], camera: VideoCamera): boolean {
+    if (flight.length < 4) return true;
+    const s = defaultBallSettings;
+    const free = BallReconstruction.bestFit(flight, camera, [], s.drag, s);
+    if (!free) return true;
+    const rms = Math.sqrt(free.pixelCost / Math.max(free.count, 1));
+    const sigma = BallReconstruction.problemFor(free, flight, camera, []).positionSigma(free, anchor.time) * Math.max(1, rms);
+    const seg = new BallSegment(flight[0].time, flight[flight.length - 1].time, free.p0, free.v0, free.aero);
+    const off = seg.unclamped(anchor.time).sub(anchor.position).length;
+    return !(off > contactSigmas * Math.hypot(sigma, anchor.horizontalSigma ?? anchor.verticalSigma ?? 0));
+  },
+
+  /**
+   * Web addition: the anchors with each contact that a flight it reaches does not agree with left out.
+   * `BallReconstruction.reconstruct` gives a flight every anchor within 0.15 s of it (`anchorsOf`), so a contact found
+   * at one flight's end also holds for the start of the next, and that flight's image must be able to put the ball
+   * there too (`imagePlaces`). Floor anchors (no horizontal position) are kept.
+   */
+  agreedAnchors(anchors: readonly BallAnchor[], flights: readonly (readonly BallObservation[])[], camera: VideoCamera): BallAnchor[] {
+    return anchors.filter((a) => a.horizontalSigma === undefined || flights.every((f) =>
+      BallReconstruction.anchorsOf(f, [a]).length === 0 || VideoReconstructor.imagePlaces(a, f, camera)));
   },
 
   /** Nominal spot of each rotational position in the team's own frame (l from its left sideline, d from the net). */

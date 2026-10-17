@@ -707,6 +707,15 @@ export const BallReconstruction = {
   },
 
   /**
+   * The anchors falling in or next to a flight (observations sorted by time), as `reconstruct` gives them to it: within
+   * 0.15 s of it, so a contact between two flights holds for both.
+   */
+  anchorsOf(flight: readonly BallObservation[], anchors: readonly BallAnchor[]): BallAnchor[] {
+    if (flight.length === 0) return [];
+    return anchors.filter((a) => a.time >= flight[0].time - 0.15 && a.time <= flight[flight.length - 1].time + 0.15);
+  },
+
+  /**
    * Reconstructs flights (observation groups from `split`) with the anchors falling in or next to each, places the
    * contact between consecutive flights where they pass closest, and chains them there: both flights are refitted
    * with the contact point fused from the two by their uncertainties.
@@ -715,8 +724,7 @@ export const BallReconstruction = {
     settings: Partial<BallSettings> = {}): BallSegment[] {
     const s = { ...defaultBallSettings, ...settings };
     const groups = flights.map((g) => [...g].sort((a, b) => a.time - b.time)).filter((g) => g.length >= 4);
-    const own = (g: readonly BallObservation[]) =>
-      anchors.filter((a) => a.time >= g[0].time - 0.15 && a.time <= g[g.length - 1].time + 0.15);
+    const own = (g: readonly BallObservation[]) => BallReconstruction.anchorsOf(g, anchors);
     const extra: BallAnchor[][] = groups.map(() => []);
     const fits: (Fit | undefined)[] = groups.map((g) => BallReconstruction.bestFit(g, camera, own(g), s.drag));
     const segment = (i: number): BallSegment | undefined => {
