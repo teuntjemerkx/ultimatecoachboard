@@ -2,7 +2,7 @@ import { V3 } from "../../core/spatial";
 import {
   PersonDetection, VideoScene, type ImagePoint, type Keypoints, type TrackLock, type VideoCamera, type VideoFrameObservation,
 } from "../../core/video";
-import { grabFrame, type Clip } from "./clip";
+import { grabFrame, SEEK_INTO_FRAME, type Clip } from "./clip";
 import { Detector, zoomTiles, type FrameDetections, type ZoomBand } from "./detect";
 import type { RebuildReply, RebuildRequest } from "./rebuild.worker";
 
@@ -244,17 +244,19 @@ export async function peopleOnStill(still: HTMLCanvasElement, camera: VideoCamer
 
 /**
  * The frames a build reads over [start, end]: pose frames at `rate` per second (people, pose and the ball) and, in
- * each gap between two of them, `between` frames for the ball alone, evenly spaced. In time order.
+ * each gap between two of them, `between` frames for the ball alone, evenly spaced. In time order. Each is read where
+ * `seek` says, a little past its time (`SEEK_INTO_FRAME`), for the frame on screen at that time.
  */
-export function samplePlan(start: number, end: number, rate = 10, between = 2): { time: number; pose: boolean }[] {
+export function samplePlan(start: number, end: number, rate = 10, between = 2): { time: number; seek: number; pose: boolean }[] {
   const count = Math.max(2, Math.round((end - start) * rate) + 1);
-  const plan: { time: number; pose: boolean }[] = [];
+  const plan: { time: number; seek: number; pose: boolean }[] = [];
+  const read = (time: number, pose: boolean) => plan.push({ time, seek: time + SEEK_INTO_FRAME, pose });
   for (let i = 0; i < count; i++) {
     const t = start + ((end - start) * i) / (count - 1);
-    plan.push({ time: t, pose: true });
+    read(t, true);
     if (i === count - 1) break;
     const next = start + ((end - start) * (i + 1)) / (count - 1);
-    for (let k = 1; k <= between; k++) plan.push({ time: t + ((next - t) * k) / (between + 1), pose: false });
+    for (let k = 1; k <= between; k++) read(t + ((next - t) * k) / (between + 1), false);
   }
   return plan;
 }
@@ -282,11 +284,11 @@ export function sameFrame(a: Uint8ClampedArray, b: Uint8ClampedArray): boolean {
 const CLIP_RATES = [23.976, 24, 25, 29.97];
 
 /**
- * The frame grid of a clip with fewer frames a second than a build reads, from which reads repeated the frame before
- * (`sameFrame`): its rate and phase, so that the read at clip time t shows frame floor(t * fps - phase), which a seek
- * shows from (frame + phase) / fps on. A 24 fps clip read every 33 ms repeats a frame every fifth read and is read up
- * to 33 ms after its frame came up, so the read times step 33 ms where the frames step 42 ms, and a ball coming at
- * the camera seems to slow down and speed up. The rate and phase that predict the repeats best, when they predict all
+ * The frame grid of a clip with fewer frames a second than a build reads, from the reads' seek times and which of them
+ * repeated the frame before (`sameFrame`): its rate and phase, so that a seek to clip time t shows frame
+ * floor(t * fps - phase), which came up at (frame + phase) / fps. A 24 fps clip read every 33 ms repeats a frame every
+ * fifth read and is read up to 33 ms after its frame came up, so the read times step 33 ms where the frames step 42 ms,
+ * and a ball coming at the camera seems to slow down and speed up. The rate and phase that predict the repeats best, when they predict all
  * but a few (a still picture repeats too; compression noise can hide a repeat); undefined when the reads hardly
  * repeat (the clip has as many frames as are read, or more) or no common rate fits.
  */
@@ -316,7 +318,7 @@ export function frameGrid(reads: readonly { time: number; repeat: boolean }[]): 
   return best && best.misses <= Math.max(2, 0.15 * repeats) ? { fps: best.fps, phase: best.phase } : undefined;
 }
 
-/** The time a read at clip time t shows a frame from, on a clip's frame grid (`frameGrid`). */
+/** The time the frame a seek to clip time t shows came up, on a clip's frame grid (`frameGrid`). */
 export function onFrameGrid(t: number, grid: { fps: number; phase: number }): number {
   return (Math.floor(t * grid.fps - grid.phase + 1e-9) + grid.phase) / grid.fps;
 }
@@ -407,7 +409,8 @@ export async function buildRally(options: {
   const sampled: { time: number; detections: FrameDetections; appearance: (number[] | undefined)[]; repeat: boolean }[] = [];
   const ballOnly: { time: number; balls: BallCandidates }[] = [];
   let repeats = 0;
-  // Every read's clip time and whether it repeated the frame before, for the clip's own frame grid.
+  // Every read's seek time and whether it repeated the frame before, for the clip's own frame grid (on the seek times,
+  // its phase is where the clip's frames come up).
   const reads: { time: number; repeat: boolean }[] = [];
   const plateFrames: Uint8Array[] = [], plateMasks: Uint8Array[] = [];
   let nextPlate = 0;
@@ -415,13 +418,13 @@ export async function buildRally(options: {
   let done = 0;
   for (const s of plan) {
     aborted(signal);
-    await grabFrame(clip, s.time, work);
+    await grabFrame(clip, s.seek, work);
     prg.drawImage(work, 0, 0, print.width, print.height);
     const fingerprint = prg.getImageData(0, 0, print.width, print.height).data;
     const repeat = previous !== undefined && sameFrame(fingerprint, previous);
     previous = fingerprint;
     if (repeat) repeats += 1;
-    reads.push({ time: s.time, repeat });
+    reads.push({ time: s.seek, repeat });
     done += s.pose ? 1 : BALL_FRAME_COST;
     if (!s.pose) {
       // The ball alone; a repeated frame adds nothing (its ball was seen at the earlier time).
@@ -466,7 +469,7 @@ export async function buildRally(options: {
   // the share of unseen samples between 28% and 37%, the frame grid gave 35%). A clip with as many frames as are read
   // keeps the read times, and a pose frame's ball stays with its people.
   const grid = frameGrid(reads);
-  const ballTime = (t: number) => (grid ? onFrameGrid(t, grid) : t) - start;
+  const ballTime = (t: number) => (grid ? onFrameGrid(t + SEEK_INTO_FRAME, grid) : t) - start;
   // The ball over all frames read, in time order (a repeated pose frame keeps its people but not the ball).
   const frames = [
     ...sampled.map((f, k) => ({ time: ballTime(f.time), read: f.time - start, pose: k, balls: f.repeat ? [] : f.detections.balls })),

@@ -71,6 +71,13 @@ export async function openClip(file: Blob, maxSide = 1920): Promise<Clip> {
   return { video, url, duration, width: Math.round(video.videoWidth * s), height: Math.round(video.videoHeight * s), close };
 }
 
+/**
+ * How far past a time a read seeks, for the frame on screen at that time: in Chromium a seek to the exact start of a
+ * frame often shows the frame before it (a 30 fps clip read at k/30 s showed it on every third read). Past any rounding
+ * of the times (whole microseconds, or whole milliseconds in WebM), under half a frame at 60 fps.
+ */
+export const SEEK_INTO_FRAME = 0.005;
+
 /** Seeks to a time and waits until the frame there can be drawn. */
 export async function seekClip(clip: Clip, t: number): Promise<void> {
   const v = clip.video;
