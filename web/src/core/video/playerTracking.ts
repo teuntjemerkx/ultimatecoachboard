@@ -434,8 +434,10 @@ export class PlayerTracker {
    * for the detections: a lock waiting for its player does not take a person standing nearby, who is already someone
    * else's. Each detection counts with the camera's own uncertainty at that spot (`floorNoise`), not a fixed 10 cm:
    * from a low camera a far player's floor point wanders metres along the view, and such a player would otherwise be
-   * lost every few frames. Returns the locks' tracks (spanning the clip, unseen frames occluded) and the detections
-   * they took.
+   * lost every few frames. A person the frame cuts is now and then found twice, whole and as a piece at the edge
+   * (`onePerson`): the piece next to a lock's detection starts no passing track. Frames a lock's player spends in the
+   * air go back to the lock after each pass (`rejoinJumps`). Returns the locks' tracks (spanning the clip, unseen frames
+   * occluded) and the detections they took.
    */
   follow(input: readonly VideoFrameObservation[], locks: readonly TrackLock[], camera: VideoCamera):
     { tracks: TrackedPlayer[]; taken: Set<PersonDetection> } {
@@ -518,7 +520,7 @@ export class PlayerTracker {
               + this.appearanceCost(w.appearance, d.appearance) + this.keypointCost(w, d, dt);
           });
         });
-        const assigned = new Array<boolean>(nd).fill(false);
+        const assigned = new Array<boolean>(nd).fill(false), locksTook = new Array<boolean>(nd).fill(false);
         Hungarian.solve(cost).forEach((j, i) => {
           if (i >= nt || j === undefined || j >= nd || !(cost[i][j] < forbidden)) return;
           const w = active[i], { px, pz } = predicted[i];
@@ -530,14 +532,19 @@ export class PlayerTracker {
           w.detections.push({ frame: k, det: dets[j] });
           w.blendAppearance(dets[j].appearance);
           assigned[j] = true;
-          if (i < locks.length) taken.add(dets[j]);
+          if (i < locks.length) {
+            taken.add(dets[j]);
+            locksTook[j] = true;
+          }
         });
         const matched = dets.filter((_, j) => assigned[j]).map((d) => d.floor);
         dets.forEach((d, j) => {
           if (assigned[j] || matched.some((m) => Math.hypot(m.x - d.floor.x, m.z - d.floor.z) < settings.duplicateRadius)) return;
+          if (dets.some((m, i) => locksTook[i] && PlayerTracker.onePerson(m, d, camera))) return;
           others.push(new Work(CourtFrame.side(d.floor), d, k, t, r));
         });
       }
+      PlayerTracker.rejoinJumps(locked, others, times, camera, taken);
       locked.forEach((w, i) => found[i].push(...w.detections.slice(1)));
     }
     const tracks = locked.map((w, i) => {
@@ -545,6 +552,78 @@ export class PlayerTracker {
       return this.smooth(w, times, Infinity);
     });
     return { tracks, taken };
+  }
+
+  /**
+   * Web addition: whether two detections of one frame are one person the frame cuts, found twice: the shorter box,
+   * under half the taller one's height, reaches the edge of the picture (within 2% of its height), its feet lie under
+   * the taller one's body (within 0.3 of its height across) and no higher than its feet, and its top below the taller
+   * one's. Another person standing farther away would stand higher in the picture, and one nearer would look taller.
+   */
+  static onePerson(a: PersonDetection, b: PersonDetection, camera: VideoCamera): boolean {
+    if (a.boxHeight === undefined || b.boxHeight === undefined) return false;
+    const [tall, short] = a.boxHeight >= b.boxHeight ? [a, b] : [b, a];
+    const h = tall.boxHeight!, s = short.boxHeight!, f = short.footImage, edge = 0.02 * camera.height;
+    const cut = f.y >= camera.height - edge || f.x <= edge || f.x >= camera.width - edge;
+    return cut && s < 0.5 * h && Math.abs(f.x - tall.footImage.x) <= 0.3 * h && f.y >= tall.footImage.y - 0.1 * h
+      && f.y - s >= tall.footImage.y - h;
+  }
+
+  /**
+   * Web addition: whether detection `b`, `dt` seconds after `a`, continues it in the picture: their keypoints at most
+   * 0.3 of the body's height apart per 1/15 s (`keypointDistance`; a random walk, so growing with the square root of
+   * the time between them).
+   */
+  static continues(a: PersonDetection, b: PersonDetection, dt: number): boolean {
+    const m = PlayerTracker.keypointDistance(a.keypoints, b.keypoints);
+    return m !== undefined && m <= 0.3 * Math.sqrt(Math.max(1, Math.abs(dt) * 15));
+  }
+
+  /**
+   * Web addition: gives the locks back the frames their players spent in the air. Feet off the floor read farther along
+   * the camera's ray (see `maxFootHeight`), from a low camera metres farther, and when the first frame in the air
+   * already reads beyond the physical gate a passing track takes the jumper's frames until he lands. A passing track
+   * that holds at least two frames inside a gap of a lock (a jump lasts 0.3 s or more), each farther along the ray than
+   * the lock's path across the gap (from its detection before the gap to the one after) by more than three times the
+   * reading's own uncertainty (as in `floorNoise`), and whose first and last of them continue the lock's detections on
+   * either side in the picture (`continues`), was the lock's player in the air: the lock takes those frames. A passing
+   * track goes to one lock at most.
+   */
+  private static rejoinJumps(locked: readonly Work[], others: readonly Work[], times: readonly number[],
+    camera: VideoCamera, taken: Set<PersonDetection>): void {
+    type Taken = { frame: number; det: PersonDetection };
+    const c = camera.center, claimed = new Set<Work>();
+    const byFrame = (x: Taken, y: Taken) => x.frame - y.frame;
+    // How far a detection reads beyond a floor point along the camera's ray, in standard deviations of a reading there.
+    const beyond = (e: Taken, p: FloorPoint): number => {
+      const d = Math.max(2, Math.hypot(p.x - c.x, p.z - c.z));
+      const along = ((e.det.floor.x - p.x) * (p.x - c.x) + (e.det.floor.z - p.z) * (p.z - c.z)) / d;
+      return along / ((5 * d * d) / (camera.focalLength * Math.max(1, c.y)));
+    };
+    for (const w of locked) {
+      const mine = [...w.detections].sort(byFrame);
+      for (let g = 0; g + 1 < mine.length; g++) {
+        const a = mine[g], b = mine[g + 1];
+        if (b.frame - a.frame < 3) continue;
+        const path = (e: Taken): FloorPoint => {
+          const u = (times[e.frame] - times[a.frame]) / (times[b.frame] - times[a.frame]);
+          return { x: a.det.floor.x + u * (b.det.floor.x - a.det.floor.x), z: a.det.floor.z + u * (b.det.floor.z - a.det.floor.z) };
+        };
+        const between = (o: Work) => o.detections.filter((e) => e.frame > a.frame && e.frame < b.frame).sort(byFrame);
+        const o = others.find((o) => {
+          const inside = between(o);
+          if (claimed.has(o) || inside.length < 2 || !inside.every((e) => beyond(e, path(e)) > 3)) return false;
+          const first = inside[0], last = inside[inside.length - 1];
+          return PlayerTracker.continues(a.det, first.det, times[first.frame] - times[a.frame])
+            && PlayerTracker.continues(last.det, b.det, times[b.frame] - times[last.frame]);
+        });
+        if (!o) continue;
+        claimed.add(o);
+        const inside = between(o);
+        for (const e of inside) taken.add(e.det);
+        w.detections.push(...inside);
+      }
+    }
   }
 
   /**

@@ -390,6 +390,81 @@ describe("TrackingVideoTests", () => {
     expect(tracks.filter((t) => t.side === "home").length).toBeLessThanOrEqual(6);
     expect(tracks.filter((t) => t.side === "opponent"), "reaching under the net does not change sides").toEqual([]);
   });
+
+  it("a tapped jump server keeps his own frames: a second box on him and his jump start no one else", () => {
+    // The OK Hoče clip from 4.1 to 6.1 s, on its camera (2.6 m up, 14 m behind our end line), ten pose frames a second.
+    // The server, tapped at 0.2 s, stands at z 10.1 with his feet below the frame: his floor points follow what the
+    // detector makes of his legs at the bottom edge (z 8.7 to 10.1). At 1.0 s it finds him twice, his box ending 38 px
+    // above the edge (z 8.0) and a piece of him in the corner (as at 4.1 s), and at 1.2 s his feet read 30 px above the
+    // edge (z 8.3, as at 4.6 s). He jumps at 1.5 s, 0.5 m up for 0.6 s: his feet in the air read up to 3.5 m farther
+    // along the view. He lands at z 8.4 and runs in. Two teammates and two opponents stand elsewhere, tapped too.
+    // Before, on all 8 seeds a passing track started by the second box took his frame at 1.2 s and a passing track his
+    // frames in the air, and on 2 of them his lock followed him up and lost him from the landing on; the same with his
+    // first frame in the air missed, as in the clip.
+    const cam = VideoCamera.lookingAt(new V3(-1.9, 2.6, 23.1), new V3(0.97, 2.16, 0), 360 / Math.tan(deg(10)), 1280, 720);
+    const H = cam.height;
+    const takeOff = 1.5, landing = 2.1, top = 0.5;
+    const lift = (t: number) => (t > takeOff && t < landing ? (4 * top * (t - takeOff) * (landing - t)) / (landing - takeOff) ** 2 : 0);
+    const where = (t: number): FloorPoint => (t < takeOff ? { x: -4.4 + 0.3 * t, z: 10.1 }
+      : t < landing ? { x: -3.95 + 0.4 * (t - takeOff), z: 10.1 - 2.8 * (t - takeOff) } : { x: -3.71 + 0.3 * (t - landing), z: 8.42 - 2.5 * (t - landing) });
+    const posture = (t: number): Posture => (t < takeOff ? "armCock" : t < landing ? "jumpServe" : t < landing + 0.2 ? "landing" : "ready");
+    const inPicture = (kp: Keypoints): Keypoints => Object.fromEntries(Object.entries(kp).filter(([, o]) => cam.contains(o!.point)));
+    // As the app reads a detector box: the feet from the keypoints, or where the box ends (`footY`, the frame cut him).
+    const detect = (kp: Keypoints, footY?: number): PersonDetection => {
+      const ys = Object.values(kp).map((o) => o!.point.y), xs = Object.values(kp).map((o) => o!.point.x);
+      const y0 = Math.min(...ys) - 0.12 * (Math.max(...ys) - Math.min(...ys)), x = (Math.min(...xs) + Math.max(...xs)) / 2;
+      if (footY !== undefined) {
+        const foot = { x, y: footY };
+        return PersonDetection.create(cam.floorPoint(foot)!, foot, { keypoints: kp, confidence: 0.8, boxHeight: footY - y0 });
+      }
+      const y1 = Math.min(H, Math.max(...ys) + 4);
+      return PersonDetection.fromKeypoints(kp, 0.9, cam, { boxHeight: y1 - y0, boxBottom: { x, y: y1 }, minConfidence: 0.3 })!;
+    };
+    const others = [{ x: -1, z: 4 }, { x: 2, z: 6.5 }, { x: 0.5, z: -4 }, { x: -2.5, z: -6 }];
+    const at = (o: FloorPoint, t: number) => ({ x: o.x + 0.3 * Math.sin(t + o.x), z: o.z });
+    for (const missed of [false, true]) {
+      for (let seed = 1; seed <= 8; seed++) {
+        const label = `seed ${seed}${missed ? ", first frame in the air missed" : ""}`;
+        const rng = new SplitMix64(1400 + seed);
+        const s = new SkeletonModel(new BodyMetrics(uniform(rng, 1.86, 2.0)));
+        const his: PersonDetection[][] = [], theirs: PersonDetection[][][] = [];
+        const frames: VideoFrameObservation[] = Array.from({ length: 31 }, (_, k) => {
+          const t = k / 10;
+          const kp = inPicture(Synth.keypoints(s, posture(t), where(t), Math.PI, cam, rng, { totalJump: lift(t), noise: 2, drop: 0.05 }));
+          let mine = [detect(kp, kp.leftAnkle || kp.rightAnkle ? undefined : H + uniform(rng, -20, 20))];
+          if (k === 10) {
+            const whole = detect(kp, H - 38), piece = { x: Math.max(4, whole.footImage.x - 14), y: H - 8 };
+            mine = [whole, PersonDetection.create(cam.floorPoint(piece)!, piece, { confidence: 0.12, boxHeight: 75 })];
+            expect(PlayerTracker.onePerson(whole, mine[1], cam), label).toBe(true);
+          }
+          if (k === 12) mine = [detect(kp, H - 30)];
+          if (missed && k === 16) mine = [];
+          his.push(mine);
+          theirs.push(others.map((o) => [detect(inPicture(Synth.keypoints(new SkeletonModel(new BodyMetrics(1.85)), "ready", at(o, t),
+            o.z > 0 ? Math.PI : 0, cam, rng, { noise: 2, drop: 0.05 })))]));
+          return { time: t, detections: [...mine, ...theirs[k].flat()] };
+        });
+        const locks = [{ time: 0.2, foot: his[2][0].footImage }, ...others.map((o) => ({ time: 0.2, foot: cam.project(V3.fromFloor(at(o, 0.2), 0))! }))];
+        const { tracks } = new PlayerTracker({ maxFootHeight: 0.4 }).follow(frames, locks, cam);
+        tracks[0].samples.forEach((x, k) => {
+          if (his[k].length === 0) return;
+          expect(x.measured && his[k].some((d) => d.floor === x.measured), `${label}: his frame at ${x.time.toFixed(1)} s`).toBe(true);
+        });
+        // The others keep their own.
+        others.forEach((_, i) => tracks[i + 1].samples.forEach((x, k) => {
+          if (x.measured) expect(theirs[k][i].some((d) => d.floor === x.measured), `${label}: player ${i + 1} at ${x.time.toFixed(1)} s`).toBe(true);
+        }));
+      }
+    }
+
+    // Two people one behind the other are two: a player standing farther away stands higher in the picture, and a short
+    // box not cut by the frame is someone else's.
+    const tall = PersonDetection.create({ x: -1, z: 6 }, { x: 600, y: 650 }, { boxHeight: 240 });
+    const behind = PersonDetection.create({ x: -1, z: 0 }, { x: 610, y: 560 }, { boxHeight: 110 });
+    const inside = PersonDetection.create({ x: -1, z: 5.8 }, { x: 590, y: 655 }, { boxHeight: 80 });
+    expect(PlayerTracker.onePerson(tall, behind, cam)).toBe(false);
+    expect(PlayerTracker.onePerson(tall, inside, cam)).toBe(false);
+  }, 60_000);
 });
 
 describe("PoseVideoTests", () => {
