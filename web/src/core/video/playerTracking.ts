@@ -586,17 +586,21 @@ export class PlayerTracker {
    * in the air already reads beyond the physical gate, a passing track takes the jumper's frames until he lands. A
    * passing track that holds at least two frames inside a gap of a lock (a jump lasts 0.3 s or more), each farther along
    * the ray than the lock's path across the gap (from its detection before the gap to the one after) by more than three
-   * times the reading's own uncertainty (as in `floorNoise`), and whose first and last of them continue the lock's
-   * detections on either side in the picture (`continues`), was the lock's player in the air: the lock takes those
-   * frames. When the lock follows its player up instead (his first frame in the air, often only 0.1 to 0.3 m up, reads
-   * inside its gate), the frame he comes down in (the landing, or the take-off on the pass back in time) reads beyond it
-   * and a passing track takes him from there. At least two of the lock's detections that each read that much farther
-   * than an earlier one of his (`a`, the latest that does), with him lifted off the floor (`lifted`, from `a` to the
-   * farthest of them: a misread foot moves alone), were a jump. He comes down within a second of the first of them,
-   * over a frame or a few after the last the lock saw him in: each a passing track's detection that continues the one
-   * before in the picture, reads that much nearer, shows the one before as him lifted, and whose track held no one
-   * else's frames since the jump began (of several, the one nearest in the picture). The lock takes each, and from the
-   * last, his landing, that track's frames up to its own next detection. A passing track goes to one lock at most.
+   * times the reading's own uncertainty (as in `floorNoise`), whose first and last of them continue the lock's
+   * detections on either side in the picture (`continues`), and the farthest of which shows him lifted off the floor
+   * (`lifted`: legs misread move the feet alone) against him on the floor next to the gap (the lock's detection before
+   * or after it, whichever reads nearer; where the lock followed him part of the way up or down, the one it saw him
+   * take off or land in: away from the gap while each reads that much nearer and shows him lifted in the one closer to
+   * it), was the lock's player in the air: the lock takes those frames. When the lock follows its player up instead
+   * (his first frame in the air, often only 0.1 to 0.3 m up, reads inside its gate), the frame he comes down in (the
+   * landing, or the take-off on the pass back in time) reads beyond it and a passing track takes him from there. At
+   * least two of the lock's detections that each read that much farther than an earlier one of his (`a`, the latest
+   * that does), with him lifted off the floor (`lifted`, from `a` to the farthest of them: a misread foot moves alone),
+   * were a jump. He comes down within a second of the first of them, over a frame or a few after the last the lock saw
+   * him in: each a passing track's detection that continues the one before in the picture, reads that much nearer,
+   * shows the one before as him lifted, and whose track held no one else's frames since the jump began (of several, the
+   * one nearest in the picture). The lock takes each, and from the last, his landing, that track's frames up to its own
+   * next detection. A passing track goes to one lock at most.
    */
   private static rejoinJumps(locked: readonly Work[], others: readonly Work[], times: readonly number[],
     camera: VideoCamera, taken: Set<PersonDetection>, forward: boolean): void {
@@ -614,8 +618,16 @@ export class PlayerTracker {
       const along = ((e.det.floor.x - p.x) * (p.x - c.x) + (e.det.floor.z - p.z) * (p.z - c.z)) / d;
       return along / ((5 * d * d) / (camera.focalLength * Math.max(1, c.y)));
     };
+    const distance = (d: PersonDetection) => Math.hypot(d.floor.x - c.x, d.floor.z - c.z);
     for (const w of locked) {
       const mine = [...w.detections].sort(byFrame);
+      // The lock's detection of its player on the floor, from its `k`th on away from a gap (`step` -1 or 1): while the
+      // next one reads that much nearer and shows him lifted in this one, he was in the air in this one.
+      const floor = (k: number, step: number): Taken => {
+        while (mine[k + step] && beyond(mine[k], mine[k + step].det.floor) > 3
+          && PlayerTracker.lifted(mine[k + step].det, mine[k].det, camera)) k += step;
+        return mine[k];
+      };
       for (let g = 0; g + 1 < mine.length; g++) {
         const a = mine[g], b = mine[g + 1];
         if (b.frame - a.frame < 3) continue;
@@ -628,8 +640,12 @@ export class PlayerTracker {
           const inside = between(o);
           if (claimed.has(o) || inside.length < 2 || !inside.every((e) => beyond(e, path(e)) > 3)) return false;
           const first = inside[0], last = inside[inside.length - 1];
-          return PlayerTracker.continues(a.det, first.det, times[first.frame] - times[a.frame])
-            && PlayerTracker.continues(last.det, b.det, times[b.frame] - times[last.frame]);
+          if (!(PlayerTracker.continues(a.det, first.det, times[first.frame] - times[a.frame])
+            && PlayerTracker.continues(last.det, b.det, times[b.frame] - times[last.frame]))) return false;
+          const sides = [floor(g, -1).det, floor(g + 1, 1).det];
+          const ground = sides[distance(sides[0]) <= distance(sides[1]) ? 0 : 1];
+          const top = inside.reduce((m, e) => (beyond(e, ground.floor) > beyond(m, ground.floor) ? e : m));
+          return PlayerTracker.lifted(ground, top.det, camera);
         });
         if (o) give(w, o, between(o));
       }

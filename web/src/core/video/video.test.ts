@@ -407,7 +407,8 @@ describe("TrackingVideoTests", () => {
     // landing, waiting where he was in the air. Tapped after the jump (2.8 s), his lock followed him back from the
     // landing up and lost him from the take-off back, for a second or more, on all 8 seeds. He is kept from the take-off
     // on (before it, cut feet scattering a metre along the view still split him into his lock and a passing track on
-    // one seed).
+    // one seed). Seeds 20 and 26 tapped after the jump: his lock follows him back from the landing to 2.0 s and takes
+    // him again at 1.7 s, his frames between with a passing track, so the gap starts and ends in the air.
     const cam = VideoCamera.lookingAt(new V3(-1.9, 2.6, 23.1), new V3(0.97, 2.16, 0), 360 / Math.tan(deg(10)), 1280, 720);
     const H = cam.height;
     const takeOff = 1.5, landing = 2.1, top = 0.5;
@@ -431,7 +432,7 @@ describe("TrackingVideoTests", () => {
     const at = (o: FloorPoint, t: number) => ({ x: o.x + 0.3 * Math.sin(t + o.x), z: o.z });
     const variants = [[true, false, 0.2], [true, true, 0.2], [false, false, 0.2], [false, true, 0.2], [false, false, 2.8], [false, true, 2.8]] as const;
     for (const [clip, missed, tap] of variants) {
-      for (let seed = 1; seed <= 8; seed++) {
+      for (const seed of tap > takeOff ? [1, 2, 3, 4, 5, 6, 7, 8, 20, 26] : [1, 2, 3, 4, 5, 6, 7, 8]) {
         const label = `seed ${seed}${clip ? "" : ", scattered feet"}${missed ? ", first frame in the air missed" : ""}${tap > takeOff ? ", tapped after the jump" : ""}`;
         const rng = new SplitMix64(1400 + seed);
         const s = new SkeletonModel(new BodyMetrics(uniform(rng, 1.86, 2.0)));
@@ -487,6 +488,18 @@ describe("TrackingVideoTests", () => {
     expect(PlayerTracker.lifted(ground, lifted, cam)).toBe(true);
     expect(PlayerTracker.lifted(ground, misread, cam)).toBe(false);
     expect(PlayerTracker.lifted(ground, away, cam)).toBe(false);
+
+    // His legs misread for 0.3 s with the body where it was (the far blocker of the OK Hoče cuts at 1.1 to 1.3 s) are no
+    // jump: the passing track that took those readings, beyond his lock's gate, keeps them.
+    const blocker = new SkeletonModel(new BodyMetrics(1.9)), stand = { x: 4.3, z: -3 };
+    const legs = Array.from({ length: 21 }, (_, k) => {
+      const kp = Synth.keypoints(blocker, "ready", stand, 0, cam, rng, { noise: 1, drop: 0 });
+      return detect(k >= 11 && k <= 13 ? feetUp(kp) : kp);
+    });
+    expect(legs[12].floor.z, "the misread legs read farther").toBeLessThan(stand.z - 2);
+    const { tracks: [his] } = new PlayerTracker({ maxFootHeight: 0.4 })
+      .follow(legs.map((d, k) => ({ time: k / 10, detections: [d] })), [{ time: 0.2, foot: legs[2].footImage }], cam);
+    his.samples.forEach((x, k) => expect(x.measured === legs[k].floor, `his lock at ${x.time.toFixed(1)} s`).toBe(k < 11 || k > 13));
   }, 60_000);
 });
 
