@@ -272,8 +272,9 @@ export class Players3D {
     const jersey = { home: input.colors.home, opponent: input.colors.opponent };
     const libero = cssColor("libero", "#F5F5F5");
     const led = cssColor("led", "#2D7DFF");
+    // Labels as the 2D tokens: the token's fill and lettering (white with ink on the dark themes' lit court).
     const labelInk = cssColor("tokenLabel", "#0A1A33");
-    const labelFill = cssColor("surface", "#FFFFFF");
+    const labelFill = cssColor("tokenFill", "#FFFFFF");
     for (const p of input.players) {
       seen.add(p.id);
       const stature = p.skeleton.metrics.stature;
