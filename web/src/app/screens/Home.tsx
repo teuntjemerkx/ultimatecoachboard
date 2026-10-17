@@ -39,7 +39,7 @@ export function Home() {
       <header className="home-head">
         <div className="home-brand">
           <div className="home-sub">
-            <span className="nameplate">Coach Board</span>
+            <span className="brand">Coach Board</span>
             <span className="label">{today}</span>
           </div>
           <h1 className="home-team">{teamName || "Your team"}</h1>
@@ -110,20 +110,29 @@ function GameDay({ matches }: { matches: MatchRow[] }) {
       </div>
       <div className="card-body">
         {unfinished ? (
-          <div>
-            <div className="gameday-vs">Playing now</div>
-            <h2 className="gameday-opponent" style={{ fontSize: fitSize(`vs ${unfinished.opponent}`) }}>vs {unfinished.opponent}</h2>
-            {unfinished.score && <div className="gameday-when">{unfinished.sets && unfinished.sets !== "0–0" ? `Sets ${unfinished.sets} · ` : ""}this set {unfinished.score}</div>}
-          </div>
+          <>
+            <div>
+              <div className="gameday-vs live">Playing now</div>
+              <h2 className="gameday-opponent" style={{ fontSize: fitSize(`vs ${unfinished.opponent}`) }}>vs {unfinished.opponent}</h2>
+            </div>
+            <div className="gameday-score" aria-label={`Sets ${unfinished.sets ?? "0–0"}, this set ${unfinished.score ?? "0–0"}`}>
+              <div><span className="label">Sets</span><strong>{unfinished.sets ?? "0–0"}</strong></div>
+              <div><span className="label">This set</span><strong>{unfinished.score ?? "0–0"}</strong></div>
+            </div>
+          </>
         ) : next ? (
-          <div style={{ minWidth: 0 }}>
-            <div className="gameday-vs">Next match</div>
-            <h2 className="gameday-opponent" style={{ fontSize: fitSize(f?.opponent ? `vs ${f.opponent}` : next.title) }}>
-              {f?.opponent ? `vs ${f.opponent}` : next.title}
-            </h2>
-            <div className="gameday-when">{when(next)}</div>
-            {next.venue && <div className="gameday-where">{next.venue}</div>}
-          </div>
+          <>
+            <div style={{ minWidth: 0 }}>
+              <div className="gameday-vs">Next match</div>
+              <h2 className="gameday-opponent" style={{ fontSize: fitSize(f?.opponent ? `vs ${f.opponent}` : next.title) }}>
+                {f?.opponent ? `vs ${f.opponent}` : next.title}
+              </h2>
+              {next.venue && <div className="gameday-where">{next.venue}</div>}
+            </div>
+            <div className="gameday-score" aria-label={when(next)}>
+              <div><span className="label">{when(next).split(" · ")[0]}</span><strong>{when(next).split(" · ")[1]}</strong></div>
+            </div>
+          </>
         ) : (
           <div>
             <div className="gameday-vs">Ready when you are</div>
@@ -175,7 +184,7 @@ function GameDay({ matches }: { matches: MatchRow[] }) {
 /** Big for a short name, smaller for a long one, so the opponent fits in two lines. */
 function fitSize(text: string): string {
   const n = text.length;
-  return n <= 14 ? "clamp(40px, 5vw, 64px)" : n <= 22 ? "clamp(34px, 3.9vw, 52px)" : "clamp(28px, 3.1vw, 42px)";
+  return n <= 14 ? "clamp(34px, 4vw, 52px)" : n <= 22 ? "clamp(28px, 3.2vw, 42px)" : "clamp(24px, 2.6vw, 34px)";
 }
 
 function Locker({ area, num, icon, title, note, text, onClick, children }: {

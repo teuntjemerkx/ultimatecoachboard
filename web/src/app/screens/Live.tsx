@@ -119,7 +119,7 @@ export function Live({ matchId }: { matchId: string }) {
         <div className="row" style={{ gap: 16, flex: 1, justifyContent: "center", flexWrap: "nowrap", minWidth: 0 }}>
           <span className="team" style={{ color: "var(--c-bandText)" }}>{home}</span>
           <span className="digits" aria-label={`${home} ${set.score.home}, ${away} ${set.score.opponent}`}>
-            {set.score.home}<span style={{ opacity: 0.45, margin: "0 8px" }}>:</span>{set.score.opponent}
+            {set.score.home}<span className="sep">:</span>{set.score.opponent}
           </span>
           <span className="team" style={{ color: "var(--c-bandText)" }}>{away}</span>
         </div>
@@ -130,7 +130,7 @@ export function Live({ matchId }: { matchId: string }) {
       </header>
 
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: portrait ? "column" : "row" }}>
-        <div style={{ flex: 1, minWidth: 0, minHeight: 0, position: "relative" }}>
+        <div style={{ flex: 1, minWidth: 0, minHeight: 0, position: "relative", padding: portrait ? "4px 16px 0" : "4px 0 16px 16px" }}>
           <Court2D tokens={tokens} vertical={portrait} flipped={flipped} />
           <div className="court-pills">
             {session.unsaved && (
@@ -260,7 +260,7 @@ function SetBreak({ session, onDone, onLog }: { session: MatchSession; onDone: (
               <span className="label">Start the next set in rotation</span>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6 }}>
                 {[1, 2, 3, 4, 5, 6].map((r) => (
-                  <button key={r} className={`btn big ${start === r ? "on" : ""}`} style={{ font: "800 26px/1 var(--font-athletic)" }} onClick={() => setStart(r)}>{r}</button>
+                  <button key={r} className={`btn big ${start === r ? "on" : ""}`} style={{ font: "700 22px/1 var(--font-num)" }} onClick={() => setStart(r)}>{r}</button>
                 ))}
               </div>
               {suggested && <span className="muted">Suggested: rotation {suggested.rotation} (best side-out so far).</span>}

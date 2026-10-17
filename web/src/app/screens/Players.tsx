@@ -140,7 +140,7 @@ export function Players() {
                 <label className="field">
                   <span className="label">Number</span>
                   <input id="player-number" inputMode="numeric" value={number} onChange={(e) => setNumber(e.target.value)} placeholder="7"
-                         style={{ font: "400 36px/1 var(--font-display-big)", textAlign: "center" }} />
+                         style={{ font: "800 30px/1 var(--font-num)", textAlign: "center", letterSpacing: "-0.02em" }} />
                 </label>
                 <label className="field">
                   <span className="label">Name (optional)</span>

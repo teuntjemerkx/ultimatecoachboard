@@ -45,7 +45,6 @@ export function Court2D({ tokens, vertical, flipped = false, onPointer, children
     return <line key={key} x1={a.u} y1={a.v} x2={b.u} y2={b.v} stroke="var(--c-courtLine)" strokeWidth={0.05} strokeDasharray={dash} />;
   };
   const corner = view(-4.5, -9), far = view(4.5, 9);
-  const free = { a: view(-7.5, -12), b: view(7.5, 12) };
 
   const toWorld = (e: PointerEvent<SVGSVGElement>) => {
     const svg = e.currentTarget;
@@ -62,9 +61,8 @@ export function Court2D({ tokens, vertical, flipped = false, onPointer, children
          onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); onPointer?.("down", toWorld(e), e); }}
          onPointerMove={(e) => onPointer?.("move", toWorld(e), e)}
          onPointerUp={(e) => onPointer?.("up", toWorld(e), e)}>
-      <rect x={-w / 2} y={-h / 2} width={w} height={h} fill="var(--c-hallFloor)" />
-      <rect x={Math.min(free.a.u, free.b.u)} y={Math.min(free.a.v, free.b.v)} width={Math.abs(free.b.u - free.a.u)}
-            height={Math.abs(free.b.v - free.a.v)} fill="var(--c-freeZone)" />
+      {/* The floor around the court, a rounded panel within the view (the free zone runs past it on every side). */}
+      <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={0.9} fill="var(--c-freeZone)" stroke="rgba(255,255,255,0.07)" strokeWidth={0.04} />
       <rect x={Math.min(corner.u, far.u)} y={Math.min(corner.v, far.v)} width={Math.abs(far.u - corner.u)}
             height={Math.abs(far.v - corner.v)} fill="var(--c-court)" stroke="var(--c-courtLine)" strokeWidth={0.05} />
       {line(-4.5, 3, 4.5, 3, "a1")}

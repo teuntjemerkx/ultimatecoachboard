@@ -87,7 +87,7 @@ export function Season() {
                 const v = rec ? RotationRecord.sideOutRate(rec) : undefined;
                 return (
                   <div key={r}>
-                    <span style={{ font: "800 22px/1 var(--font-athletic)" }}>{pct(v)}</span>
+                    <span className="bar-value">{pct(v)}</span>
                     <div className="bar-fill" style={{ height: `${Math.max(4, (v ?? 0) * 100)}%`, opacity: v === undefined ? 0.25 : 1 }} />
                     <span className="label" style={{ color: "var(--c-text)" }}>R{r}</span>
                   </div>

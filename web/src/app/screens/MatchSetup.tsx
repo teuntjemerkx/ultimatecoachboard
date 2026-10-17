@@ -190,7 +190,7 @@ export function MatchSetup() {
                     <button key={sys} type="button" className={`btn ${system === sys ? "on" : ""}`} aria-pressed={system === sys}
                             onClick={() => setSystem(sys)} title={TeamSystem.displayName(sys)}
                             style={{ minHeight: 64, flexDirection: "column", gap: 2, padding: "4px 6px", whiteSpace: "normal", borderRadius: 18 }}>
-                      <span style={{ font: `400 ${main.length > 4 ? 24 : 28}px/1 var(--font-display-big)`, whiteSpace: "nowrap" }}>{main}</span>
+                      <span style={{ font: `700 ${main.length > 4 ? 18 : 21}px/1 var(--font-display)`, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>{main}</span>
                       {sub && <small style={{ fontSize: 12, fontWeight: 600, opacity: 0.85, lineHeight: 1.1 }}>{sub}</small>}
                     </button>
                   );
@@ -284,7 +284,7 @@ function PickSheet({ title, roster, onCourt, libero, line, typed, setTyped, onPi
         <form className="row" onSubmit={(e) => { e.preventDefault(); const n = Number(typed); if (typed.trim() !== "" && Number.isInteger(n) && n >= 0 && n <= 99) onPick({ id: crypto.randomUUID().toUpperCase(), number: n }); }}>
           <span className="label">{roster.length ? "Not in the team?" : "Shirt number"}</span>
           <input id="type-number" className="input" inputMode="numeric" placeholder="#" value={typed} onChange={(e) => setTyped(e.target.value)}
-                 style={{ width: 120, font: "400 34px/1 var(--font-display-big)", textAlign: "center" }} />
+                 style={{ width: 120, font: "800 28px/1 var(--font-num)", textAlign: "center" }} />
           <button className="btn big" type="submit">Use this number</button>
         </form>
       </div>

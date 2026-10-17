@@ -68,7 +68,7 @@ export function MatchLogView({ matchId }: { matchId: string }) {
           <div className="row" style={{ gap: 10 }}>
             {sets.map((n) => (
               <button key={n} className={`btn big ${n === set ? "on" : ""}`} aria-pressed={n === set} onClick={() => setChosen(n)}
-                      style={{ font: "800 22px/1 var(--font-athletic)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Set {n}</button>
+                      >Set {n}</button>
             ))}
             {last && <span className="nameplate" style={{ marginLeft: "auto", fontSize: 24 }}>{last.home} – {last.opponent}</span>}
           </div>
