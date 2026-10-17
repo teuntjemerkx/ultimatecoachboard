@@ -92,13 +92,13 @@ export async function unseen() {
  */
 export async function stillPeople(time = 0.2) {
   const v = await import("/src/core/video/index.ts");
-  const { openClip, grabFrame } = await import("/src/app/video/clip.ts");
+  const { openClip, grabFrame, SEEK_INTO_FRAME } = await import("/src/app/video/clip.ts");
   const { peopleOnStill } = await import("/src/app/video/pipeline.ts");
   const cam = v.VideoCamera.decode(globalThis.__videoDebug.camera);
   const blob = await (await (await caches.open("video-test")).match("/__test/rally.mp4")).blob();
   const clip = await openClip(blob);
   const still = document.createElement("canvas");
-  await grabFrame(clip, time, still);
+  await grabFrame(clip, time + SEEK_INTO_FRAME, still);
   clip.close();
   const t0 = performance.now();
   const people = await peopleOnStill(still, cam);

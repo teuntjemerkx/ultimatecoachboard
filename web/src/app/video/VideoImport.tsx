@@ -10,7 +10,7 @@ import { netHeight, useSettings } from "../store/settings";
 import { Bar } from "../ui/Bar";
 import { Choice } from "../ui/Choice";
 import { Icon } from "../ui/Icon";
-import { grabFrame, openClip, type Clip } from "./clip";
+import { grabFrame, openClip, SEEK_INTO_FRAME, type Clip } from "./clip";
 import { buildRally, loadDetector, peopleOnStill } from "./pipeline";
 import { deleteVideo, listVideos, saveVideo, type StoredVideo } from "./videoStore";
 import "./video.css";
@@ -173,9 +173,9 @@ export function VideoImport() {
   }, [calibration, net]);
   const end = clip ? Math.min(clip.duration, start + 10) : 0;
 
-  /** The still for marking the court: the clip at `at` seconds. */
+  /** The still for marking the court: the clip at `at` seconds, read as a build reads that time. */
   const grabStill = async (c: Clip, at: number) => {
-    stillRef.current = await grabFrame(c, at, stillRef.current ?? undefined);
+    stillRef.current = await grabFrame(c, at + SEEK_INTO_FRAME, stillRef.current ?? undefined);
     setStillVersion((v) => v + 1);
   };
 

@@ -30,6 +30,45 @@ describe("Video to 3D ball sampling", () => {
     expect(samplePlan(0, 1, 10, 0).every((s) => s.pose)).toBe(true);
   });
 
+  it("seeks into the frame on screen at each read's time", () => {
+    // A browser that cuts a seek to whole microseconds and shows the last frame whose start, rounded to whole
+    // microseconds (MP4) or milliseconds (WebM), is not after it: a seek to a frame's exact start can show the one before.
+    const shows = (seek: number, fps: number, unit: number) => {
+      const at = Math.floor(seek * 1e6);
+      let frame = Math.floor(seek * fps) + 1;
+      while (Math.round((frame / fps) * (1e6 / unit)) * unit > at) frame -= 1;
+      return frame;
+    };
+    const own = (t: number, fps: number) => Math.floor(t * fps + 1e-6);
+    for (const [start, end] of [[0, 4], [3.2, 7.2], [1.234, 5.234]]) {
+      const plan = samplePlan(start, end);
+      for (const fps of [24, 25, 30, 60]) {
+        for (const unit of [1, 1000]) {
+          for (const s of plan) expect(shows(s.seek, fps, unit), `${fps} fps at ${s.time}`).toBe(own(s.time, fps));
+        }
+      }
+    }
+    // Seeking to the times themselves, a 30 fps clip would show the frame before on every third read.
+    const plan = samplePlan(0, 4);
+    expect(plan.filter((s) => shows(s.time, 30, 1) !== own(s.time, 30)).length).toBe(40);
+    // Under half a frame at 60 fps.
+    expect(plan.every((s) => s.seek > s.time + 0.001 && s.seek < s.time + 1 / 120)).toBe(true);
+  });
+
+  it("puts a 24 fps clip's frames where they come up, from the seek times", () => {
+    const shows = (seek: number) => Math.floor(seek * 24);
+    let previous: number | undefined;
+    const reads = samplePlan(2, 12).map((s) => {
+      const frame = shows(s.seek), repeat = frame === previous;
+      previous = frame;
+      return { time: s.seek, repeat, frame };
+    });
+    const grid = frameGrid(reads)!;
+    expect(grid?.fps).toBe(24);
+    // Within a few milliseconds of each frame's start (the planned times would put them up to 5 ms early).
+    for (const r of reads) expect(Math.abs(onFrameGrid(r.time, grid) - r.frame / 24)).toBeLessThan(0.003);
+  });
+
   it("drops candidates that stay put for a second, not a ball near the top of its flight", () => {
     const frames = flight(1.5);
     // The ball hangs at the top of a set for a few frames.
