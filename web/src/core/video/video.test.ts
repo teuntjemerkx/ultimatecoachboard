@@ -1142,7 +1142,10 @@ describe("BallVideoTests", () => {
     const tossEnd = BallAnchor.hand(5.537, new V3(-3.5, 2.8, 6.2), 0.3);
     const serveStart = BallAnchor.hand(5.485, new V3(-3.5, 2.8, 6.5), 0.3, topspin);
     const isServe = (s: BallSegment) => s.t1 > 6;
-    expect(BallReconstruction.reconstruct([toss, serve], clip, [tossStart, tossEnd, serveStart]).some(isServe), "before").toBe(false);
+    // Without the rule the build's anchors spoil the serve: dropped (its sizes over the threshold), or, with the drag
+    // coefficient fitted (dragSeen), kept from the misread hand 3 m into the court.
+    const before = BallReconstruction.reconstruct([toss, serve], clip, [tossStart, tossEnd, serveStart]).find(isServe);
+    expect(before === undefined || before.position(5.517).z < 8.5, "before").toBe(true);
     expect(VideoReconstructor.imagePlaces(serveStart, serve, clip)).toBe(false);
     expect(VideoReconstructor.imagePlaces(tossEnd, toss, clip), "the toss alone does not place its end").toBe(true);
     const agreed = VideoReconstructor.agreedAnchors([tossStart, tossEnd, serveStart], [toss, serve], clip);
