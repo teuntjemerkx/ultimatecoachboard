@@ -436,8 +436,9 @@ export class PlayerTracker {
    * from a low camera a far player's floor point wanders metres along the view, and such a player would otherwise be
    * lost every few frames. A person the frame cuts is now and then found twice, whole and as a piece at the edge
    * (`onePerson`): the piece next to a lock's detection starts no passing track. Frames a lock's player spends in the
-   * air go back to the lock after each pass (`rejoinJumps`). Returns the locks' tracks (spanning the clip, unseen frames
-   * occluded) and the detections they took.
+   * air go back to the lock after each pass, and so do the frames from his landing on when the lock followed him up
+   * (`rejoinJumps`). Returns the locks' tracks (spanning the clip, unseen frames occluded) and the detections they
+   * took.
    */
   follow(input: readonly VideoFrameObservation[], locks: readonly TrackLock[], camera: VideoCamera):
     { tracks: TrackedPlayer[]; taken: Set<PersonDetection> } {
@@ -544,7 +545,7 @@ export class PlayerTracker {
           others.push(new Work(CourtFrame.side(d.floor), d, k, t, r));
         });
       }
-      PlayerTracker.rejoinJumps(locked, others, times, camera, taken);
+      PlayerTracker.rejoinJumps(locked, others, times, camera, taken, forward);
       locked.forEach((w, i) => found[i].push(...w.detections.slice(1)));
     }
     const tracks = locked.map((w, i) => {
@@ -580,20 +581,33 @@ export class PlayerTracker {
   }
 
   /**
-   * Web addition: gives the locks back the frames their players spent in the air. Feet off the floor read farther along
-   * the camera's ray (see `maxFootHeight`), from a low camera metres farther, and when the first frame in the air
-   * already reads beyond the physical gate a passing track takes the jumper's frames until he lands. A passing track
-   * that holds at least two frames inside a gap of a lock (a jump lasts 0.3 s or more), each farther along the ray than
-   * the lock's path across the gap (from its detection before the gap to the one after) by more than three times the
-   * reading's own uncertainty (as in `floorNoise`), and whose first and last of them continue the lock's detections on
-   * either side in the picture (`continues`), was the lock's player in the air: the lock takes those frames. A passing
-   * track goes to one lock at most.
+   * Web addition: gives the locks back what passing tracks took of their players around a jump. Feet off the floor
+   * read farther along the camera's ray (see `maxFootHeight`), from a low camera metres farther. When the first frame
+   * in the air already reads beyond the physical gate, a passing track takes the jumper's frames until he lands. A
+   * passing track that holds at least two frames inside a gap of a lock (a jump lasts 0.3 s or more), each farther along
+   * the ray than the lock's path across the gap (from its detection before the gap to the one after) by more than three
+   * times the reading's own uncertainty (as in `floorNoise`), and whose first and last of them continue the lock's
+   * detections on either side in the picture (`continues`), was the lock's player in the air: the lock takes those
+   * frames. When the lock follows its player up instead (his first frame in the air, often only 0.1 to 0.3 m up, reads
+   * inside its gate), the frame he comes down in (the landing, or the take-off on the pass back in time) reads beyond it
+   * and a passing track takes him from there. At least two of the lock's detections that each read that much farther
+   * than an earlier one of his (`a`, the latest that does), with him lifted off the floor (`lifted`, from `a` to the
+   * farthest of them: a misread foot moves alone), were a jump. He comes down within a second of the first of them,
+   * over a frame or a few after the last the lock saw him in: each a passing track's detection that continues the one
+   * before in the picture, reads that much nearer, shows the one before as him lifted, and whose track held no one
+   * else's frames since the jump began (of several, the one nearest in the picture). The lock takes each, and from the
+   * last, his landing, that track's frames up to its own next detection. A passing track goes to one lock at most.
    */
   private static rejoinJumps(locked: readonly Work[], others: readonly Work[], times: readonly number[],
-    camera: VideoCamera, taken: Set<PersonDetection>): void {
+    camera: VideoCamera, taken: Set<PersonDetection>, forward: boolean): void {
     type Taken = { frame: number; det: PersonDetection };
-    const c = camera.center, claimed = new Set<Work>();
+    const c = camera.center, claimed = new Map<Work, Work>();
     const byFrame = (x: Taken, y: Taken) => x.frame - y.frame;
+    const give = (w: Work, o: Work, dets: readonly Taken[]) => {
+      claimed.set(o, w);
+      for (const e of dets) taken.add(e.det);
+      w.detections.push(...dets);
+    };
     // How far a detection reads beyond a floor point along the camera's ray, in standard deviations of a reading there.
     const beyond = (e: Taken, p: FloorPoint): number => {
       const d = Math.max(2, Math.hypot(p.x - c.x, p.z - c.z));
@@ -617,13 +631,82 @@ export class PlayerTracker {
           return PlayerTracker.continues(a.det, first.det, times[first.frame] - times[a.frame])
             && PlayerTracker.continues(last.det, b.det, times[b.frame] - times[last.frame]);
         });
-        if (!o) continue;
-        claimed.add(o);
-        const inside = between(o);
-        for (const e of inside) taken.add(e.det);
-        w.detections.push(...inside);
+        if (o) give(w, o, between(o));
       }
     }
+    // In the pass's order of time: the lock followed its player up from one of his detections (`a`) and lost him where
+    // he came down. Of the runs ending at the same detection the latest `a` that passes wins: the shortest, the jump.
+    const order = (x: Taken, y: Taken) => (forward ? x.frame - y.frame : y.frame - x.frame);
+    const before = (x: Taken, y: Taken) => order(x, y) < 0;
+    for (const w of locked) {
+      const mine = [...w.detections].sort(order), held = new Set(mine.map((e) => e.det)), landed = new Set<number>();
+      for (let g = mine.length - 3; g >= 0; g--) {
+        const a = mine[g];
+        let n = g + 1;
+        while (n < mine.length && beyond(mine[n], a.det.floor) > 3) n++;
+        if (n - g - 1 < 2 || landed.has(n)) continue;
+        const up = mine.slice(g + 1, n);
+        const top = up.reduce((m, e) => (beyond(e, a.det.floor) > beyond(m, a.det.floor) ? e : m));
+        if (!PlayerTracker.lifted(a.det, top.det, camera)) continue;
+        // He comes down within a second, over a frame or a few: from the last the lock saw him in (it may follow him
+        // part of the way), each a passing track's detection that reads nearer, with him lifted in the one before. The
+        // lock takes each, and from the last, on the floor, its track's frames up to the lock's own next detection.
+        let from = up[up.length - 1], step: { o: Work; landing: Taken; gap: number } | undefined;
+        for (;;) {
+          const next = mine.find((e) => before(from, e));
+          let best: typeof step;
+          for (const o of others) {
+            const landing = o.detections.filter((e) => before(from, e) && (!next || before(e, next))).sort(order)[0];
+            if (!landing || (claimed.has(o) && claimed.get(o) !== w)) continue;
+            // No one else's frames while the lock's player was in the air.
+            if (o.detections.some((e) => !before(e, up[0]) && !before(from, e) && !held.has(e.det))) continue;
+            if (!(Math.abs(times[landing.frame] - times[up[0].frame]) <= 1 && beyond(landing, from.det.floor) < -3
+              && PlayerTracker.continues(from.det, landing.det, times[landing.frame] - times[from.frame])
+              && PlayerTracker.lifted(landing.det, from.det, camera))) continue;
+            const gap = PlayerTracker.keypointDistance(from.det.keypoints, landing.det.keypoints)!;
+            if (!best || gap < best.gap) best = { o, landing, gap };
+          }
+          if (best) {
+            if (step) give(w, step.o, [step.landing]);
+            held.add(best.landing.det);
+            step = best;
+            from = best.landing;
+          } else if (!step && next && Math.abs(times[next.frame] - times[up[0].frame]) <= 1) {
+            from = next;
+          } else {
+            break;
+          }
+        }
+        if (!step) continue;
+        const { o, landing } = step, next = mine.find((e) => before(landing, e));
+        landed.add(n);
+        give(w, o, o.detections.filter((e) => !before(e, landing) && (!next || before(e, next))));
+      }
+    }
+  }
+
+  /**
+   * Web addition: whether detection `air`, read farther along the camera's ray than `ground`, is the same body lifted
+   * off the floor rather than its feet misread (or the body standing farther away): its upper body (neck, shoulders,
+   * hips) stands taller above its floor reading (`heightAbove`, per keypoint both show, median). A body raised with its
+   * feet stands as much taller as the reading is farther (the same rays, met farther away), one standing there as tall,
+   * and one whose feet alone read farther shorter. On a log scale at least a quarter of what the reading's distance
+   * gives (1 for a body raised with its feet, 0 standing): the OK Hoče jump server, his feet tucked up, 0.6 to 1.2;
+   * feet misread there -1.2 to -1.8.
+   */
+  static lifted(ground: PersonDetection, air: PersonDetection, camera: VideoCamera): boolean {
+    const c = camera.center;
+    const taller: number[] = [];
+    for (const k of ["neck", "leftShoulder", "rightShoulder", "root", "leftHip", "rightHip"] as const) {
+      const p = ground.keypoints[k], q = air.keypoints[k];
+      if (!p || !q || !(p.confidence >= 0.2) || !(q.confidence >= 0.2)) continue;
+      const h0 = camera.heightAbove(p.point, ground.floor), h1 = camera.heightAbove(q.point, air.floor);
+      if (h0 !== undefined && h1 !== undefined && h0 > 0 && h1 > 0) taller.push(Math.log(h1 / h0));
+    }
+    const farther = Math.log(Math.hypot(air.floor.x - c.x, air.floor.z - c.z) / Math.hypot(ground.floor.x - c.x, ground.floor.z - c.z));
+    if (taller.length < 2 || !(farther > 0)) return false;
+    taller.sort((x, y) => x - y);
+    return taller[Math.floor(taller.length / 2)] >= 0.25 * farther;
   }
 
   /**

@@ -401,6 +401,13 @@ describe("TrackingVideoTests", () => {
     // Before, on all 8 seeds a passing track started by the second box took his frame at 1.2 s and a passing track his
     // frames in the air, and on 2 of them his lock followed him up and lost him from the landing on; the same with his
     // first frame in the air missed, as in the clip.
+    // Then without the clip's two moments and with the detector's guess at his cut feet from 40 px above the edge to
+    // 25 px below it: on 2 of 8 seeds his lock took his first frame in the air at face value (0.1 to 0.3 m up it reads
+    // 0.6 to 1.7 m farther, inside its gate), followed him up 3 m into the court and lost him to a passing track at the
+    // landing, waiting where he was in the air. Tapped after the jump (2.8 s), his lock followed him back from the
+    // landing up and lost him from the take-off back, for a second or more, on all 8 seeds. He is kept from the take-off
+    // on (before it, cut feet scattering a metre along the view still split him into his lock and a passing track on
+    // one seed).
     const cam = VideoCamera.lookingAt(new V3(-1.9, 2.6, 23.1), new V3(0.97, 2.16, 0), 360 / Math.tan(deg(10)), 1280, 720);
     const H = cam.height;
     const takeOff = 1.5, landing = 2.1, top = 0.5;
@@ -422,32 +429,33 @@ describe("TrackingVideoTests", () => {
     };
     const others = [{ x: -1, z: 4 }, { x: 2, z: 6.5 }, { x: 0.5, z: -4 }, { x: -2.5, z: -6 }];
     const at = (o: FloorPoint, t: number) => ({ x: o.x + 0.3 * Math.sin(t + o.x), z: o.z });
-    for (const missed of [false, true]) {
+    const variants = [[true, false, 0.2], [true, true, 0.2], [false, false, 0.2], [false, true, 0.2], [false, false, 2.8], [false, true, 2.8]] as const;
+    for (const [clip, missed, tap] of variants) {
       for (let seed = 1; seed <= 8; seed++) {
-        const label = `seed ${seed}${missed ? ", first frame in the air missed" : ""}`;
+        const label = `seed ${seed}${clip ? "" : ", scattered feet"}${missed ? ", first frame in the air missed" : ""}${tap > takeOff ? ", tapped after the jump" : ""}`;
         const rng = new SplitMix64(1400 + seed);
         const s = new SkeletonModel(new BodyMetrics(uniform(rng, 1.86, 2.0)));
         const his: PersonDetection[][] = [], theirs: PersonDetection[][][] = [];
         const frames: VideoFrameObservation[] = Array.from({ length: 31 }, (_, k) => {
           const t = k / 10;
           const kp = inPicture(Synth.keypoints(s, posture(t), where(t), Math.PI, cam, rng, { totalJump: lift(t), noise: 2, drop: 0.05 }));
-          let mine = [detect(kp, kp.leftAnkle || kp.rightAnkle ? undefined : H + uniform(rng, -20, 20))];
-          if (k === 10) {
+          let mine = [detect(kp, kp.leftAnkle || kp.rightAnkle ? undefined : H + (clip ? uniform(rng, -20, 20) : uniform(rng, -40, 25)))];
+          if (clip && k === 10) {
             const whole = detect(kp, H - 38), piece = { x: Math.max(4, whole.footImage.x - 14), y: H - 8 };
             mine = [whole, PersonDetection.create(cam.floorPoint(piece)!, piece, { confidence: 0.12, boxHeight: 75 })];
             expect(PlayerTracker.onePerson(whole, mine[1], cam), label).toBe(true);
           }
-          if (k === 12) mine = [detect(kp, H - 30)];
+          if (clip && k === 12) mine = [detect(kp, H - 30)];
           if (missed && k === 16) mine = [];
           his.push(mine);
           theirs.push(others.map((o) => [detect(inPicture(Synth.keypoints(new SkeletonModel(new BodyMetrics(1.85)), "ready", at(o, t),
             o.z > 0 ? Math.PI : 0, cam, rng, { noise: 2, drop: 0.05 })))]));
           return { time: t, detections: [...mine, ...theirs[k].flat()] };
         });
-        const locks = [{ time: 0.2, foot: his[2][0].footImage }, ...others.map((o) => ({ time: 0.2, foot: cam.project(V3.fromFloor(at(o, 0.2), 0))! }))];
+        const locks = [{ time: tap, foot: his[Math.round(tap * 10)][0].footImage }, ...others.map((o) => ({ time: tap, foot: cam.project(V3.fromFloor(at(o, tap), 0))! }))];
         const { tracks } = new PlayerTracker({ maxFootHeight: 0.4 }).follow(frames, locks, cam);
         tracks[0].samples.forEach((x, k) => {
-          if (his[k].length === 0) return;
+          if (his[k].length === 0 || (!clip && x.time < takeOff - 1e-6)) return;
           expect(x.measured && his[k].some((d) => d.floor === x.measured), `${label}: his frame at ${x.time.toFixed(1)} s`).toBe(true);
         });
         // The others keep their own.
@@ -464,6 +472,21 @@ describe("TrackingVideoTests", () => {
     const inside = PersonDetection.create({ x: -1, z: 5.8 }, { x: 590, y: 655 }, { boxHeight: 80 });
     expect(PlayerTracker.onePerson(tall, behind, cam)).toBe(false);
     expect(PlayerTracker.onePerson(tall, inside, cam)).toBe(false);
+
+    // A body lifted 0.3 m stands taller above its feet's farther reading; feet misread 25 px up with the body where it
+    // was, or the body standing as far away, do not.
+    const rng = new SplitMix64(1499), body = new SkeletonModel(new BodyMetrics(1.9)), spot = { x: -2, z: 6 };
+    const pose = (at: FloorPoint, totalJump = 0) => Synth.keypoints(body, "ready", at, Math.PI, cam, rng, { totalJump, noise: 1, drop: 0 });
+    const ground = detect(pose(spot)), lifted = detect(pose(spot, 0.3));
+    const feetUp = (kp: Keypoints): Keypoints => Object.fromEntries(Object.entries(kp).map(([k, o]) =>
+      [k, k.endsWith("Ankle") ? { ...o!, point: { x: o!.point.x, y: o!.point.y - 25 } } : o!]));
+    const misread = detect(feetUp(pose(spot)));
+    const away = detect(pose({ x: spot.x - 0.15 * (lifted.floor.z - spot.z), z: lifted.floor.z }));
+    expect(lifted.floor.z, "the lifted feet read farther").toBeLessThan(spot.z - 1);
+    expect(misread.floor.z, "the misread feet read farther").toBeLessThan(spot.z - 1);
+    expect(PlayerTracker.lifted(ground, lifted, cam)).toBe(true);
+    expect(PlayerTracker.lifted(ground, misread, cam)).toBe(false);
+    expect(PlayerTracker.lifted(ground, away, cam)).toBe(false);
   }, 60_000);
 });
 
