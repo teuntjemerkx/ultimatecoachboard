@@ -31,6 +31,19 @@ describe("making a rebuilt player believable", () => {
     expect(fastest).toBeLessThan(3);
   });
 
+  it("lets a player lost before the end of the clip come to a stop, not run on", () => {
+    // Seen running at 4 m/s along x until 1.5 s, then not again until the clip ends at 4 s (and not before 0.5 s).
+    const samples = Array.from({ length: 41 }, (_, k) => {
+      const t = k / 10, seen = t >= 0.5 && t <= 1.5;
+      return VideoPlayerSample.create(t, seen ? -2 + 4 * (t - 0.5) : 0, -6, 0, "ready", { occluded: !seen, confidence: 0.8 });
+    });
+    const out = TrackCleanup.clean(samples, defaultTrackCleanup, camera);
+    const end = out[out.length - 1], atLast = out[15], atFirst = out[5];
+    expect(Math.abs(end.x - atLast.x)).toBeLessThan(1.5);
+    expect(Math.abs(out[0].x - atFirst.x)).toBeLessThan(1.5);
+    expect(Math.abs(end.x)).toBeLessThan(4);
+  });
+
   it("never lets a player go faster than a sprint", () => {
     const samples = Array.from({ length: 11 }, (_, k) => VideoPlayerSample.create(k / 10, k === 5 ? 4 : 0, 5, Math.PI, "ready", { confidence: 1 }));
     const out = TrackCleanup.clean(samples, { ...defaultTrackCleanup, acceleration: 200 }, camera);

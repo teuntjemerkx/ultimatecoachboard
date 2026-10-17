@@ -129,6 +129,22 @@ export const TrackCleanup = {
       next = { p: f.p + c00 * dp + c01 * dv, v: f.v + c10 * dp + c11 * dv };
       out[i] = next.p;
     }
+    // Before the first reading and after the last the model carries the player on at their speed for as long as the
+    // clip lasts (a far player lost 1.6 s before the end ran 10 m into the benches): there they ease to a stop within
+    // a few tenths of a second (`settle`), from their speed at the edge.
+    const last = n - 1 - [...values].reverse().findIndex((v) => v !== undefined);
+    const settle = 0.25;
+    const ease = (edge: number, step: 1 | -1) => {
+      const k = edge - step;
+      const dt = k >= 0 && k < n ? times[edge] - times[k] : 0;
+      const v = Math.abs(dt) > 1e-6 ? (out[edge] - out[k]) / dt : 0;
+      for (let i = edge + step; i >= 0 && i < n; i += step) {
+        const d = times[i] - times[edge];
+        out[i] = out[edge] + Math.sign(d) * v * settle * (1 - Math.exp(-Math.abs(d) / settle));
+      }
+    };
+    ease(last, 1);
+    ease(first, -1);
     return out;
   },
 
