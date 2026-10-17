@@ -178,18 +178,20 @@ export class MatchSession {
 
   /** The label on a player's token: the jersey number, else the role. */
   label(player: PlayerID, role: string): string {
-    const n = this.state.setup.jerseys?.[player];
+    const n = this.number(player);
     return n !== undefined ? String(n) : role;
   }
 
-  name(player: PlayerID): string | undefined { return this.state.setup.names?.[player]; }
+  /** A player's name, from the setup or as typed when they came on. */
+  name(player: PlayerID): string | undefined { return this.state.playerName(player); }
 
-  number(player: PlayerID): number | undefined { return this.state.setup.jerseys?.[player]; }
+  /** A player's shirt number, from the setup or as typed when they came on (undone with that substitution). */
+  number(player: PlayerID): number | undefined { return this.state.jersey(player); }
 
   /** A player as the coach names them: "#12 Anna", "#12", or the role when no number is known. */
   who(player: PlayerID): string {
     const n = this.number(player), name = this.name(player);
-    if (n === undefined) return name ?? this.state.match.displayRole(player, "home") ?? "a player";
+    if (n === undefined) return name ?? this.state.match.displayRole(player, this.state.sideOf(player) ?? "home") ?? "a player";
     return `#${n}${name ? ` ${name}` : ""}`;
   }
 

@@ -113,6 +113,12 @@ export const RotationStats = {
   },
 };
 
+/** A substitution or time-out (FIVB: the regular game interruptions) and the team that took it (web addition). */
+export interface Interruption {
+  kind: "substitution" | "timeOut";
+  side: Side;
+}
+
 /** A Match Log row (Appendix C2, Screen 7): a rally and what happened since the previous one. */
 export interface MatchLogRow {
   rally: RallyRecord;
@@ -123,11 +129,13 @@ export interface MatchLogRow {
   notes: string[];
   /** Skill codes of this rally (Advanced Mode). */
   skills: SkillCode[];
+  /** The substitutions and time-outs before this rally, in order, with their teams (web addition). */
+  interruptions: Interruption[];
 }
 
 export const MatchLogRow = {
   make(rally: RallyRecord): MatchLogRow {
-    return { rally, scoutLines: 0, sketchStrokes: 0, substitutions: 0, timeOuts: 0, notes: [], skills: [] };
+    return { rally, scoutLines: 0, sketchStrokes: 0, substitutions: 0, timeOuts: 0, notes: [], skills: [], interruptions: [] };
   },
 
   id(row: MatchLogRow): number {
@@ -159,8 +167,14 @@ export const MatchLog = {
         }
         case "scout": pending.scoutLines += 1; break;
         case "ink": pending.sketchStrokes += 1; break;
-        case "substitution": pending.substitutions += 1; break;
-        case "timeOut": pending.timeOuts += 1; break;
+        case "substitution":
+          pending.substitutions += 1;
+          pending.interruptions.push({ kind: "substitution", side: action.side });
+          break;
+        case "timeOut":
+          pending.timeOuts += 1;
+          pending.interruptions.push({ kind: "timeOut", side: action.side });
+          break;
         case "skill": pending.skills.push(action.code); break;
         case "nextSet":
         case "rotationCorrection": break;

@@ -87,7 +87,8 @@ export type LiveEvent =
   | { kind: "ink"; stroke: InkStroke }
   | { kind: "moveToken"; side: Side; position: CourtPosition; to: LocalPoint }
   | { kind: "resetTokens" }
-  | { kind: "substitution"; side: Side; outgoing: PlayerID; incoming: PlayerID }
+  /** With `number` (and `name`) for an incoming player new to the match (web addition). */
+  | { kind: "substitution"; side: Side; outgoing: PlayerID; incoming: PlayerID; number?: number; name?: string }
   /** A time-out for a side, counted in the set (web addition; the panic time-out counts as one for home). */
   | { kind: "timeOut"; side: Side }
   | { kind: "toggleMode" }
@@ -107,8 +108,8 @@ export const LiveEvent = {
   ink: (stroke: InkStroke): LiveEvent => ({ kind: "ink", stroke }),
   moveToken: (side: Side, position: CourtPosition, to: LocalPoint): LiveEvent => ({ kind: "moveToken", side, position, to }),
   resetTokens: { kind: "resetTokens" } as LiveEvent,
-  substitution: (side: Side, outgoing: PlayerID, incoming: PlayerID): LiveEvent =>
-    ({ kind: "substitution", side, outgoing, incoming }),
+  substitution: (side: Side, outgoing: PlayerID, incoming: PlayerID, newcomer?: { number?: number; name?: string }): LiveEvent =>
+    ({ kind: "substitution", side, outgoing, incoming, ...newcomer }),
   timeOut: (side: Side): LiveEvent => ({ kind: "timeOut", side }),
   toggleMode: { kind: "toggleMode" } as LiveEvent,
   undo: { kind: "undo" } as LiveEvent,
@@ -120,6 +121,13 @@ export const LiveEvent = {
   skill: (side: Side, player: PlayerID, skill: Skill, grade: SkillGrade): LiveEvent =>
     ({ kind: "skill", side, player, skill, grade }),
 };
+
+/** A player who came on without being in the match's MatchStarted record, with what the coach typed (web addition). */
+export interface Newcomer {
+  side: Side;
+  number?: number;
+  name?: string;
+}
 
 /** A token as drawn on the board. */
 export interface BoardToken {
@@ -135,7 +143,7 @@ export interface BoardToken {
 /** Undoable actions, kept in order; derived state is rebuilt from the active ones (exact undo). */
 export type LiveAction =
   | { kind: "rally"; winner: Side }
-  | { kind: "substitution"; side: Side; outgoing: PlayerID; incoming: PlayerID }
+  | { kind: "substitution"; side: Side; outgoing: PlayerID; incoming: PlayerID; number?: number; name?: string }
   | { kind: "timeOut"; side: Side }
   | { kind: "scout"; line: ScoutLine }
   | { kind: "ink"; stroke: InkStroke }
@@ -148,7 +156,8 @@ export const LiveAction = {
   encode(a: LiveAction): JsonValue {
     switch (a.kind) {
       case "rally": return encodeTagged("rally", { _0: a.winner });
-      case "substitution": return encodeTagged("substitution", { _0: a.side, _1: a.outgoing, _2: a.incoming });
+      case "substitution":
+        return encodeTagged("substitution", { _0: a.side, _1: a.outgoing, _2: a.incoming, _3: a.number, _4: a.name });
       case "timeOut": return encodeTagged("timeOut", { _0: a.side });
       case "scout": return encodeTagged("scout", { _0: ScoutLine.encode(a.line) });
       case "ink": return encodeTagged("ink", { _0: InkStroke.encode(a.stroke) });
@@ -164,7 +173,7 @@ export const LiveAction = {
       case "rally": return { kind: "rally", winner: p.req("_0", Side.decode) };
       case "substitution":
         return { kind: "substitution", side: p.req("_0", Side.decode), outgoing: p.req("_1", decodeUUID),
-                 incoming: p.req("_2", decodeUUID) };
+                 incoming: p.req("_2", decodeUUID), number: p.optInt("_3"), name: p.optStr("_4") };
       case "timeOut": return { kind: "timeOut", side: p.req("_0", Side.decode) };
       case "scout": return { kind: "scout", line: p.req("_0", ScoutLine.decode) };
       case "ink": return { kind: "ink", stroke: p.req("_0", InkStroke.decode) };
@@ -222,6 +231,10 @@ export const MatchEndedPayload: Codec<MatchEndedPayload> = {
   },
 };
 
+function own<V>(record: Readonly<Record<string, V>> | undefined, key: string): V | undefined {
+  return record !== undefined && Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
+}
+
 /** Swift's `try?`: a MatchError is swallowed, anything else is a bug and propagates. */
 function attempt(f: () => void): boolean {
   try {
@@ -255,6 +268,7 @@ export class LiveState {
   private _nextSeq: number;
   private _rallies: RallyRecord[];
   private _skillCodes: SkillCode[];
+  private _newcomers: Map<PlayerID, Newcomer>;
 
   constructor({ setup, profile, template, opponentTemplate, nextSeq = 2 }: {
     setup: MatchStartedPayload; profile: RuleCourtProfile; template: RotationTemplate;
@@ -276,6 +290,7 @@ export class LiveState {
     this._nextSeq = nextSeq;
     this._rallies = [];
     this._skillCodes = [];
+    this._newcomers = new Map();
   }
 
   get mode(): CoachMode { return this._mode; }
@@ -293,6 +308,8 @@ export class LiveState {
   get rallies(): readonly RallyRecord[] { return this._rallies; }
   /** Advanced Mode skill codes of the active log, in order. */
   get skillCodes(): readonly SkillCode[] { return this._skillCodes; }
+  /** Players new to the match who came on in a substitution of the active log, with their numbers (web addition). */
+  get newcomers(): ReadonlyMap<PlayerID, Newcomer> { return this._newcomers; }
 
   /** A copy that shares nothing mutable with this state (Swift value semantics). */
   clone(): LiveState {
@@ -304,6 +321,7 @@ export class LiveState {
       _redoStack: [...this._redoStack],
       _overrides: new Map([...this._overrides].map(([side, m]) => [side, new Map(m)])),
       _nextSeq: this._nextSeq, _rallies: [...this._rallies], _skillCodes: [...this._skillCodes],
+      _newcomers: new Map(this._newcomers),
     });
     return s;
   }
@@ -397,12 +415,15 @@ export class LiveState {
         return [];
 
       case "substitution": {
-        if (this.substitutionRefusal(event.side, event.outgoing, event.incoming) !== undefined) {
+        const { side, outgoing, incoming, number, name } = event;
+        // A shirt number is a whole number, as the journal stores it.
+        if (this.substitutionRefusal(side, outgoing, incoming) !== undefined
+            || (number !== undefined && !(Number.isInteger(number) && number >= 0))) {
           return [LiveEffect.haptic("rejected")];
         }
-        const effects = this.record({ kind: "substitution", side: event.side, outgoing: event.outgoing, incoming: event.incoming },
+        const effects = this.record({ kind: "substitution", side, outgoing, incoming, number, name },
                                     JournalRecordType.substitution, SubstitutionPayload,
-                                    { side: event.side, outgoing: event.outgoing, incoming: event.incoming });
+                                    { side, outgoing, incoming, number, name });
         this.rebuild();
         return [...effects, LiveEffect.commitJournal];
       }
@@ -500,6 +521,7 @@ export class LiveState {
     const strokes: InkStroke[] = [];
     const played: RallyRecord[] = [];
     const codes: SkillCode[] = [];
+    const newcomers = new Map<PlayerID, Newcomer>();
     for (const entry of this._log) {
       if (!entry.active) continue;
       const a = entry.action;
@@ -514,7 +536,9 @@ export class LiveState {
           break;
         }
         case "substitution":
-          attempt(() => m.substitute(a.side, a.outgoing, a.incoming));
+          if (attempt(() => m.substitute(a.side, a.outgoing, a.incoming)) && (a.number !== undefined || a.name !== undefined)) {
+            newcomers.set(a.incoming, { side: a.side, number: a.number, name: a.name });
+          }
           break;
         case "timeOut":
           attempt(() => m.timeOut(a.side));
@@ -544,6 +568,7 @@ export class LiveState {
     this._ink = strokes;
     this._rallies = played;
     this._skillCodes = codes;
+    this._newcomers = newcomers;
     if (this._context.kind === "panicTimeOut") return;
     this._context = m.isOver ? matchOver : (m.current.winner !== undefined ? setBreak : live);
   }
@@ -659,9 +684,55 @@ export class LiveState {
     return undefined;
   }
 
+  /**
+   * A side's substitutes right now (web addition): for home the roster bench, then starters who went off, then
+   * players typed in during the match; for the opponent the starters who went off, then the players who came on
+   * earlier in the match. Never anyone on court or a libero.
+   */
+  bench(side: Side): PlayerID[] {
+    const typed = [...this._newcomers].filter(([, n]) => n.side === side).map(([id]) => id);
+    if (side === "home") return this._match.bench("home", [...(this.setup.homeBench ?? []), ...typed]);
+    const off = this._match.bench("opponent", []);
+    return [...off, ...this._match.bench("opponent", typed).filter((id) => !off.includes(id))];
+  }
+
   /** The home team's substitutes right now (roster bench plus starters who went off). */
   get homeBench(): PlayerID[] {
-    return this._match.bench("home", this.setup.homeBench ?? []);
+    return this.bench("home");
+  }
+
+  /** A player's shirt number: from the match setup, else as typed when they came on (web addition). */
+  jersey(id: PlayerID): number | undefined {
+    return own(this.setup.jerseys, id) ?? this._newcomers.get(id)?.number;
+  }
+
+  /** A player's name: from the match setup, else as typed when they came on (web addition). */
+  playerName(id: PlayerID): string | undefined {
+    return own(this.setup.names, id) ?? this._newcomers.get(id)?.name;
+  }
+
+  /**
+   * The player of a side who wears this shirt number, among everyone the match knows for that side: the lineup, the
+   * libero, the bench and players typed in earlier (web addition). Undefined for a number new to the match.
+   */
+  playerWithNumber(side: Side, number: number): PlayerID | undefined {
+    const sheet = this.setup[side];
+    const known = [...sheet.startingLineup, ...sheet.liberos, ...(side === "home" ? this.setup.homeBench ?? [] : []),
+                   ...this._match.sets.flatMap((set) => set[side].lineup),
+                   ...[...this._newcomers].filter(([, n]) => n.side === side).map(([id]) => id)];
+    return known.find((id) => this.jersey(id) === number);
+  }
+
+  /** The team a player of this match plays for (web addition); undefined for an id the match does not know. */
+  sideOf(id: PlayerID): Side | undefined {
+    const newcomer = this._newcomers.get(id);
+    if (newcomer !== undefined) return newcomer.side;
+    for (const side of Side.allCases) {
+      const sheet = this.setup[side];
+      if (sheet.startingLineup.includes(id) || sheet.liberos.includes(id)
+          || this._match.sets.some((set) => set[side].lineup.includes(id))) return side;
+    }
+    return this.setup.homeBench?.includes(id) ? "home" : undefined;
   }
 
   /** A what-if copy for the RING tool: the home team in any rotation and phase of its template. Swift `previewing(homeRotation:phase:)`. */
@@ -730,7 +801,10 @@ export class LiveState {
         }
         case JournalRecordType.substitution: {
           const p = decode(SubstitutionPayload);
-          if (p) state.appendReplayed({ kind: "substitution", side: p.side, outgoing: p.outgoing, incoming: p.incoming }, r.seq);
+          if (p) {
+            state.appendReplayed({ kind: "substitution", side: p.side, outgoing: p.outgoing, incoming: p.incoming,
+                                   number: p.number, name: p.name }, r.seq);
+          }
           break;
         }
         case JournalRecordType.timeOutStarted: {

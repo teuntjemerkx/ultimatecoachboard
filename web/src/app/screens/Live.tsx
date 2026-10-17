@@ -16,11 +16,7 @@ function undoText(session: MatchSession, last: LoggedAction | undefined): string
   switch (a.kind) {
     case "rally": return `Point ${team(a.winner)}`;
     case "timeOut": return `Time-out ${team(a.side)}`;
-    case "substitution": {
-      const n = (id: string) => session.number(id);
-      return a.side === "home" && n(a.incoming) !== undefined && n(a.outgoing) !== undefined
-        ? `Sub #${n(a.incoming)} for #${n(a.outgoing)}` : "Substitution";
-    }
+    case "substitution": return `${a.side === "home" ? "Sub" : "Their"} ${session.who(a.incoming)} for ${session.who(a.outgoing)}`;
     case "nextSet": return "Start of the set";
     default: return "Last entry";
   }
@@ -185,9 +181,9 @@ export function Live({ matchId }: { matchId: string }) {
             );
           })}
           <button className="btn live-btn" disabled={setOver} onClick={() => setSubbing(true)}
-                  aria-label={`Substitution, ${m.substitutionsLeft("home")} of ${m.maxSubstitutionsPerSet} left in this set`}>
+                  aria-label={`Substitution, ${m.substitutionsLeft("home")} of ${m.maxSubstitutionsPerSet} left in this set for ${home}, ${m.substitutionsLeft("opponent")} for ${away}`}>
             <span className="live-btn-title"><Icon name="sub" /> Sub</span>
-            <small>{m.substitutionsLeft("home")} of {m.maxSubstitutionsPerSet} left</small>
+            <small>Us {m.substitutionsLeft("home")} · Them {m.substitutionsLeft("opponent")} left</small>
           </button>
           <button className="btn live-btn" onClick={() => dispatch(LiveEvent.undo)} disabled={!last}
                   aria-label={last ? `Undo ${undoText(session, last)}` : "Undo"}>

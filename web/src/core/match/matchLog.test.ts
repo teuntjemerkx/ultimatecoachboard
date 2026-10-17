@@ -5,12 +5,12 @@ import { JournalPayload, type JournalRecord, JournalRecordType, NotePayload } fr
 import { LiveEvent, LiveState } from "./liveStore";
 import { InkStroke } from "./liveTypes";
 import { MatchLog, RallyRecord, RotationStats } from "./matchLog";
-import { MatchState, TeamInSet } from "./matchState";
+import { MatchState, TeamInSet, newPlayerID } from "./matchState";
 import { TemplateLibrary } from "./rotationTemplate";
 import { RuleCourtProfile } from "./ruleCourtProfile";
 import { TestTeam, matchStartedRecord, run } from "./testSupport";
 
-function makeState(firstServer: Side = "opponent"): [LiveState, TestTeam] {
+function makeState(firstServer: Side = "opponent"): [LiveState, TestTeam, TestTeam] {
   const home = new TestTeam();
   const away = new TestTeam();
   const state = new LiveState({
@@ -19,7 +19,7 @@ function makeState(firstServer: Side = "opponent"): [LiveState, TestTeam] {
     profile: RuleCourtProfile.fivbSenior(),
     template: TemplateLibrary.shipped("5-1-outside-follows-setter"),
   });
-  return [state, home];
+  return [state, home, away];
 }
 
 describe("NextSetAndStatsTests", () => {
@@ -83,7 +83,7 @@ describe("NextSetAndStatsTests", () => {
   });
 
   it("match log attaches events to their rally", () => {
-    const [s] = makeState();
+    const [s, , away] = makeState();
     const records: JournalRecord[] = [matchStartedRecord(s)];
     run(s, records, LiveEvent.pointSwipe("home"));
     run(s, records, LiveEvent.scoutTap("opponent", { l: 1, d: 1 }, 1));
@@ -91,6 +91,7 @@ describe("NextSetAndStatsTests", () => {
     run(s, records, LiveEvent.panicPressed(3));
     run(s, records, LiveEvent.ink(InkStroke.make([{ x: 0, z: 1 }, { x: 1, z: 2 }])));
     run(s, records, LiveEvent.panicDone);
+    run(s, records, LiveEvent.substitution("opponent", away.oh1, newPlayerID(), { number: 4 }));
     run(s, records, LiveEvent.pointSwipe("opponent"));
     const second = s.rallies[1];
     records.push({ type: JournalRecordType.note, origin: 0, seq: s.nextSeq, lamport: s.nextSeq, wallClock: 0,
@@ -101,6 +102,10 @@ describe("NextSetAndStatsTests", () => {
     expect(rows[1].scoutLines).toBe(1);
     expect(rows[1].sketchStrokes).toBe(1);
     expect(rows[1].timeOuts).toBe(1);
+    expect(rows[1].substitutions).toBe(1);
+    // The panic time-out is ours; then their substitution (web).
+    expect(rows[0].interruptions).toEqual([]);
+    expect(rows[1].interruptions).toEqual([{ kind: "timeOut", side: "home" }, { kind: "substitution", side: "opponent" }]);
     expect(rows[1].notes).toEqual(["late block"]);
     expect(RallyRecord.scoreAfter(rows[1].rally)).toEqual({ home: 1, opponent: 1 });
   });

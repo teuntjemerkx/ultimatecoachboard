@@ -423,13 +423,20 @@ export interface SubstitutionPayload {
   side: Side;
   outgoing: PlayerID;
   incoming: PlayerID;
+  /**
+   * The shirt number and name of an incoming player new to the match (web addition: a player not in the
+   * MatchStarted record, such as one of theirs or one of ours not in the team). Undefined for a known player.
+   */
+  number?: number;
+  name?: string;
 }
 
 export const SubstitutionPayload: Codec<SubstitutionPayload> = {
-  encode: (p) => ({ side: p.side, outgoing: p.outgoing, incoming: p.incoming }),
+  encode: (p) => compact({ side: p.side, outgoing: p.outgoing, incoming: p.incoming, number: p.number, name: p.name }),
   decode: (json) => {
     const r = new JsonReader(json, "SubstitutionPayload");
-    return { side: r.req("side", Side.decode), outgoing: r.req("outgoing", decodeUUID), incoming: r.req("incoming", decodeUUID) };
+    return { side: r.req("side", Side.decode), outgoing: r.req("outgoing", decodeUUID), incoming: r.req("incoming", decodeUUID),
+             number: r.optInt("number"), name: r.optStr("name") };
   },
 };
 

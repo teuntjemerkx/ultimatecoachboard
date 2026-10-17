@@ -551,6 +551,48 @@ button { font: inherit; color: inherit; }
 .sub-net .net { width: 100%; height: 6px; border-radius: 3px; background: var(--c-text); box-shadow: 0 0 14px -2px color-mix(in srgb, var(--c-text) 60%, transparent); }
 .sub-message { margin: 0; min-height: 48px; display: grid; place-items: center; text-align: center; font: 600 18px/1.3 var(--font); color: var(--c-text2); text-wrap: balance; }
 .sub-message.refused { color: var(--c-fault); font-weight: 700; }
+/* Us | Them at the top of the sheet: the chosen team lit in its colour, with its substitutions left. */
+.sub-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: nowrap; }
+.team-switch { display: flex; gap: 6px; padding: 6px; min-width: 0; border-radius: 999px; background: color-mix(in srgb, var(--c-bg) 60%, var(--c-surface)); border: 1px solid var(--c-hairline); }
+.team-switch button {
+  flex: 1 1 0; min-width: 0; width: 210px; min-height: 60px; padding: 4px 22px; border: 0; border-radius: 999px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: transparent; color: var(--c-text2);
+}
+.team-switch .t { font: 400 30px/1 var(--font-display-big); text-transform: uppercase; letter-spacing: 0.03em; padding-top: 2px; color: var(--team); }
+.team-switch small { display: flex; max-width: 100%; font: 600 13px/1.1 var(--font); white-space: nowrap; }
+.team-switch small .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; margin-right: 0.3em; }
+.team-switch button[aria-pressed="true"] {
+  color: var(--on-team); box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--team) 80%, transparent);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--team) 82%, #fff) 0%, var(--team) 45%, color-mix(in srgb, var(--team) 80%, #000) 100%);
+}
+.team-switch button[aria-pressed="true"] .t { color: var(--on-team); }
+.sub-set { margin-right: 14px; font: 800 18px/1 var(--font-athletic); letter-spacing: 0.14em; text-transform: uppercase; color: var(--team); vertical-align: 8px; }
+.sub-foot { display: flex; align-items: center; gap: 14px; }
+.sub-foot .sub-message { flex: 1; }
+/* Their cards in their gold, the role chip too. */
+.their-card .pcard-role { background: var(--c-opponent); }
+/* Who comes on: the bench (or their players who went off) beside a number pad for a shirt number. */
+.sub-incoming { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 22px; }
+.sub-incoming > .card-rack, .sub-empty { min-height: 0; }
+.sub-empty { padding: 20px; border-radius: var(--radius-card); border: 2px dashed color-mix(in srgb, var(--c-text) 18%, transparent); }
+.sub-pad { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.sub-readout {
+  flex: none; height: 84px; border-radius: var(--radius-card); display: grid; place-items: center; padding-top: 6px;
+  font: 400 68px/1 var(--font-display-big); font-variant-numeric: tabular-nums; color: var(--team);
+  border: 2px solid color-mix(in srgb, var(--team) 70%, transparent); background: color-mix(in srgb, var(--team) 13%, var(--c-surface));
+}
+.sub-readout.empty { color: color-mix(in srgb, var(--c-text) 30%, transparent); border-style: dashed; border-color: color-mix(in srgb, var(--c-text) 28%, transparent); background: transparent; }
+.sub-keys { flex: 1; min-height: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(56px, 1fr); }
+.sub-keys .btn { min-height: 56px; }
+.sub-keys .icon { width: 34px; height: 34px; }
+.sub-keys .btn.go { font: 800 20px/1 var(--font); border: 0; color: var(--on-team); background: var(--team); }
+.sub-keys .btn.go:disabled { color: var(--c-text2); background: color-mix(in srgb, var(--c-surface2) 70%, transparent); }
+@media (orientation: portrait) {
+  .sheet > .pick-sheet.sub-sheet { height: min(1060px, 100%); }
+  .sub-incoming { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+  .sub-pad { width: min(520px, 100%); justify-self: center; }
+  .sub-keys { flex: none; grid-auto-rows: 64px; }
+}
 
 /* Match log: one card per rally. */
 .rally-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); grid-auto-rows: 74px; gap: 10px; overflow-y: auto; align-content: start; }
@@ -560,6 +602,12 @@ button { font: inherit; color: inherit; }
 }
 .rally strong { font: 400 30px/1 var(--font-display-big); font-variant-numeric: tabular-nums; }
 .rally span { font-size: 13px; color: var(--c-text2); }
+/* The substitutions and time-outs before a rally, as marks in the team's colour under the score. */
+.rally strong, .rally span { white-space: nowrap; }
+.rally:has(.rally-marks) { gap: 3px; }
+.rally .rally-marks { display: flex; gap: 7px; }
+.rally .rally-mark { display: inline-flex; align-items: center; gap: 1px; color: var(--team); font: 800 13px/1 var(--font); }
+.rally-mark .icon { width: 16px; height: 16px; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 @media (max-width: 700px) {

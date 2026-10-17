@@ -1,14 +1,15 @@
 // Port of LiveStateTests (GeometryJournalLiveTests.swift).
 import { describe, expect, it } from "vitest";
-import type { JournalRecord } from "./journal";
+import { JournalRecordType, SubstitutionPayload, type JournalRecord } from "./journal";
 import { LiveAction, LiveContext, LiveEffect, LiveEvent, LiveState, LoggedAction } from "./liveStore";
 import { InkStroke } from "./liveTypes";
 import { ConstraintResult } from "./overlapEngine";
 import { TemplateLibrary } from "./rotationTemplate";
+import { newPlayerID } from "./matchState";
 import { RuleCourtProfile } from "./ruleCourtProfile";
 import { TestTeam, matchStartedRecord, run } from "./testSupport";
 
-function makeState(): [LiveState, TestTeam] {
+function makeState(): [LiveState, TestTeam, TestTeam] {
   const home = new TestTeam();
   const away = new TestTeam();
   const state = new LiveState({
@@ -17,7 +18,7 @@ function makeState(): [LiveState, TestTeam] {
     profile: RuleCourtProfile.fivbSenior(),
     template: TemplateLibrary.shipped("5-1-outside-follows-setter"),
   });
-  return [state, home];
+  return [state, home, away];
 }
 
 describe("LiveStateTests", () => {
@@ -168,5 +169,91 @@ describe("LiveStateTests", () => {
     expect(s.substitutionRefusal("home", home.oh2, home.bench)).toBeUndefined();
     expect(LiveAction.decode(LiveAction.encode({ kind: "timeOut", side: "opponent" }))).toEqual({ kind: "timeOut", side: "opponent" });
     expect(LiveAction.encode({ kind: "timeOut", side: "home" })).toEqual({ timeOut: { _0: "home" } });
+  });
+
+  it("a player new to the match comes on with the number typed for them, for either team (web)", () => {
+    const [s, home, away] = makeState();
+    const records: JournalRecord[] = [matchStartedRecord(s)];
+    const theirs = newPlayerID(), ours = newPlayerID();
+    run(s, records, LiveEvent.substitution("opponent", away.mb1, theirs, { number: 15 }));
+    run(s, records, LiveEvent.pointSwipe("home"));
+    run(s, records, LiveEvent.substitution("home", home.oh2, ours, { number: 21, name: "Guest" }));
+    expect([s.jersey(theirs), s.playerName(theirs), s.sideOf(theirs)]).toEqual([15, undefined, "opponent"]);
+    expect([s.jersey(ours), s.playerName(ours), s.sideOf(ours)]).toEqual([21, "Guest", "home"]);
+    expect(s.match.substitutionsLeft("opponent")).toBe(5);
+    // The starters who went off wait on the bench.
+    expect(s.bench("opponent")).toEqual([away.mb1]);
+    expect(s.bench("home")).toEqual([home.oh2]);
+
+    // The rules are the same for them: only the starter comes back for the substitute, and then the pair is closed.
+    const another = newPlayerID();
+    expect(s.substitutionRefusal("opponent", theirs, another)).toMatchObject({ reason: "onlyPartner", partner: away.mb1 });
+    expect(run(s, records, LiveEvent.substitution("opponent", theirs, another, { number: 4 }))).toEqual([LiveEffect.haptic("rejected")]);
+    expect(s.jersey(another)).toBeUndefined();
+    run(s, records, LiveEvent.substitution("opponent", theirs, away.mb1));
+    expect(s.bench("opponent")).toEqual([theirs]);
+    expect(s.substitutionRefusal("opponent", away.opp, theirs)).toMatchObject({ reason: "incomingDone" });
+    // A shirt number is a whole number.
+    expect(s.reduce(LiveEvent.substitution("opponent", away.opp, newPlayerID(), { number: 1.5 }))).toEqual([LiveEffect.haptic("rejected")]);
+
+    const replayed = LiveState.replay(records, s.profile, { template: s.template })!;
+    expect(replayed.log).toEqual(s.log);
+    expect(replayed.match).toEqual(s.match);
+    expect(replayed.newcomers).toEqual(s.newcomers);
+    expect(replayed.jersey(theirs)).toBe(15);
+    expect(replayed.playerName(ours)).toBe("Guest");
+
+    // Undo takes the numbers back with the substitutions that brought them.
+    for (const state of [s, replayed]) {
+      state.reduce(LiveEvent.undo);                 // their starter's return
+      state.reduce(LiveEvent.undo);                 // our guest
+      expect(state.jersey(ours)).toBeUndefined();
+      expect(state.sideOf(ours)).toBeUndefined();
+      expect(state.jersey(theirs)).toBe(15);
+      state.reduce(LiveEvent.undo);                 // the point
+      state.reduce(LiveEvent.undo);                 // their #15
+      expect(state.jersey(theirs)).toBeUndefined();
+      expect(state.newcomers.size).toBe(0);
+      expect(state.match.current.opponent.lineup).toEqual(away.sheet.startingLineup);
+    }
+    // Redo brings the number back, as the journal does.
+    s.reduce(LiveEvent.redo);
+    expect(s.jersey(theirs)).toBe(15);
+  });
+
+  it("a player typed in keeps their number in the next set and comes on again as themselves (web)", () => {
+    const [s, , away] = makeState();
+    const theirs = newPlayerID();
+    s.reduce(LiveEvent.substitution("opponent", away.oh1, theirs, { number: 9 }));
+    for (let i = 0; i < 25; i++) s.reduce(LiveEvent.pointSwipe("home"));
+    s.reduce(LiveEvent.startNextSet());
+    expect(s.match.current.opponent.lineup).toContain(away.oh1);
+    expect(s.bench("opponent")).toEqual([theirs]);
+    expect(s.jersey(theirs)).toBe(9);
+    s.reduce(LiveEvent.substitution("opponent", away.s, theirs));
+    expect(s.match.current.opponent.lineup).toContain(theirs);
+    expect(s.newcomers.get(theirs)).toEqual({ side: "opponent", number: 9, name: undefined });
+    // A number typed again finds that player, for their team only.
+    expect(s.playerWithNumber("opponent", 9)).toBe(theirs);
+    expect(s.playerWithNumber("home", 9)).toBeUndefined();
+    expect(s.playerWithNumber("opponent", 10)).toBeUndefined();
+  });
+
+  it("journals without numbers on substitutions still replay (web)", () => {
+    const [s, home] = makeState();
+    const records: JournalRecord[] = [matchStartedRecord(s)];
+    // A substitution as the journal stored it before numbers: side, outgoing and incoming only.
+    const old = new TextEncoder().encode(JSON.stringify({ side: "home", outgoing: home.oh2, incoming: home.bench }));
+    records.push({ type: JournalRecordType.substitution, origin: 0, seq: 2, lamport: 2, wallClock: 0, payload: old });
+    const replayed = LiveState.replay(records, s.profile, { template: s.template })!;
+    expect(replayed.match.current.home.lineup).toContain(home.bench);
+    expect(replayed.newcomers.size).toBe(0);
+    expect(replayed.log[0].action).toEqual({ kind: "substitution", side: "home", outgoing: home.oh2, incoming: home.bench });
+    // The number is written only when there is one, so the payload of a known player keeps its old shape.
+    expect(SubstitutionPayload.encode({ side: "home", outgoing: home.oh2, incoming: home.bench }))
+      .toEqual({ side: "home", outgoing: home.oh2, incoming: home.bench });
+    const typed = { kind: "substitution", side: "opponent", outgoing: home.oh2, incoming: home.bench, number: 0 } as const;
+    expect(LiveAction.encode(typed)).toEqual({ substitution: { _0: "opponent", _1: home.oh2, _2: home.bench, _3: 0 } });
+    expect(LiveAction.decode(LiveAction.encode(typed))).toEqual(typed);
   });
 });
