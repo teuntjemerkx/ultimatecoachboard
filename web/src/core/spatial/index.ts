@@ -7,6 +7,7 @@ export {
   PostureSpec, PostureLibrary, PoseParams,
   type PostureSpecRoot, type PositionTraits, type PostureLibraryPosition, type PostureLibraryFile,
 } from "./postureLibrary";
+export { Stride, strideParams, type StrideMotion } from "./gait";
 export { CameraPose } from "./cameraPose";
 export { BoardCamera, criticallyDamped } from "./boardCamera";
 export { Aero, BallFlight, NetCrossing, Trajectory, FlightSolver, type FlightSample } from "./ballFlight";

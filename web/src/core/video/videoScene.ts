@@ -1,6 +1,7 @@
 // Port of Video/VideoScene.swift: a scene reconstructed from a rally video and the video-to-3D pipeline
 // (Section 4.6). Swift's `VideoScene` is a class here; `encode`/`decode` give its Codable JSON shape.
 import { CourtFrame, CourtPosition, Side, type FloorPoint, type LocalPoint } from "../match/court";
+import { Stride, strideParams } from "../spatial/gait";
 import { V3 } from "../spatial/math3d";
 import { PoseParams } from "../spatial/postureLibrary";
 import { PosedPlayer } from "../spatial/povAnalysis";
@@ -14,6 +15,7 @@ import { HallEnvironment, type HallEnvironmentJSON } from "./environment";
 import { PlayerTracker, type VideoFrameObservation } from "./playerTracking";
 import { PoseFitter } from "./poseFitting";
 import { Hungarian, wrappedAngle, type ImagePoint } from "./videoMath";
+import { motionAt, type PlayerMotion } from "./videoMotion";
 
 /** One reconstructed instant of a player. */
 export interface VideoPlayerSample {
@@ -100,20 +102,34 @@ export class VideoFrame {
   /** Postures changing between two samples (the token's posture is the blend's start). */
   postureBlends = new Map<string, PostureBlend>();
   confidence = new Map<string, number>();
+  /** Velocity on the floor and step phase per token (web addition, see videoMotion.ts). */
+  motion = new Map<string, PlayerMotion>();
   ball?: V3;
 
-  /** Every player posed with the reconstructed facing and jump (for the 3D view and POV analysis). */
-  posedPlayers(): PosedPlayer[] {
+  /**
+   * Every player posed with the reconstructed facing and jump (for the 3D view and POV analysis). Web additions: a
+   * grounded posture the keypoints barely support (confidence under 0.4, a far, small or hidden player) fades to the
+   * ready stance, since a held set or dive the video does not show is the likelier error; and a player moving over
+   * the floor takes steps (spatial/gait.ts) instead of sliding in one stance; `stride: false` leaves the steps out
+   * (the bodies as they stand, e.g. for keeping players apart without the swinging legs).
+   */
+  posedPlayers(options: { stride?: boolean } = {}): PosedPlayer[] {
     return this.tokens.map((t) => {
       const s = new SkeletonModel(new BodyMetrics(SceneToken.effectiveStature(t)));
       const posture = t.posture ?? automaticPosture(t.point);
       const blend = this.postureBlends.get(t.id);
-      const params = blend
+      let params = blend
         ? PoseParams.blend(Posture.params(blend.from, s, t.role), Posture.params(blend.to, s, t.role), blend.t)
         : Posture.params(posture, s, t.role);
       const j = this.jump.get(t.id);
+      const inAir = params.airborne || (j !== undefined && j > 0.02);
+      const doubt = Math.max(0, Math.min(1, (0.4 - (this.confidence.get(t.id) ?? 1)) / 0.2));
+      if (doubt > 0 && !inAir) params = PoseParams.blend(params, Posture.params("ready", s, t.role), doubt);
       if (j !== undefined && (params.airborne || j > 0.02)) params.jump = Math.max(0, j);
-      const joints = s.pose(params, t.point, this.yaw.get(t.id) ?? SceneToken.facing(t), 0);
+      const yaw = this.yaw.get(t.id) ?? SceneToken.facing(t);
+      const motion = this.motion.get(t.id);
+      if (motion && !inAir && options.stride !== false) params = strideParams(params, s, Stride.motion(motion.velocity, yaw, motion.phase));
+      const joints = s.pose(params, t.point, yaw, 0);
       return new PosedPlayer(t, s, joints);
     });
   }
@@ -185,6 +201,8 @@ export class VideoScene {
       frame.jump.set(track.id, a.jump + (b.jump - a.jump) * u);
       frame.confidence.set(track.id, a.confidence + (b.confidence - a.confidence) * u);
       if (a.posture !== b.posture && u > 0 && u < 1) frame.postureBlends.set(track.id, { from: a.posture, to: b.posture, t: u });
+      const motion = motionAt(track, t);
+      if (motion) frame.motion.set(track.id, motion);
     }
     frame.ball = this.ballPosition(t);
     return frame;

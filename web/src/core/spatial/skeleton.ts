@@ -219,17 +219,7 @@ export class SkeletonModel {
    * the angles put it. Hip and knee rotations of `params` are replaced in place; the rest is untouched.
    */
   solveStance(params: PoseParams, width: number | undefined, stagger: number | undefined, yaw: Quat = Quat.identity): void {
-    const pelvisRot = params.rotations.get(Joint.pelvis) ?? Quat.identity;
-    const thigh = this.restOffsets[Joint.lKnee].length, shank = this.restOffsets[Joint.lAnkle].length;
-    const fk = (left: boolean): { hip: V3; knee: V3; ankle: V3 } => {
-      const hipJ = left ? Joint.lHip : Joint.rHip, kneeJ = left ? Joint.lKnee : Joint.rKnee;
-      const hip = pelvisRot.rotate(this.restOffsets[hipJ]);
-      const tw = pelvisRot.mul(params.rotations.get(hipJ) ?? Quat.identity);
-      const knee = hip.add(tw.rotate(new V3(0, -thigh, 0)));
-      const sw = tw.mul(params.rotations.get(kneeJ) ?? Quat.identity);
-      return { hip, knee, ankle: knee.add(sw.rotate(new V3(0, -shank, 0))) };
-    };
-    const l = fk(true), rgt = fk(false);
+    const l = this.legChain(params, true), rgt = this.legChain(params, false);
     // Targets in the body's yaw frame (the stance is measured on the floor, not in the tilted pelvis), then back.
     const inv = yaw.conjugate;
     let la = inv.rotate(l.ankle), ra = inv.rotate(rgt.ankle);
@@ -246,9 +236,31 @@ export class SkeletonModel {
       ra = ra.with({ z: cz + stagger / 2 });
       la = la.with({ z: cz - stagger / 2 });
     }
+    this.reachFeet(params, yaw.rotate(la), yaw.rotate(ra), yaw);
+  }
+
+  /** Hip, knee and ankle of one leg in the body frame (metres from the pelvis joint, facing +Z, left +X). */
+  legChain(params: PoseParams, left: boolean): { hip: V3; knee: V3; ankle: V3 } {
+    const pelvisRot = params.rotations.get(Joint.pelvis) ?? Quat.identity;
+    const thigh = this.restOffsets[Joint.lKnee].length, shank = this.restOffsets[Joint.lAnkle].length;
+    const hipJ = left ? Joint.lHip : Joint.rHip, kneeJ = left ? Joint.lKnee : Joint.rKnee;
+    const hip = pelvisRot.rotate(this.restOffsets[hipJ]);
+    const tw = pelvisRot.mul(params.rotations.get(hipJ) ?? Quat.identity);
+    const knee = hip.add(tw.rotate(new V3(0, -thigh, 0)));
+    const sw = tw.mul(params.rotations.get(kneeJ) ?? Quat.identity);
+    return { hip, knee, ankle: knee.add(sw.rotate(new V3(0, -shank, 0))) };
+  }
+
+  /**
+   * Two-bone IK for both legs: hip and knee rotations of `params` (replaced in place) that put the ankles at the
+   * targets (body frame, as `legChain` measures them). Each knee keeps pointing where the current angles put it.
+   */
+  reachFeet(params: PoseParams, leftAnkle: V3, rightAnkle: V3, yaw: Quat = Quat.identity): void {
+    const pelvisRot = params.rotations.get(Joint.pelvis) ?? Quat.identity;
+    const thigh = this.restOffsets[Joint.lKnee].length, shank = this.restOffsets[Joint.lAnkle].length;
     const legs: [boolean, { hip: V3; knee: V3; ankle: V3 }, V3][] = [
-      [true, l, yaw.rotate(la)],
-      [false, rgt, yaw.rotate(ra)],
+      [true, this.legChain(params, true), leftAnkle],
+      [false, this.legChain(params, false), rightAnkle],
     ];
     for (const [left, leg, target] of legs) {
       const v = target.sub(leg.hip);
