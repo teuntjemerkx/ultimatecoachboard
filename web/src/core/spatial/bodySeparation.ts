@@ -61,8 +61,8 @@ export function bodyCapsules(skeleton: SkeletonModel, posed: readonly Rigid[]): 
  * mannequin's.
  */
 export function playerCapsules(p: PosedPlayer): BodyCapsule[] {
-  // A player taking steps: the whole step cycle (its turning points, a centimetre thicker for the arcs between them), so
-  // swinging arms and legs never reach into anyone. The trunk does not swing (once is enough), the arms swing between
+  // A player taking steps: the whole step cycle (its turning points, 1.5 cm thicker for the arcs between them: a long
+  // arm's swing sags that far between two of them), so swinging arms and legs never reach into anyone. The trunk does not swing (once is enough), the arms swing between
   // the second and fourth turning points through the first.
   const envelope = p.strideEnvelope;
   if (envelope.length > 0) {
@@ -72,7 +72,7 @@ export function playerCapsules(p: PosedPlayer): BodyCapsule[] {
       playerCapsules(new PosedPlayer(p.token, p.skeleton, joints)).forEach((c, i) => {
         const kind = kinds?.[i] ?? "leg";
         if ((kind === "trunk" && k > 0) || (kind === "arm" && k === 2)) return;
-        out.push({ ...c, r: c.r + 0.01 });
+        out.push({ ...c, r: c.r + 0.015 });
       });
     });
     return out;

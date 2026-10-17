@@ -135,8 +135,9 @@ function build(name: string, glb: GlbSkinned, hang: Hang, withCapsules = true): 
     return bone;
   });
 
-  // Relaxed hands (as the app showed them when they were chosen): fingers curled a little toward the palm, the spread
-  // fingers closed halfway toward the middle finger, the thumb barely bent.
+  // Relaxed hands, as a hand hangs at rest (the resting cascade): every finger bent a little at each joint, more from
+  // the index to the little finger (knuckle 14 to 24 degrees, middle joint 24 to 34), the spread fingers closed most of
+  // the way toward the middle finger, the thumb lightly bent beside the index.
   const deg = Math.PI / 180;
   for (const side of ["l", "r"]) {
     const hand = P(`hand_${side}`);
@@ -146,7 +147,7 @@ function build(name: string, glb: GlbSkinned, hang: Hang, withCapsules = true): 
     if (palm.dot(P(`thumb_02_${side}`).sub(hand)) < 0) palm = palm.neg();
     const middle = P(`middle_02_${side}`).sub(P(`middle_01_${side}`)).normalized;
     const fingers: [string, number[]][] = [
-      ["index", [6, 16, 12]], ["middle", [8, 18, 12]], ["ring", [10, 20, 14]], ["pinky", [12, 22, 14]], ["thumb", [0, 6, 6]],
+      ["index", [14, 24, 10]], ["middle", [17, 28, 12]], ["ring", [20, 31, 13]], ["pinky", [24, 34, 14]], ["thumb", [6, 12, 10]],
     ];
     for (const [finger, angles] of fingers) {
       const names = [1, 2, 3].map((k) => `${finger}_0${k}_${side}`);
@@ -155,7 +156,7 @@ function build(name: string, glb: GlbSkinned, hang: Hang, withCapsules = true): 
       let spread = Quat.identity;
       if (finger !== "middle" && finger !== "thumb") {
         const a = projectOnPlane(dir, palm).normalized, b = projectOnPlane(middle, palm).normalized;
-        spread = Quat.identity.slerp(fromUnitVectors(a, b), 0.5).normalized;
+        spread = Quat.identity.slerp(fromUnitVectors(a, b), 0.75).normalized;
         dir = spread.rotate(dir);
       }
       const axis = dir.cross(palm).normalized;

@@ -76,22 +76,27 @@ export function loadAthletes(): Promise<{ female: AthleteTemplate; male: Athlete
   return loading;
 }
 
-/** Opaque materials (the export marks every material as blended); hair, brows and lashes cut out along their alpha. */
+/**
+ * Opaque materials (the export marks every material as blended); hair, brows and lashes cut out along their alpha
+ * (smoothed by the multisampling); the kit (jersey, shorts, pads and socks) drawn on both sides, so its inside shows
+ * through a sleeve or a hem. Their textures carry the baked shading (folds, creases, the collar and cuffs).
+ */
 function material(source: THREE.Material): THREE.MeshStandardMaterial {
   const s = source as THREE.MeshStandardMaterial;
   const name = s.name;
   const cutout = name === "Hair" || name === "Eyebrows" || name === "Eyelashes";
+  const cloth = name === "Shirt" || name === "Shorts" || name === "Gear";
   return new THREE.MeshStandardMaterial({
     name,
-    // Plain shorts in the team's colour; the other garments keep their fabric texture under the colour.
-    map: name === "Shorts" ? null : s.map,
-    normalMap: name === "Shorts" ? null : s.normalMap,
+    map: s.map,
+    normalMap: s.normalMap,
     color: 0xffffff,
-    roughness: name === "Skin" ? 0.6 : name === "Eyes" ? 0.15 : name === "Shoes" ? 0.55 : name === "Hair" ? 0.75 : 0.85,
+    roughness: name === "Skin" ? 0.62 : name === "Eyes" ? 0.2 : name === "Shoes" ? 0.6 : name === "Hair" ? 0.75 : cloth ? 0.88 : 0.85,
     metalness: 0,
     transparent: false,
     alphaTest: cutout ? 0.5 : 0,
-    side: cutout ? THREE.DoubleSide : THREE.FrontSide,
+    alphaToCoverage: cutout,
+    side: cutout || cloth ? THREE.DoubleSide : THREE.FrontSide,
   });
 }
 

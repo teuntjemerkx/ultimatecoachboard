@@ -73,7 +73,8 @@
         const s = new SkeletonModel(new BodyMetrics(stature));
         const posed = new PosedPlayer(token, s, s.pose(posture, token.point, 0, 0, "OH1"));
         const a = new Athlete(template);
-        a.setColors({ jersey: row ? "#0067A5" : "#D55E00", shorts: "#1F2937" });
+        // The app's teams: violet (us) and gold (them), dark shorts.
+        a.setColors({ jersey: row ? "#E8B84A" : "#9C85FF", shorts: "#1E1E37" });
         a.pose(posed);
         scene.add(a.root);
         if (params.get("capsules")) {
@@ -91,7 +92,9 @@
       }
     });
     document.getElementById("info").textContent = lines.join("  ");
+    window.scene = scene; // for inspection from the console
     renderer.setAnimationLoop(() => renderer.render(scene, camera));
+    window.camera = camera;
   </script>
 </body>
 </html>
