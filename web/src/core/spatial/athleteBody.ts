@@ -78,6 +78,32 @@ export interface AthleteRig {
 const q4 = (v: Vec4) => new Quat(v[0], v[1], v[2], v[3]);
 const v3 = (v: Vec3) => new V3(v[0], v[1], v[2]);
 
+/** A rig's numbers as the posing needs them, built once per rig (posing runs for every player many times a second). */
+interface RigParts {
+  restWorld: Quat[];
+  bindLocal: Quat[];
+  local: V3[];
+  pelvisBone: number;
+  /** Each capsule end in its bone's bind frame. */
+  ends: { a: V3; b: V3 }[];
+}
+
+const rigParts = new WeakMap<AthleteRig, RigParts>();
+
+function partsOf(rig: AthleteRig): RigParts {
+  let parts = rigParts.get(rig);
+  if (!parts) {
+    const inBone = (end: CapsuleEnd) => q4(rig.bindRotation[end.bone]).conjugate.rotate(v3(end.at).sub(v3(rig.bindPosition[end.bone])));
+    parts = {
+      restWorld: rig.bones.map((b) => q4(b.restWorld)), bindLocal: rig.bones.map((b) => q4(b.bindLocal)),
+      local: rig.bones.map((b) => v3(b.local)), pelvisBone: rig.bones.findIndex((b) => b.name === "pelvis"),
+      ends: rig.capsules.map((c) => ({ a: inBone(c.a), b: inBone(c.b) })),
+    };
+    rigParts.set(rig, parts);
+  }
+  return parts;
+}
+
 /** The board skeleton's rest pose (standing, arms down, facing +Z); its rotations do not depend on stature. */
 const reference = new SkeletonModel(new BodyMetrics(1.8));
 const referenceRest = reference.restPose;
@@ -115,20 +141,19 @@ export function poseAthlete(rig: AthleteRig, p: PosedPlayer): AthletePose {
   };
   // The origin: the pelvis bone head over the skeleton's pelvis; vertically as high as the skeleton's pelvis is above
   // its standing height, so a standing athlete's soles touch the floor and a jump lifts it as much.
-  const pelvisBone = rig.bones.findIndex((b) => b.name === "pelvis");
-  const pelvisBind = v3(rig.bindPosition[pelvisBone]);
+  const parts = partsOf(rig);
+  const pelvisBind = v3(rig.bindPosition[parts.pelvisBone]);
   const pelvis = J[Joint.pelvis].translation;
   const restPelvis = p.skeleton.restPose[Joint.pelvis].translation.y;
   const origin = new V3(pelvis.x - pelvisBind.x * scale, pelvis.y - restPelvis - rig.sole * scale, pelvis.z - pelvisBind.z * scale);
 
   const world: Rigid[] = [];
-  const local: Quat[] = [];
   rig.bones.forEach((b, i) => {
     const parent = b.parent >= 0 ? world[b.parent] : undefined;
     let w: Quat;
     switch (b.mode) {
-      case "joint": w = turn(b.joint!).mul(q4(b.restWorld)); break;
-      case "spine": w = turn(Joint.spine).slerp(turn(Joint.chest), 0.5).mul(q4(b.restWorld)); break;
+      case "joint": w = turn(b.joint!).mul(parts.restWorld[i]); break;
+      case "spine": w = turn(Joint.spine).slerp(turn(Joint.chest), 0.5).mul(parts.restWorld[i]); break;
       case "clavicle": {
         const left = (b.side ?? 1) > 0;
         const chest = turn(Joint.chest);
@@ -136,31 +161,40 @@ export function poseAthlete(rig: AthleteRig, p: PosedPlayer): AthletePose {
         const down = chest.rotate(new V3(0, -1, 0));
         const elevation = Math.acos(Math.max(-1, Math.min(1, arm.dot(down))));
         const lift = Math.max(0, elevation - Math.PI / 6) / 3;
-        w = Quat.fromAxisAngle(chest.rotate(new V3(0, 0, 1)), left ? lift : -lift).mul(chest).mul(q4(b.restWorld));
+        w = Quat.fromAxisAngle(chest.rotate(new V3(0, 0, 1)), left ? lift : -lift).mul(chest).mul(parts.restWorld[i]);
         break;
       }
-      case "root": w = q4(b.restWorld); break;
-      default: w = (parent ? parent.rotation : Quat.identity).mul(q4(b.bindLocal));
+      case "root": w = parts.restWorld[i]; break;
+      default: w = (parent ? parent.rotation : Quat.identity).mul(parts.bindLocal[i]);
     }
     w = w.normalized;
     const position = parent
-      ? parent.translation.add(parent.rotation.rotate(v3(b.local).mul(scale)))
-      : origin.add(v3(b.local).mul(scale));
+      ? parent.translation.add(parent.rotation.rotate(parts.local[i].mul(scale)))
+      : origin.add(parts.local[i].mul(scale));
     world.push(new Rigid(w, position));
-    local.push(parent ? parent.rotation.conjugate.mul(w).normalized : w);
   });
-  return { scale, origin, local, world };
+  // The renderer's rotations relative to the parents, worked out only when asked for (the body separation never is).
+  let local: Quat[] | undefined;
+  return {
+    scale, origin, world,
+    get local() {
+      local ??= rig.bones.map((b, i) => (b.parent >= 0 ? world[b.parent].rotation.conjugate.mul(world[i].rotation).normalized : world[i].rotation));
+      return local;
+    },
+  };
 }
 
-/** A bind-pose point carried by its bone into a posed athlete. */
-function carry(rig: AthleteRig, pose: AthletePose, end: CapsuleEnd): V3 {
-  const bone = pose.world[end.bone];
-  const offset = v3(end.at).sub(v3(rig.bindPosition[end.bone]));
-  // Into the bone's bind frame, out through its posed frame, scaled like the model.
-  return bone.translation.add(bone.rotation.rotate(q4(rig.bindRotation[end.bone]).conjugate.rotate(offset)).mul(pose.scale));
+/** A bind-pose point (given in its bone's bind frame, see RigParts) carried by its bone into a posed athlete. */
+function carry(pose: AthletePose, bone: number, inBone: V3): V3 {
+  const b = pose.world[bone];
+  // Out through the bone's posed frame, scaled like the model.
+  return b.translation.add(b.rotation.rotate(inBone).mul(pose.scale));
 }
 
 /** The capsules enclosing a posed athlete's body (skin, clothes, shoes and hair), in world metres. */
 export function athleteCapsules(rig: AthleteRig, p: PosedPlayer, pose: AthletePose = poseAthlete(rig, p)): BodyCapsule[] {
-  return rig.capsules.map((c) => ({ a: carry(rig, pose, c.a), b: carry(rig, pose, c.b), r: c.r * pose.scale, core: c.core }));
+  const ends = partsOf(rig).ends;
+  return rig.capsules.map((c, i) => ({
+    a: carry(pose, c.a.bone, ends[i].a), b: carry(pose, c.b.bone, ends[i].b), r: c.r * pose.scale, core: c.core,
+  }));
 }

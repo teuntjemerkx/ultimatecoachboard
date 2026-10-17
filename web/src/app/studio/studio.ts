@@ -2,16 +2,19 @@ import { create } from "zustand";
 import type { FloorPoint, Side } from "../../core/match/court";
 import { InkStroke } from "../../core/match/liveTypes";
 import {
-  Gaze, PlayerBodies, SeparationTrack, posedPlayers, separateBodies, type GazeAim, type PosedPlayer, type Posture,
+  Gaze, PlayerBodies, SeparationMoments, offsetBodies, posedPlayers, separateBodies, separationOffsets, type GazeAim,
+  type PosedPlayer, type Posture, type SeparationOptions, type SeparationTrack,
 } from "../../core/spatial";
 import {
   ContactKind, PlacementAssist, SceneEditor, SceneSetup, SmartGeometry, TacticalScene, Zone, ZoneBuilder, ZoneSnapping, ZoneStyle,
-  ZoneTag, sceneClock, sceneFrame, sceneMotion, sceneTimeline, templateRotations,
-  type AttackOption, type BallContact, type BallPlan, type RallyPhase, type SceneFrame, type ShapeKind, type SnapTarget,
-  type ZonePattern, type ZoneTint,
+  ZoneTag, sceneClock, sceneTimeline, templateRotations,
+  type AttackOption, type BallContact, type BallPlan, type RallyPhase, type SceneClock, type SceneFrame, type ShapeKind,
+  type SnapTarget, type ZonePattern, type ZoneTint,
 } from "../../core/zones";
 import { loadTemplate } from "../../core/zones/templateAccess";
 import { all, get, put, remove } from "../store/db";
+import type { BodiesReply, BodiesRequest } from "./bodies.worker";
+import { bodyKey, bodyScene, studioTrack, velocities } from "./bodyTrack";
 
 /** A Studio board as stored on the device: the scene in the iPad app's JSON shape. */
 export interface BoardRecord {
@@ -27,60 +30,208 @@ export type StudioTool = "move" | "pen" | "zone";
 const RallyPhaseOrder: readonly RallyPhase[] = ["serve", "receive", "set", "attack", "cover", "defence"];
 
 
-let planCache: { scene: TacticalScene; net: number; plan: BallPlan } | undefined;
+let planCache: { key: string; plan: BallPlan } | undefined;
+const planKeys = new WeakMap<TacticalScene, string>();
 
-/** The ball's flights for a scene (solving them is expensive, so one plan is kept per scene value). */
+/**
+ * The ball's flights for a scene. Solving them is expensive, so the plan is kept while what it depends on stays the
+ * same (players, timeline, contacts, landing, net height), whatever else an edit changes (ink, zones, the title).
+ */
 export function ballPlanOf(scene: TacticalScene): BallPlan {
-  const net = PlayerBodies.netHeight;
-  if (planCache && planCache.scene === scene && planCache.net === net) return planCache.plan;
-  const plan = TacticalScene.ballPlan(scene, net);
-  planCache = { scene, net, plan };
+  let key = planKeys.get(scene);
+  if (key === undefined) {
+    key = JSON.stringify([scene.tokens, scene.phases, scene.contacts, scene.ballLanding, scene.ballLandingHeight]);
+    planKeys.set(scene, key);
+  }
+  key = `${PlayerBodies.netHeight}|${key}`;
+  if (planCache?.key === key) return planCache.plan;
+  const plan = TacticalScene.ballPlan(scene, PlayerBodies.netHeight);
+  planCache = { key, plan };
   return plan;
 }
 
-let bodyCache: { scene: TacticalScene; women: boolean; athletes: boolean; track: SeparationTrack } | undefined;
-
-/** Floor velocities (m/s) of a scene's players at a timeline position, as the scene plays (sceneMotion). */
-function velocities(scene: TacticalScene, time: number): Map<string, FloorPoint> {
-  return new Map([...sceneMotion(scene, time)].map(([id, m]) => [id, m.velocity]));
+/**
+ * The rally's separation as the Studio shows it, for the scene's bodies (bodyKey): solved from the start in a worker
+ * (bodies.worker.ts) and read here, or, where no worker can run, solved here a few milliseconds per frame.
+ */
+interface Bodies {
+  key: string;
+  job: number;
+  /** What of the scene the bodies depend on (bodyScene): what the worker is sent. */
+  scene: TacticalScene;
+  clock: SceneClock;
+  moments: SeparationMoments;
+  /** The track solved on this thread, when there is no worker. */
+  local?: SeparationTrack;
 }
+
+let bodies: Bodies | undefined;
+let jobs = 0;
+/** The bodies worker; null once it turned out not to work here. */
+let worker: Worker | null | undefined;
+
+function bodiesWorker(): Worker | null {
+  if (worker !== undefined) return worker;
+  try {
+    worker = new Worker(new URL("./bodies.worker.ts", import.meta.url), { type: "module" });
+    worker.onmessage = (e: MessageEvent<BodiesReply>) => received(e.data);
+    worker.onerror = () => {
+      // The worker cannot run (it failed to load): solve on this thread instead.
+      worker?.terminate();
+      worker = null;
+      if (bodies && !bodies.local && !bodies.moments.complete) solveHere(bodies);
+    };
+  } catch {
+    worker = null;
+  }
+  return worker;
+}
+
+/** Moments from the worker: kept, and the board redrawn when the moment shown has just been solved. */
+function received(reply: BodiesReply) {
+  const b = bodies;
+  if (!b || reply.job !== b.job || b.local) return;
+  const n = reply.ids.length;
+  const times = Array.from(reply.times);
+  const offsets = times.map((_, k) => {
+    const m = new Map<string, FloorPoint>();
+    reply.ids.forEach((id, i) => {
+      const x = reply.offsets[(k * n + i) * 2], z = reply.offsets[(k * n + i) * 2 + 1];
+      if (!Number.isNaN(x)) m.set(id, { x, z });
+    });
+    return m;
+  });
+  const shown = b.clock.seconds(useStudio.getState().time);
+  const before = b.moments.covers(shown);
+  b.moments.append(reply.from, times, offsets);
+  if (!before && b.moments.covers(shown)) solvedNow(b);
+}
+
+/** Seconds over which players shown before their moment was solved move over to where the solved separation has them. */
+const settleTime = 0.35;
+
+/** How far the players were slid on the last moment shown before it was solved, and the move over once it is. */
+let unsolvedStart: { moments: SeparationMoments; start: Map<string, FloorPoint> } | undefined;
+let settling: { moments: SeparationMoments; from: Map<string, FloorPoint>; at: number } | undefined;
+
+/** The moment shown has its separation now: the board redraws, easing the players over if they were shown without it. */
+function solvedNow(b: Bodies) {
+  if (unsolvedStart?.moments === b.moments) {
+    settling = { moments: b.moments, from: unsolvedStart.start, at: performance.now() };
+    unsolvedStart = undefined;
+    const step = () => {
+      if (settling?.moments !== b.moments) return;
+      if (performance.now() - settling.at >= settleTime * 1000) settling = undefined;
+      else requestAnimationFrame(step);
+      bodiesSolved();
+    };
+    requestAnimationFrame(step);
+  }
+  bodiesSolved();
+}
+
+/** No worker: the track is solved on this thread right after each frame starts, a few milliseconds at a time. */
+function solveHere(b: Bodies) {
+  const track = studioTrack(b.scene);
+  b.local = track;
+  b.moments = track;
+  const next = (f: () => void) => (typeof requestAnimationFrame === "function" ? requestAnimationFrame(f) : setTimeout(f, 16));
+  const slice = () => {
+    if (bodies !== b) return;
+    const shown = b.clock.seconds(useStudio.getState().time);
+    const before = track.covers(shown);
+    const done = track.solveFor(4);
+    if (!before && track.covers(shown)) solvedNow(b);
+    if (!done) next(slice);
+  };
+  next(slice);
+}
+
+/** The separation for a scene's bodies, starting to solve it when they changed. */
+function bodiesOf(scene: TacticalScene): Bodies {
+  const key = bodyKey(scene);
+  if (bodies?.key === key) return bodies;
+  const clock = sceneClock(scene);
+  const b: Bodies = { key, job: ++jobs, scene: bodyScene(scene), clock, moments: new SeparationMoments(0, clock.total) };
+  bodies = b;
+  const w = bodiesWorker();
+  if (w) w.postMessage({ kind: "solve", job: b.job, scene: b.scene, women: PlayerBodies.women, athletes: PlayerBodies.athletes } satisfies BodiesRequest);
+  else solveHere(b);
+  return b;
+}
+
+/** Tells the views the moment they show has its separation now (set when the store is made). */
+let bodiesSolved = () => {};
 
 /**
  * The players of a moment of the scene as bodies that never stand in each other or reach through the net (web
- * addition): posed, slid aside along the rally (one SeparationTrack per scene, so they step around each other rather
- * than jump), and any touch left in this exact frame (a drag included) resolved. The dragged player stands firm.
- * Players taking steps are kept apart by their whole step cycle (PosedPlayer.strideEnvelope).
+ * addition): posed, slid aside along the rally (one SeparationTrack per scene's bodies, so they step around each other
+ * rather than jump), and any touch left in this exact frame (a drag included) resolved. The dragged player stands
+ * firm. Players taking steps are kept apart by their whole step cycle (PosedPlayer.strideEnvelope).
+ *
+ * The rally is solved in the background (see Bodies). Until it reaches this moment, the last moment solved is used,
+ * eased back toward the players' own paths as the track itself does, so nothing waits and nobody stands in anyone;
+ * once it does, the players move over to the solved picture in a third of a second instead of jumping (solvedNow).
  */
 export function studioBodies(scene: TacticalScene, time: number, frame: SceneFrame, dragged?: string): PosedPlayer[] {
-  const posed = posedPlayers(frame);
   const line = sceneTimeline(scene);
-  if (line.length === 0) return separateBodies(posed, { weight: (p) => (p.id === dragged ? 0 : 1) });
-  const women = PlayerBodies.women, athletes = PlayerBodies.athletes;
-  if (!bodyCache || bodyCache.scene !== scene || bodyCache.women !== women || bodyCache.athletes !== athletes) {
-    const plan = ballPlanOf(scene);
-    const clock = sceneClock(scene);
-    const track = new SeparationTrack((seconds) => {
-      const t = clock.time(seconds);
-      const f = TacticalScene.liveFrame(scene, t, plan);
-      const velocity = velocities(scene, t);
-      return { players: posedPlayers(f), velocity, weight: (p) => 0.3 + Math.hypot(velocity.get(p.id)!.x, velocity.get(p.id)!.z) };
-    }, 0, clock.total, {
-      floor: (seconds) => new Map(sceneFrame(scene, clock.time(seconds)).tokens.map((t) => [t.id, t.point])),
-    });
-    bodyCache?.track.stop();
-    track.prepare();
-    bodyCache = { scene, women, athletes, track };
-  }
-  const velocity = velocities(scene, time);
-  const speed = (id: string) => Math.hypot(velocity.get(id)?.x ?? 0, velocity.get(id)?.z ?? 0);
-  return separateBodies(posed, { weight: (p) => (p.id === dragged ? 0 : 0.3 + speed(p.id)), velocity: (p) => velocity.get(p.id) },
-    bodyCache.track.offsets(sceneClock(scene).seconds(time)));
+  const b = line.length ? bodiesOf(scene) : undefined;
+  // The board and the sight-line readout ask for the same moment: it is worked out once.
+  const memo = shownBodies;
+  const athletes = PlayerBodies.athletes;
+  // (Not while easing over to a moment just solved: that changes from frame to frame.)
+  if (!settling && memo && !memo.easing && memo.frame === frame && memo.scene === scene && memo.time === time
+    && memo.dragged === dragged && memo.athletes === athletes && memo.moments === b?.moments
+    && memo.solved === b?.moments.solvedCount) return memo.posed;
+  const posed = studioBodiesNow(scene, time, frame, dragged, b);
+  shownBodies = { frame, scene, time, dragged, athletes, moments: b?.moments, solved: b?.moments.solvedCount,
+    easing: settling !== undefined, posed };
+  return posed;
 }
 
-interface StudioState {
+let shownBodies: {
+  frame: SceneFrame; scene: TacticalScene; time: number; dragged?: string; athletes: boolean; moments?: SeparationMoments;
+  solved?: number; easing: boolean; posed: PosedPlayer[];
+} | undefined;
+
+function studioBodiesNow(scene: TacticalScene, time: number, frame: SceneFrame, dragged: string | undefined, b: Bodies | undefined): PosedPlayer[] {
+  const posed = posedPlayers(frame);
+  if (!b) return separateBodies(posed, { weight: (p) => (p.id === dragged ? 0 : 1) });
+  const seconds = b.clock.seconds(time);
+  const velocity = velocities(scene, time);
+  const speed = (id: string) => Math.hypot(velocity.get(id)?.x ?? 0, velocity.get(id)?.z ?? 0);
+  const options: SeparationOptions = { weight: (p) => (p.id === dragged ? 0 : 0.3 + speed(p.id)), velocity: (p) => velocity.get(p.id) };
+  if (b.moments.covers(seconds)) {
+    const start = b.moments.offsets(seconds);
+    const s = settling;
+    if (s?.moments !== b.moments) return separateBodies(posed, options, start);
+    // Shown without it a moment ago: from that picture over to this one (smoothstep), every step kept apart again (the
+    // pictures in between are nearly apart already, so that moves little).
+    const to = separationOffsets(posed, options, start);
+    const f = Math.min(1, (performance.now() - s.at) / (settleTime * 1000)), e = f * f * (3 - 2 * f);
+    const between = new Map([...to].map(([id, q]) => {
+      const p = s.from.get(id) ?? { x: 0, z: 0 };
+      return [id, { x: p.x + (q.x - p.x) * e, z: p.z + (q.z - p.z) * e }];
+    }));
+    return separateBodies(posed, options, between);
+  }
+  const last = b.moments.solvedTo;
+  let start = new Map<string, FloorPoint>();
+  if (last !== undefined) {
+    const keep = Math.exp(-Math.max(0, seconds - last) / 0.5);
+    start = new Map([...b.moments.offsets(Math.min(seconds, last))].map(([id, q]) => [id, { x: q.x * keep, z: q.z * keep }]));
+  }
+  const offsets = separationOffsets(posed, options, start);
+  unsolvedStart = { moments: b.moments, start: offsets };
+  return offsetBodies(posed, offsets);
+}
+
+export interface StudioState {
   editor?: SceneEditor;
   /** Changes after every edit so views redraw. */
   version: number;
+  /** Changes when the separation of the moment shown has been solved in the background (the 3D board redraws). */
+  bodiesVersion: number;
   tool: StudioTool;
   selectedToken?: string;
   selectedZone?: string;
@@ -188,6 +339,8 @@ function serially(job: () => Promise<void>): Promise<void> {
 }
 
 let tween: number | undefined;
+/** The last moment worked out by `frame()` (frames are not changed by their readers). */
+let frameCache: { scene: TacticalScene; time: number; net: number; frame: SceneFrame } | undefined;
 let alternativeTimer: number | undefined;
 let highlightTimer: number | undefined;
 
@@ -283,8 +436,11 @@ export const useStudio = create<StudioState>((set, getState) => {
     return s.selectedZone ? s.frame().zones.find((z) => z.id === s.selectedZone) : undefined;
   };
 
+  bodiesSolved = () => set({ bodiesVersion: getState().bodiesVersion + 1 });
+
   return {
     version: 0,
+    bodiesVersion: 0,
     tool: "move",
     time: 0,
     playing: false,
@@ -332,7 +488,12 @@ export const useStudio = create<StudioState>((set, getState) => {
     frame() {
       const { editor, time } = getState();
       const scene = editor!.scene;
-      return TacticalScene.liveFrame(scene, time, sceneTimeline(scene).length ? ballPlanOf(scene) : undefined);
+      const net = PlayerBodies.netHeight;
+      // Asked for by the board and the strips alike, so one moment is worked out once.
+      if (frameCache?.scene === scene && frameCache.time === time && frameCache.net === net) return frameCache.frame;
+      const frame = TacticalScene.liveFrame(scene, time, sceneTimeline(scene).length ? ballPlanOf(scene) : undefined);
+      frameCache = { scene, time, net, frame };
+      return frame;
     },
 
     ball() {

@@ -164,6 +164,26 @@ function lerpSample(a: FlightSample, b: FlightSample, f: number): FlightSample {
   return { t: a.t + (b.t - a.t) * f, p: a.p.add(b.p.sub(a.p).mul(f)), v: a.v.add(b.v.sub(a.v).mul(f)) };
 }
 
+/**
+ * Flights solved so far, by everything that decides them (solving one takes milliseconds of shooting): an edit to the
+ * board that leaves a flight's ends where they were finds it here. Trajectories are never changed once made.
+ */
+const solvedFlights = new Map<string, Trajectory | undefined>();
+
+function remembered(key: string, solve: () => Trajectory | undefined): Trajectory | undefined {
+  if (solvedFlights.has(key)) {
+    const t = solvedFlights.get(key);
+    // Most recently used last, so the oldest go first.
+    solvedFlights.delete(key);
+    solvedFlights.set(key, t);
+    return t;
+  }
+  const t = solve();
+  solvedFlights.set(key, t);
+  if (solvedFlights.size > 256) solvedFlights.delete(solvedFlights.keys().next().value!);
+  return t;
+}
+
 /** Two-point boundary value problems by shooting (Section 5.4). */
 export const FlightSolver = {
   /**
@@ -171,48 +191,51 @@ export const FlightSolver = {
    * target is out of reach at that speed. The ball's centre ends at `to`.
    */
   aim(from: V3, to: V3, speed: number, aero: Aero): Trajectory | undefined {
-    const flat = new V3(to.x - from.x, 0, to.z - from.z);
-    const distance = flat.length;
-    if (!(distance > 0.05)) return undefined;
-    const heading = flat.mul(1 / distance);
-    const along = (p: V3): number => new V3(p.x - from.x, 0, p.z - from.z).dot(heading);
-    // Height above the target when the flight has covered the horizontal distance (exactly, by interpolating the
-    // last step); undefined when the ball comes down first.
-    const shoot = (theta: number, dt: number): [number, FlightSample[]] | undefined => {
-      const v0 = heading.mul(Math.cos(theta)).add(V3.up.mul(Math.sin(theta))).mul(speed);
-      const samples = BallFlight.simulate(from, v0, aero, (s) => along(s.p) >= distance || s.p.y < to.y - 3, { dt, keepEvery: 1 });
-      if (samples.length < 2) return undefined;
-      const b = samples[samples.length - 1], a = samples[samples.length - 2];
-      if (!(along(b.p) >= distance)) return undefined;
-      const f = (distance - along(a.p)) / Math.max(along(b.p) - along(a.p), 1e-12);
-      const end = lerpSample(a, b, f);
-      return [end.p.y - to.y, [...samples.slice(0, -1), end]];
-    };
-    const height = (theta: number, dt = 0.004): number => shoot(theta, dt)?.[0] ?? -1e3;
-    // Scan upward from a steep downward angle for the first rise through the target (the low solution).
-    let a = -1.2, fa = height(a);
-    let bracket: [number, number] | undefined;
-    let theta = a;
-    while (theta < 1.3) {
-      theta += 0.04;
-      const f = height(theta);
-      if (fa < 0 && f >= 0) {
-        bracket = [a, theta];
-        break;
+    return remembered(`aim|${from.x}|${from.y}|${from.z}|${to.x}|${to.y}|${to.z}|${speed}|${aero.drag}|${aero.lift}`, () => {
+      const flat = new V3(to.x - from.x, 0, to.z - from.z);
+      const distance = flat.length;
+      if (!(distance > 0.05)) return undefined;
+      const heading = flat.mul(1 / distance);
+      const along = (p: V3): number => new V3(p.x - from.x, 0, p.z - from.z).dot(heading);
+      // Height above the target when the flight has covered the horizontal distance (exactly, by interpolating the
+      // last step); undefined when the ball comes down first.
+      const shoot = (theta: number, dt: number): [number, FlightSample[]] | undefined => {
+        const v0 = heading.mul(Math.cos(theta)).add(V3.up.mul(Math.sin(theta))).mul(speed);
+        const samples = BallFlight.simulate(from, v0, aero, (s) => along(s.p) >= distance || s.p.y < to.y - 3, { dt, keepEvery: 1 });
+        if (samples.length < 2) return undefined;
+        const b = samples[samples.length - 1], a = samples[samples.length - 2];
+        if (!(along(b.p) >= distance)) return undefined;
+        const f = (distance - along(a.p)) / Math.max(along(b.p) - along(a.p), 1e-12);
+        const end = lerpSample(a, b, f);
+        return [end.p.y - to.y, [...samples.slice(0, -1), end]];
+      };
+      const height = (theta: number, dt = 0.004): number => shoot(theta, dt)?.[0] ?? -1e3;
+      // Scan upward from a steep downward angle for the first rise through the target (the low solution).
+      let a = -1.2, fa = height(a);
+      let bracket: [number, number] | undefined;
+      let theta = a;
+      while (theta < 1.3) {
+        theta += 0.04;
+        const f = height(theta);
+        if (fa < 0 && f >= 0) {
+          bracket = [a, theta];
+          break;
+        }
+        a = theta;
+        fa = f;
       }
-      a = theta;
-      fa = f;
-    }
-    if (!bracket) return undefined;
-    let [lo, hi] = bracket;
-    for (let i = 0; i < 36; i++) {
-      const m = (lo + hi) / 2;
-      if (height(m, 0.001) < 0) lo = m;
-      else hi = m;
-    }
-    const shot = shoot((lo + hi) / 2, 0.001);
-    if (!shot) return undefined;
-    return new Trajectory(thin(shot[1], to), aero);
+      if (!bracket) return undefined;
+      let [lo, hi] = bracket;
+      for (let i = 0; i < 36; i++) {
+        const m = (lo + hi) / 2;
+        if (height(m, 0.001) < 0) lo = m;
+        else hi = m;
+      }
+      const shot = shoot((lo + hi) / 2, 0.001);
+      if (!shot) return undefined;
+      return new Trajectory(thin(shot[1], to), aero);
+  
+    });
   },
 
   /**
@@ -220,45 +243,48 @@ export const FlightSolver = {
    * Newton's method on the launch velocity starting from the drag-free answer.
    */
   lob(from: V3, to: V3, apex0: number, aero: Aero): Trajectory | undefined {
-    const flat = new V3(to.x - from.x, 0, to.z - from.z);
-    const distance = flat.length;
-    const heading = distance > 1e-6 ? flat.mul(1 / distance) : new V3(0, 0, 1);
-    const apex = Math.max(apex0, Math.max(from.y, to.y) + 0.05);
-    const g = BallFlight.gravity;
-    // Drag-free start: rise to the apex, fall to the target height.
-    const vy0 = Math.sqrt(2 * g * (apex - from.y));
-    const tFlight = vy0 / g + Math.sqrt((2 * (apex - to.y)) / g);
-    let x: [number, number] = [distance / tFlight, vy0];
-    const run = (vh: number, vy: number): { residual: [number, number]; samples: FlightSample[] } | undefined => {
-      const v0 = heading.mul(vh).add(V3.up.mul(vy));
-      const samples = BallFlight.simulate(from, v0, aero, (s) => s.v.y < 0 && s.p.y <= to.y, { keepEvery: 1 });
-      if (samples.length < 2) return undefined;
-      const b = samples[samples.length - 1];
-      if (!(b.v.y < 0 && b.p.y <= to.y)) return undefined;
-      const a = samples[samples.length - 2];
-      const f = (a.p.y - to.y) / Math.max(a.p.y - b.p.y, 1e-12);
-      const end = lerpSample(a, b, f);
-      // At 1 ms steps the highest sample is within micrometres of the true apex (the vertical speed is ~0 there).
-      let top = -Infinity;
-      for (const s of samples) top = Math.max(top, s.p.y);
-      const covered = new V3(end.p.x - from.x, 0, end.p.z - from.z).dot(heading);
-      return { residual: [covered - distance, top - apex], samples: [...samples.slice(0, -1), end] };
-    };
-    for (let iter = 0; iter < 30; iter++) {
-      const r = run(x[0], x[1]);
-      if (!r) return undefined;
-      if (Math.abs(r.residual[0]) < 0.01 && Math.abs(r.residual[1]) < 0.01) return new Trajectory(thin(r.samples, to), aero);
-      const h = 1e-3;
-      const rx = run(x[0] + h, x[1]), ry = run(x[0], x[1] + h);
-      if (!rx || !ry) return undefined;
-      const j00 = (rx.residual[0] - r.residual[0]) / h, j01 = (ry.residual[0] - r.residual[0]) / h;
-      const j10 = (rx.residual[1] - r.residual[1]) / h, j11 = (ry.residual[1] - r.residual[1]) / h;
-      const det = j00 * j11 - j01 * j10;
-      if (!(Math.abs(det) > 1e-12)) return undefined;
-      const dx = (j11 * r.residual[0] - j01 * r.residual[1]) / det;
-      const dy = (-j10 * r.residual[0] + j00 * r.residual[1]) / det;
-      x = [Math.max(0, x[0] - dx), x[1] - dy];
-    }
-    return undefined;
+    return remembered(`lob|${from.x}|${from.y}|${from.z}|${to.x}|${to.y}|${to.z}|${apex0}|${aero.drag}|${aero.lift}`, () => {
+      const flat = new V3(to.x - from.x, 0, to.z - from.z);
+      const distance = flat.length;
+      const heading = distance > 1e-6 ? flat.mul(1 / distance) : new V3(0, 0, 1);
+      const apex = Math.max(apex0, Math.max(from.y, to.y) + 0.05);
+      const g = BallFlight.gravity;
+      // Drag-free start: rise to the apex, fall to the target height.
+      const vy0 = Math.sqrt(2 * g * (apex - from.y));
+      const tFlight = vy0 / g + Math.sqrt((2 * (apex - to.y)) / g);
+      let x: [number, number] = [distance / tFlight, vy0];
+      const run = (vh: number, vy: number): { residual: [number, number]; samples: FlightSample[] } | undefined => {
+        const v0 = heading.mul(vh).add(V3.up.mul(vy));
+        const samples = BallFlight.simulate(from, v0, aero, (s) => s.v.y < 0 && s.p.y <= to.y, { keepEvery: 1 });
+        if (samples.length < 2) return undefined;
+        const b = samples[samples.length - 1];
+        if (!(b.v.y < 0 && b.p.y <= to.y)) return undefined;
+        const a = samples[samples.length - 2];
+        const f = (a.p.y - to.y) / Math.max(a.p.y - b.p.y, 1e-12);
+        const end = lerpSample(a, b, f);
+        // At 1 ms steps the highest sample is within micrometres of the true apex (the vertical speed is ~0 there).
+        let top = -Infinity;
+        for (const s of samples) top = Math.max(top, s.p.y);
+        const covered = new V3(end.p.x - from.x, 0, end.p.z - from.z).dot(heading);
+        return { residual: [covered - distance, top - apex], samples: [...samples.slice(0, -1), end] };
+      };
+      for (let iter = 0; iter < 30; iter++) {
+        const r = run(x[0], x[1]);
+        if (!r) return undefined;
+        if (Math.abs(r.residual[0]) < 0.01 && Math.abs(r.residual[1]) < 0.01) return new Trajectory(thin(r.samples, to), aero);
+        const h = 1e-3;
+        const rx = run(x[0] + h, x[1]), ry = run(x[0], x[1] + h);
+        if (!rx || !ry) return undefined;
+        const j00 = (rx.residual[0] - r.residual[0]) / h, j01 = (ry.residual[0] - r.residual[0]) / h;
+        const j10 = (rx.residual[1] - r.residual[1]) / h, j11 = (ry.residual[1] - r.residual[1]) / h;
+        const det = j00 * j11 - j01 * j10;
+        if (!(Math.abs(det) > 1e-12)) return undefined;
+        const dx = (j11 * r.residual[0] - j01 * r.residual[1]) / det;
+        const dy = (-j10 * r.residual[0] + j00 * r.residual[1]) / det;
+        x = [Math.max(0, x[0] - dx), x[1] - dy];
+      }
+      return undefined;
+  
+    });
   },
 };

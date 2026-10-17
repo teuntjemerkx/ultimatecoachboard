@@ -22,7 +22,8 @@ export interface GestureHandlers {
 
 /**
  * A canvas with the 3D board. One finger: the screen's handlers decide (move a player) or the camera orbits; two
- * fingers: turn and pinch to zoom.
+ * fingers: turn and pinch to zoom. Each board gets a canvas of its own, which goes with it: its WebGL context is
+ * handed back at once (Safari allows only a few), and a board made again (React's development mode) starts afresh.
  */
 export function Court3DView({ onReady, onDispose, netHeight, handlers, themeKey }: {
   onReady: (b: Board3D) => void;
@@ -32,13 +33,16 @@ export function Court3DView({ onReady, onDispose, netHeight, handlers, themeKey 
   handlers?: GestureHandlers;
   themeKey: string;
 }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<Board3D | null>(null);
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
 
   useEffect(() => {
-    const canvas = canvasRef.current!;
+    const host = hostRef.current!;
+    const canvas = document.createElement("canvas");
+    Object.assign(canvas.style, { width: "100%", height: "100%", display: "block", touchAction: "none" });
+    host.appendChild(canvas);
     const board = new Board3D(canvas, boardColors(), netHeight);
     boardRef.current = board;
     onReady(board);
@@ -95,12 +99,19 @@ export function Court3DView({ onReady, onDispose, netHeight, handlers, themeKey 
       ro.disconnect();
       onDispose?.(board);
       board.dispose();
+      canvas.remove();
       boardRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { boardRef.current?.setColors(boardColors(), netHeight); }, [themeKey, netHeight]);
+  // A new theme or net (the board was just made with the current ones).
+  const built = useRef(`${themeKey}|${netHeight}`);
+  useEffect(() => {
+    if (built.current === `${themeKey}|${netHeight}`) return;
+    built.current = `${themeKey}|${netHeight}`;
+    boardRef.current?.setColors(boardColors(), netHeight);
+  }, [themeKey, netHeight]);
 
-  return <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block", touchAction: "none" }} />;
+  return <div ref={hostRef} style={{ width: "100%", height: "100%", position: "relative", touchAction: "none" }} />;
 }

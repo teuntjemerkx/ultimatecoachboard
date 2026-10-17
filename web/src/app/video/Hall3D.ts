@@ -69,7 +69,9 @@ export class Hall3D {
   private texture?: THREE.Texture;
   private disposed = false;
 
-  constructor(private readonly root: THREE.Object3D, video: VideoScene, plateURL: string | undefined, hallColor: string) {
+  /** `onLoad`: the plate arrived (a board that draws on demand draws again). */
+  constructor(private readonly root: THREE.Object3D, video: VideoScene, plateURL: string | undefined, hallColor: string,
+    onLoad?: () => void) {
     const env = video.environment, c = video.camera.center;
     const x0 = Math.min(-env.halfWidth, c.x - 1.5), x1 = Math.max(env.halfWidth, c.x + 1.5);
     const z0 = Math.min(-env.halfLength, c.z - 1.5), z1 = Math.max(env.halfLength, c.z + 1.5);
@@ -120,6 +122,7 @@ export class Hall3D {
         this.texture = tex;
         material.uniforms.plate.value = tex;
         material.uniforms.hasPlate.value = true;
+        onLoad?.();
       });
     }
   }

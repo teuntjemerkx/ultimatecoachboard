@@ -100,7 +100,7 @@ export function WatchBoard({ scene, plateURL, view, themeKey, onTap, onLook }: {
     boardRef.current = b;
     const players = new Players3D(b);
     playersRef.current = players;
-    const hall = new Hall3D(b.scene, scene, plateURL, cssColor("hall", "#B8BEC8"));
+    const hall = new Hall3D(b.scene, scene, plateURL, cssColor("hall", "#B8BEC8"), () => b.invalidate());
     // The ball's flights as thin lines.
     const paths = new THREE.Group();
     const ballColor = boardColors().ball;
@@ -117,6 +117,8 @@ export function WatchBoard({ scene, plateURL, view, themeKey, onTap, onLook }: {
     extrasRef.current = { hall, paths };
     b.setOrbit(videoOrbit(scene.camera, b.camera.aspect), false);
     let shown = { time: NaN, selected: undefined as string | undefined, theme: null as BoardColors | null };
+    // The watch screen's clock moves the view (a ref): read it every frame (the board draws only what changed; the eye
+    // view's camera follows the look as it is read).
     b.onFrame = () => {
       const v = view.current;
       colorsRef.current ??= boardColors();
@@ -149,6 +151,7 @@ export function WatchBoard({ scene, plateURL, view, themeKey, onTap, onLook }: {
         const eye = players.eyeOf(v.pov);
         players.setHidden(eye && b.camera.position.distanceTo(eye) < 0.6 ? v.pov : undefined);
       }
+      return true;
     };
   };
 

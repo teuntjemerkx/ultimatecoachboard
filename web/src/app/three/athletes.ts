@@ -112,9 +112,11 @@ export class Athlete {
       const m = o as THREE.SkinnedMesh;
       if (m.isSkinnedMesh) {
         m.material = material(Array.isArray(m.material) ? m.material[0] : m.material);
-        this.materials.set((m.material as THREE.Material).name, m.material as THREE.MeshStandardMaterial);
+        const name = (m.material as THREE.Material).name;
+        this.materials.set(name, m.material as THREE.MeshStandardMaterial);
         m.frustumCulled = false;
-        m.castShadow = true;
+        // Eyes, brows and lashes add nothing to a shadow on the floor, only draw calls.
+        m.castShadow = name !== "Eyes" && name !== "Eyebrows" && name !== "Eyelashes";
       }
     });
     this.bones = template.rig.bones.map((b) => byName.get(b.name)!);

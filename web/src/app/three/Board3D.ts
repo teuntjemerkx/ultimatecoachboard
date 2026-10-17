@@ -45,6 +45,10 @@ export function orbitEye(o: Orbit): THREE.Vector3 {
   return o.target.clone().add(h.multiplyScalar(Math.cos(o.pitch) * o.distance)).add(new THREE.Vector3(0, Math.sin(o.pitch) * o.distance, 0));
 }
 
+/**
+ * The board draws a frame only when something changed (`invalidate`: the players moved, the camera turned or flies,
+ * the canvas resized), so a board nobody touches costs nothing; the players' shadows are drawn again only when they move.
+ */
 export class Board3D {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -55,15 +59,30 @@ export class Board3D {
   private netGroup = new THREE.Group();
   readonly dynamic = new THREE.Group();
   private frame = 0;
-  private flight?: { from: THREE.Camera; to: () => { pos: THREE.Vector3; quat: THREE.Quaternion; fov: number }; start: number; duration: number };
-  /** While set, the camera follows this pose every frame (eye view). */
+  private flight?: { from: THREE.PerspectiveCamera; to: () => { pos: THREE.Vector3; quat: THREE.Quaternion; fov: number }; start: number; duration: number };
+  /** While set, the camera follows this pose (eye view); it is read again on every frame drawn. */
   firstPerson?: () => { pos: THREE.Vector3; quat: THREE.Quaternion; fov: number };
-  onFrame?: (t: number) => void;
+  /**
+   * Called on every frame the board is awake, before it draws. Return true to keep it awake (a screen that polls for
+   * changes, then calls `invalidate`); otherwise it sleeps once nothing changes.
+   */
+  onFrame?: (t: number) => boolean | void;
   private disposed = false;
+  /** Something changed since the last frame drawn. */
+  private dirty = true;
+  /** The players moved: their shadows are drawn again with the next frame. */
+  private shadowsDirty = true;
+  // Scratch objects for the camera, so a frame allocates nothing.
+  private readonly eye = new THREE.Vector3();
+  private readonly look = new THREE.Matrix4();
+  private readonly up = new THREE.Vector3(0, 1, 0);
+  private readonly pose = { pos: new THREE.Vector3(), quat: new THREE.Quaternion(), fov: 45 };
+  private readonly shown = { pos: new THREE.Vector3(NaN, NaN, NaN), quat: new THREE.Quaternion(), fov: NaN, near: NaN };
 
   constructor(readonly canvas: HTMLCanvasElement, private colors: BoardColors, netHeight: number) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    // At most 1.5 device pixels per point: on a Retina iPad, about half the pixels of the full 2x for nearly the same picture.
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.orbit = benchOrbit(1.4);
     this.scene.background = new THREE.Color(colors.hallFloor);
@@ -76,9 +95,12 @@ export class Board3D {
     pmrem.dispose();
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // Drawn again only when the players move (invalidate with shadows).
+    this.renderer.shadowMap.autoUpdate = false;
     const sun = new THREE.DirectionalLight(0xffffff, 1.6);
     sun.position.set(6, 18, 9);
     sun.castShadow = true;
+    // 2048: at 1024 the soft edges spread twice as far and the shadows of legs and arms fade (drawn only when players move).
     sun.shadow.mapSize.set(2048, 2048);
     Object.assign(sun.shadow.camera, { left: -13, right: 13, top: 16, bottom: -16, near: 1, far: 45 });
     sun.shadow.bias = -0.0005;
@@ -88,21 +110,46 @@ export class Board3D {
     this.buildNet(netHeight);
     this.scene.add(this.netGroup, this.dynamic);
     this.resize();
-    const loop = (t: number) => {
-      if (this.disposed) return;
-      this.frame = requestAnimationFrame(loop);
-      this.onFrame?.(t);
-      this.stepCamera(t);
-      this.renderer.render(this.scene, this.camera);
-    };
-    this.frame = requestAnimationFrame(loop);
   }
+
+  /** Draws a new frame soon: something on the board changed (`shadows`: the players moved). */
+  invalidate(shadows = false) {
+    this.dirty = true;
+    if (shadows) this.shadowsDirty = true;
+    this.wake();
+  }
+
+  private wake() {
+    if (this.frame === 0 && !this.disposed) this.frame = requestAnimationFrame(this.tick);
+  }
+
+  private readonly tick = (t: number) => {
+    this.frame = 0;
+    if (this.disposed) return;
+    const poll = this.onFrame?.(t) === true;
+    const moved = this.stepCamera(t);
+    const draw = this.dirty || moved;
+    if (draw) {
+      this.dirty = false;
+      if (this.shadowsDirty) {
+        this.shadowsDirty = false;
+        this.renderer.shadowMap.needsUpdate = true;
+      }
+      this.renderer.render(this.scene, this.camera);
+    }
+    // A frame drawn keeps the board awake one more frame (playback invalidates every frame); then it sleeps.
+    if (draw || poll || this.flight) this.wake();
+  };
 
   dispose() {
     this.disposed = true;
-    cancelAnimationFrame(this.frame);
+    if (this.frame) cancelAnimationFrame(this.frame);
+    this.frame = 0;
     this.scene.environment?.dispose();
+    this.floorTexture?.dispose();
     this.renderer.dispose();
+    // Hands the GPU memory back at once (Safari keeps only a few WebGL contexts).
+    this.renderer.forceContextLoss();
   }
 
   resize() {
@@ -110,6 +157,7 @@ export class Board3D {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    this.invalidate();
   }
 
   setColors(c: BoardColors, netHeight: number) {
@@ -117,6 +165,7 @@ export class Board3D {
     this.scene.background = new THREE.Color(c.hallFloor);
     this.buildFloor();
     this.buildNet(netHeight);
+    this.invalidate(true);
   }
 
   // MARK: - Floor and net
@@ -212,27 +261,36 @@ export class Board3D {
       this.flight = { from, to: () => this.orbitPose(o), start: performance.now(), duration: 700 };
     }
     this.orbit = o;
+    this.invalidate();
   }
 
+  /** The camera pose of an orbit (in a scratch object: read it before the next call). */
   private orbitPose(o: Orbit) {
-    const eye = orbitEye(o);
-    const m = new THREE.Matrix4().lookAt(eye, o.target, new THREE.Vector3(0, 1, 0));
-    return { pos: eye, quat: new THREE.Quaternion().setFromRotationMatrix(m), fov: o.fovY };
+    const h = o.heading, d = o.distance, c = Math.cos(o.pitch) * d;
+    this.eye.set(o.target.x + Math.cos(h) * c, o.target.y + Math.sin(o.pitch) * d, o.target.z + Math.sin(h) * c);
+    this.look.lookAt(this.eye, o.target, this.up);
+    this.pose.pos.copy(this.eye);
+    this.pose.quat.setFromRotationMatrix(this.look);
+    this.pose.fov = o.fovY;
+    return this.pose;
   }
 
   /** Into a player's eyes along a raised arc (Section 5.1), then head-locked. */
   flyTo(pose: () => { pos: THREE.Vector3; quat: THREE.Quaternion; fov: number }) {
     this.flight = { from: this.camera.clone(), to: pose, start: performance.now(), duration: 1100 };
     this.firstPerson = pose;
+    this.invalidate();
   }
 
   leaveFirstPerson() {
     this.firstPerson = undefined;
     this.flight = { from: this.camera.clone(), to: () => this.orbitPose(this.orbit), start: performance.now(), duration: 900 };
+    this.invalidate();
   }
 
-  private stepCamera(now: number) {
-    const target = this.firstPerson ? this.firstPerson() : this.orbitPose(this.orbit);
+  /** Places the camera for this frame; true when it moved since the frame last drawn. */
+  private stepCamera(now: number): boolean {
+    const cam = this.camera;
     if (this.flight) {
       const f = Math.min(1, (now - this.flight.start) / this.flight.duration);
       const e = criticallyDamped(f);
@@ -240,17 +298,26 @@ export class Board3D {
       const from = this.flight.from;
       // A raised arc: the midpoint lifts by a fifth of the distance.
       const lift = from.position.distanceTo(to.pos) * 0.2 * Math.sin(Math.PI * e);
-      this.camera.position.lerpVectors(from.position, to.pos, e).add(new THREE.Vector3(0, lift, 0));
-      this.camera.quaternion.slerpQuaternions(from.quaternion, to.quat, e);
-      this.camera.fov = (from as THREE.PerspectiveCamera).fov + (to.fov - (from as THREE.PerspectiveCamera).fov) * e;
+      cam.position.lerpVectors(from.position, to.pos, e);
+      cam.position.y += lift;
+      cam.quaternion.slerpQuaternions(from.quaternion, to.quat, e);
+      cam.fov = from.fov + (to.fov - from.fov) * e;
       if (f >= 1) this.flight = undefined;
     } else {
-      this.camera.position.copy(target.pos);
-      this.camera.quaternion.copy(target.quat);
-      this.camera.fov = target.fov;
+      const target = this.firstPerson ? this.firstPerson() : this.orbitPose(this.orbit);
+      cam.position.copy(target.pos);
+      cam.quaternion.copy(target.quat);
+      cam.fov = target.fov;
     }
-    this.camera.near = this.firstPerson ? 0.04 : 0.25;
-    this.camera.updateProjectionMatrix();
+    cam.near = this.firstPerson ? 0.04 : 0.25;
+    const s = this.shown;
+    if (s.pos.equals(cam.position) && s.quat.equals(cam.quaternion) && s.fov === cam.fov && s.near === cam.near) return false;
+    s.pos.copy(cam.position);
+    s.quat.copy(cam.quaternion);
+    s.fov = cam.fov;
+    s.near = cam.near;
+    cam.updateProjectionMatrix();
+    return true;
   }
 
   /** Orbit by a screen drag (points) and zoom by a pinch scale. */
@@ -259,6 +326,7 @@ export class Board3D {
     o.heading -= dx * 0.006;
     o.pitch = Math.max(0.08, Math.min(Math.PI / 2 - 0.02, o.pitch + dy * 0.005));
     o.distance = Math.max(4, Math.min(80, o.distance / Math.max(zoom, 0.05)));
+    this.invalidate();
   }
 
   // MARK: - Picking

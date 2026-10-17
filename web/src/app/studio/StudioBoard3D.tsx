@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { useShallow } from "zustand/react/shallow";
 import type { FloorPoint } from "../../core/match/court";
 import { Gaze, PlayerBodies, V3, type GazeAim, type GazeReadout, type PosedPlayer } from "../../core/spatial";
-import { Zone, sceneTimeline, type SceneFrame } from "../../core/zones";
-import { benchOrbit, type Board3D, type Orbit } from "../three/Board3D";
+import { Zone, sceneTimeline, type BallPlan, type SceneFrame } from "../../core/zones";
+import { benchOrbit, type Board3D, type BoardColors, type Orbit } from "../three/Board3D";
 import { Court3DView, boardColors } from "../three/Court3DView";
 import { Players3D } from "../three/Players3D";
-import { ballPlanOf, studioBodies, useStudio } from "./studio";
+import { ballPlanOf, studioBodies, useStudio, type StudioState } from "./studio";
 
 /** Upright views stand the court upright, as the 2D board does. */
 export const uprightAspect = (aspect: number) => aspect < 1 / 1.1;
@@ -63,10 +64,23 @@ function withDrag(frame: SceneFrame, drag: Drag | null): SceneFrame {
   return f;
 }
 
+/** What the 3D board shows from the Studio's state: a change to any of these redraws it. */
+const shownFields = ["editor", "version", "time", "bodiesVersion", "selectedToken", "selectedZone", "gaze", "gazeTargets", "pov",
+  "povYaw", "povPitch", "tool", "zoneStyle", "highlights"] as const satisfies readonly (keyof StudioState)[];
+
+let pathsOf: { plan: BallPlan; paths: V3[][] } | undefined;
+
+/** The ball's solved flights as points in the air, the same arrays while the plan stays (the board keeps their lines). */
+function ballPaths(plan: BallPlan): V3[][] {
+  if (pathsOf?.plan !== plan) pathsOf = { plan, paths: plan.segments.flatMap((seg) => (seg.trajectory ? [seg.trajectory.samples.map((q) => q.p)] : [])) };
+  return pathsOf.paths;
+}
+
 /**
  * The 3D board wired to the Studio (Section 3.2). One finger on a player or zone drags it (it snaps as in 2D), with
  * Draw or Zone it draws on the floor through the touch ray, anywhere else it turns the court; two fingers turn and
- * pinch. A tap selects. In eye view the camera rides in the player's head and one finger looks around.
+ * pinch. A tap selects. In eye view the camera rides in the player's head and one finger looks around. The board is
+ * redrawn straight from the store (playback changes the time every frame), not through React.
  */
 export function StudioBoard3D({ themeKey, netHeight, onBoard, inset = 0, size }: {
   themeKey: string;
@@ -76,20 +90,46 @@ export function StudioBoard3D({ themeKey, netHeight, onBoard, inset = 0, size }:
   inset?: number;
   size?: { w: number; h: number };
 }) {
-  const st = useStudio();
+  const st = useStudio(useShallow((s) => ({ pov: s.pov, flipped: s.flipped })));
   const boardRef = useRef<Board3D | null>(null);
   const playersRef = useRef<Players3D | null>(null);
   const posedRef = useRef<PosedPlayer[]>([]);
   const gesture = useRef<Gesture | null>(null);
   const strokeRef = useRef<FloorPoint[] | null>(null);
-  const [stroke, setStroke] = useState<FloorPoint[] | null>(null);
-  const [drag, setDrag] = useState<Drag | null>(null);
   const dragRef = useRef<Drag | null>(null);
   /** Counts boards made (React's development mode makes the canvas twice); 0 until the first. */
   const [ready, setReady] = useState(0);
   const flippedRef = useRef(st.flipped);
+  /** The theme's colours, read from the CSS once per theme. */
+  const colors = useRef<{ key: string; colors: BoardColors } | null>(null);
 
-  const setDragBoth = (d: Drag | null) => { dragRef.current = d; setDrag(d); };
+  /** Redraws the players, the ball, zones, ink and sight lines for the moment shown. */
+  const redraw = () => {
+    const players = playersRef.current;
+    const s = useStudio.getState();
+    if (!players || !s.editor) return;
+    const drag = dragRef.current, stroke = strokeRef.current;
+    const frame = withDrag(s.frame(), drag);
+    const posed = studioBodies(s.scene(), s.time, frame, drag?.kind === "token" && drag.moved ? drag.id : undefined);
+    posedRef.current = posed;
+    const ball = s.ball();
+    const gaze = s.gaze ? sightLines(posed, s.gaze, { id: s.pov, yaw: s.povYaw, pitch: s.povPitch }, ball,
+      boardRef.current?.camera.aspect, s.gazeTargetList(posed)) : undefined;
+    const scene = s.scene();
+    if (colors.current?.key !== `${themeKey}|${netHeight}`) colors.current = { key: `${themeKey}|${netHeight}`, colors: boardColors() };
+    players.update({
+      players: posed, colors: colors.current.colors, selected: s.selectedToken, ball, zones: frame.zones, selectedZone: s.selectedZone,
+      ink: scene.ink,
+      stroke: stroke ? { points: stroke, zone: s.tool === "zone", tint: s.zoneStyle.tint } : undefined,
+      gaze: gaze?.readouts.map((r) => ({ from: gaze.eye, to: r.point, visible: r.visibility.fraction >= 0.5 })),
+      highlights: s.highlights, ballPaths: sceneTimeline(scene).length ? ballPaths(ballPlanOf(scene)) : undefined,
+    });
+  };
+  const redrawRef = useRef(redraw);
+  redrawRef.current = redraw;
+
+  const setDragBoth = (d: Drag | null) => { dragRef.current = d; redrawRef.current(); };
+  const setStroke = (points: FloorPoint[] | null) => { strokeRef.current = points; redrawRef.current(); };
 
   const onDispose = (b: Board3D) => {
     if (boardRef.current !== b) return;
@@ -126,30 +166,15 @@ export function StudioBoard3D({ themeKey, netHeight, onBoard, inset = 0, size }:
     setReady((n) => n + 1);
   };
 
-  // Redraw the players, the ball, zones, ink and sight lines for the moment shown.
+  // Redraw when what the board shows changes in the store (the time at every frame of playback), or the theme.
   useEffect(() => {
-    const players = playersRef.current;
-    if (!ready || !players || !st.editor) return;
-    const frame = withDrag(st.frame(), drag);
-    const posed = studioBodies(st.scene(), st.time, frame, drag?.kind === "token" && drag.moved ? drag.id : undefined);
-    posedRef.current = posed;
-    const ball = st.ball();
-    const gaze = st.gaze ? sightLines(posed, st.gaze, { id: st.pov, yaw: st.povYaw, pitch: st.povPitch }, ball,
-      boardRef.current?.camera.aspect, st.gazeTargetList(posed)) : undefined;
-    const scene = st.scene();
-    const ballPaths = sceneTimeline(scene).length
-      ? ballPlanOf(scene).segments.flatMap((seg) => (seg.trajectory ? [seg.trajectory.samples.map((q) => q.p)] : []))
-      : undefined;
-    players.update({
-      players: posed, colors: boardColors(), selected: st.selectedToken, ball, zones: frame.zones, selectedZone: st.selectedZone,
-      ink: st.scene().ink,
-      stroke: stroke ? { points: stroke, zone: st.tool === "zone", tint: st.zoneStyle.tint } : undefined,
-      gaze: gaze?.readouts.map((r) => ({ from: gaze.eye, to: r.point, visible: r.visibility.fraction >= 0.5 })),
-      highlights: st.highlights, ballPaths,
+    if (!ready) return;
+    redrawRef.current();
+    return useStudio.subscribe((s, prev) => {
+      if (shownFields.some((k) => s[k] !== prev[k])) redrawRef.current();
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, st.version, st.time, st.selectedToken, st.selectedZone, st.gaze, st.gazeTargets, st.pov, st.povYaw, st.povPitch,
-      st.tool, st.zoneStyle, st.highlights, drag, stroke, themeKey, netHeight]);
+  }, [ready]);
+  useEffect(() => { if (ready) redrawRef.current(); }, [ready, themeKey, netHeight]);
 
   // The strips over the bottom of the board: shift the picture up by half their height (a view offset, so picking
   // and the eye view stay exact).
@@ -159,6 +184,7 @@ export function StudioBoard3D({ themeKey, netHeight, onBoard, inset = 0, size }:
     const w = b.canvas.clientWidth, h = b.canvas.clientHeight;
     if (inset > 0 && w > 0 && h > inset) b.camera.setViewOffset(w, h, 0, inset / 2, w, h);
     else b.camera.clearViewOffset();
+    b.invalidate();
   }, [ready, inset, size?.w, size?.h]);
 
   // Into the player's eyes and back out (Section 5.1).
@@ -197,7 +223,6 @@ export function StudioBoard3D({ themeKey, netHeight, onBoard, inset = 0, size }:
       if (s.tool !== "move") {
         if (!w) return false;
         gesture.current = { kind: "stroke" };
-        strokeRef.current = [w];
         setStroke([w]);
         return true;
       }
@@ -230,7 +255,7 @@ export function StudioBoard3D({ themeKey, netHeight, onBoard, inset = 0, size }:
         const pts = strokeRef.current;
         if (!pts) return;
         const last = pts[pts.length - 1];
-        if (Math.hypot(w.x - last.x, w.z - last.z) > 0.04) { strokeRef.current = [...pts, w]; setStroke(strokeRef.current); }
+        if (Math.hypot(w.x - last.x, w.z - last.z) > 0.04) setStroke([...pts, w]);
         return;
       }
       const dx = w.x - g.start.x, dz = w.z - g.start.z;
@@ -243,7 +268,6 @@ export function StudioBoard3D({ themeKey, netHeight, onBoard, inset = 0, size }:
       if (!b || !players || !s.editor) return;
       if (g?.kind === "stroke") {
         const pts = strokeRef.current ?? [];
-        strokeRef.current = null;
         setStroke(null);
         if (s.tool === "pen") s.addInk(pts);
         else s.addZone(pts);

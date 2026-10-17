@@ -95,11 +95,15 @@ function athleteCapsuleKinds(rig: AthleteRig): ("trunk" | "arm" | "leg")[] {
   return kinds;
 }
 
-/** Closest points of segments p1-q1 and p2-q2 (Ericson, Real-Time Collision Detection 5.1.9): parameters s, t. */
-function closest(p1: V3, q1: V3, p2: V3, q2: V3): { s: number; t: number; d2: number } {
-  const d1x = q1.x - p1.x, d1y = q1.y - p1.y, d1z = q1.z - p1.z;
-  const d2x = q2.x - p2.x, d2y = q2.y - p2.y, d2z = q2.z - p2.z;
-  const rx = p1.x - p2.x, ry = p1.y - p2.y, rz = p1.z - p2.z;
+/**
+ * Squared distance between the closest points of segments p1-q1 and p2-q2 (Ericson, Real-Time Collision Detection
+ * 5.1.9), from plain coordinates so the solver's inner loop allocates nothing.
+ */
+function closestD2(p1x: number, p1y: number, p1z: number, q1x: number, q1y: number, q1z: number,
+  p2x: number, p2y: number, p2z: number, q2x: number, q2y: number, q2z: number): number {
+  const d1x = q1x - p1x, d1y = q1y - p1y, d1z = q1z - p1z;
+  const d2x = q2x - p2x, d2y = q2y - p2y, d2z = q2z - p2z;
+  const rx = p1x - p2x, ry = p1y - p2y, rz = p1z - p2z;
   const a = d1x * d1x + d1y * d1y + d1z * d1z, e = d2x * d2x + d2y * d2y + d2z * d2z, f = d2x * rx + d2y * ry + d2z * rz;
   const eps = 1e-12;
   let s = 0, t = 0;
@@ -120,18 +124,27 @@ function closest(p1: V3, q1: V3, p2: V3, q2: V3): { s: number; t: number; d2: nu
     }
   }
   const x = rx + d1x * s - d2x * t, y = ry + d1y * s - d2y * t, z = rz + d1z * s - d2z * t;
-  return { s, t, d2: x * x + y * y + z * z };
+  return x * x + y * y + z * z;
 }
 
-/** Capsules as flat numbers for the solver: ax ay az bx by bz r, then the floor box (min x, max x, min z, max z). */
+/**
+ * Capsules as flat numbers for the solver: ax ay az bx by bz r, then the floor box (min x, max x, min z, max z); after
+ * the last capsule, the floor box of the whole body.
+ */
 const stride = 11;
 
 function packed(caps: readonly BodyCapsule[]): Float64Array {
-  const out = new Float64Array(caps.length * stride);
+  const end = caps.length * stride;
+  const out = new Float64Array(end + 4);
+  out[end] = Infinity; out[end + 1] = -Infinity; out[end + 2] = Infinity; out[end + 3] = -Infinity;
   caps.forEach((k, i) => {
     const o = i * stride;
-    out.set([k.a.x, k.a.y, k.a.z, k.b.x, k.b.y, k.b.z, k.r,
-      Math.min(k.a.x, k.b.x) - k.r, Math.max(k.a.x, k.b.x) + k.r, Math.min(k.a.z, k.b.z) - k.r, Math.max(k.a.z, k.b.z) + k.r], o);
+    out[o] = k.a.x; out[o + 1] = k.a.y; out[o + 2] = k.a.z; out[o + 3] = k.b.x; out[o + 4] = k.b.y; out[o + 5] = k.b.z;
+    out[o + 6] = k.r;
+    out[o + 7] = Math.min(k.a.x, k.b.x) - k.r; out[o + 8] = Math.max(k.a.x, k.b.x) + k.r;
+    out[o + 9] = Math.min(k.a.z, k.b.z) - k.r; out[o + 10] = Math.max(k.a.z, k.b.z) + k.r;
+    out[end] = Math.min(out[end], out[o + 7]); out[end + 1] = Math.max(out[end + 1], out[o + 8]);
+    out[end + 2] = Math.min(out[end + 2], out[o + 9]); out[end + 3] = Math.max(out[end + 3], out[o + 10]);
   });
   return out;
 }
@@ -142,9 +155,16 @@ function packed(caps: readonly BodyCapsule[]): Float64Array {
  */
 function depthAt(A: Float64Array, B: Float64Array, ox: number, oz: number, margin: number): number {
   let worst = -Infinity;
-  for (let i = 0; i < A.length; i += stride) {
+  const na = A.length - 4, nb = B.length - 4;
+  for (let i = 0; i < na; i += stride) {
     const ra = A[i + 6];
-    for (let j = 0; j < B.length; j += stride) {
+    // B's whole body is beyond this capsule's floor box (shifted boxes keep their order): no pair can touch.
+    if (nb > 0 && (B[nb] + ox > A[i + 8] + margin || B[nb + 1] + ox < A[i + 7] - margin
+      || B[nb + 2] + oz > A[i + 10] + margin || B[nb + 3] + oz < A[i + 9] - margin)) {
+      worst = Math.max(worst, -margin);
+      continue;
+    }
+    for (let j = 0; j < nb; j += stride) {
       const reach = ra + B[j + 6] + margin;
       // Floor boxes apart by more than the margin: these two cannot touch.
       if (B[j + 7] + ox > A[i + 8] + margin || B[j + 8] + ox < A[i + 7] - margin
@@ -152,10 +172,9 @@ function depthAt(A: Float64Array, B: Float64Array, ox: number, oz: number, margi
         worst = Math.max(worst, -margin);
         continue;
       }
-      const c = closest(
-        new V3(A[i], A[i + 1], A[i + 2]), new V3(A[i + 3], A[i + 4], A[i + 5]),
-        new V3(B[j] + ox, B[j + 1], B[j + 2] + oz), new V3(B[j + 3] + ox, B[j + 4], B[j + 5] + oz));
-      worst = Math.max(worst, reach - Math.sqrt(c.d2));
+      const d2 = closestD2(A[i], A[i + 1], A[i + 2], A[i + 3], A[i + 4], A[i + 5],
+        B[j] + ox, B[j + 1], B[j + 2] + oz, B[j + 3] + ox, B[j + 4], B[j + 5] + oz);
+      worst = Math.max(worst, reach - Math.sqrt(d2));
     }
   }
   return worst;
@@ -163,16 +182,21 @@ function depthAt(A: Float64Array, B: Float64Array, ox: number, oz: number, margi
 
 /** Whether two bodies are apart by at least the margin when B is shifted by (ox, oz): depthAt <= 0, stopping at the first touch. */
 function apartAt(A: Float64Array, B: Float64Array, ox: number, oz: number, margin: number): boolean {
-  for (let i = 0; i < A.length; i += stride) {
+  const na = A.length - 4, nb = B.length - 4;
+  // The two bodies' floor boxes apart: nothing can touch (the capsule boxes lie within them).
+  if (nb > 0 && na > 0 && (B[nb] + ox > A[na + 1] + margin || B[nb + 1] + ox < A[na] - margin
+    || B[nb + 2] + oz > A[na + 3] + margin || B[nb + 3] + oz < A[na + 2] - margin)) return true;
+  for (let i = 0; i < na; i += stride) {
     const ra = A[i + 6];
-    for (let j = 0; j < B.length; j += stride) {
+    if (B[nb] + ox > A[i + 8] + margin || B[nb + 1] + ox < A[i + 7] - margin
+      || B[nb + 2] + oz > A[i + 10] + margin || B[nb + 3] + oz < A[i + 9] - margin) continue;
+    for (let j = 0; j < nb; j += stride) {
       if (B[j + 7] + ox > A[i + 8] + margin || B[j + 8] + ox < A[i + 7] - margin
         || B[j + 9] + oz > A[i + 10] + margin || B[j + 10] + oz < A[i + 9] - margin) continue;
-      const c = closest(
-        new V3(A[i], A[i + 1], A[i + 2]), new V3(A[i + 3], A[i + 4], A[i + 5]),
-        new V3(B[j] + ox, B[j + 1], B[j + 2] + oz), new V3(B[j + 3] + ox, B[j + 4], B[j + 5] + oz));
+      const d2 = closestD2(A[i], A[i + 1], A[i + 2], A[i + 3], A[i + 4], A[i + 5],
+        B[j] + ox, B[j + 1], B[j + 2] + oz, B[j + 3] + ox, B[j + 4], B[j + 5] + oz);
       const reach = ra + B[j + 6] + margin;
-      if (c.d2 < reach * reach) return false;
+      if (d2 < reach * reach) return false;
     }
   }
   return true;
@@ -566,23 +590,120 @@ const lookAhead = 1;
 const lookStep = 0.05;
 
 /**
+ * A rally's solved separation moments and how they are read: `offsets(t)` interpolates between them and averages over
+ * `smoothing` seconds either side. A `SeparationTrack` solves them; a copy elsewhere (the Studio solves its rallies in a
+ * worker) is filled with `append` and reads the same numbers.
+ */
+export class SeparationMoments {
+  protected readonly times: number[] = [];
+  protected readonly solved: Offsets[] = [];
+
+  constructor(readonly start: number, readonly end: number, readonly smoothing = 0.1) {}
+
+  /** How many moments are solved so far. */
+  get solvedCount(): number {
+    return this.times.length;
+  }
+
+  /** The time of the last moment solved, seconds; undefined before the first. */
+  get solvedTo(): number | undefined {
+    return this.times.length ? this.times[this.times.length - 1] : undefined;
+  }
+
+  get complete(): boolean {
+    return this.times.length > 0 && this.times[this.times.length - 1] >= this.end - 1e-9;
+  }
+
+  /** Whether `offsets(t)` reads only moments already solved. */
+  covers(t: number): boolean {
+    const last = this.solvedTo;
+    return last !== undefined && last >= Math.min(t + Math.max(0, this.smoothing), this.end) - 1e-9;
+  }
+
+  /** The moments from the `from`th on: their times and every player's offset. */
+  slice(from: number): { times: number[]; offsets: Map<string, FloorPoint>[] } {
+    return { times: this.times.slice(from), offsets: this.solved.slice(from) };
+  }
+
+  /** Adds moments solved elsewhere that continue these from the `from`th (any already here are skipped). */
+  append(from: number, times: readonly number[], offsets: readonly ReadonlyMap<string, FloorPoint>[]): void {
+    for (let k = this.times.length - from; k < times.length; k++) {
+      if (k < 0) return;
+      this.times.push(times[k]);
+      this.solved.push(new Map(offsets[k]));
+    }
+  }
+
+  /** Solves moments until time t is covered (a SeparationTrack does; a copy only reads what it was given). */
+  protected extend(_t: number): void {}
+
+  /**
+   * Every player's offset at time t: the solved moments averaged over `smoothing` seconds either side (weighted toward
+   * t), so a quick step aside is spread over a few frames instead of showing in one. A touch the averaging lets
+   * through is for the moment's own separation to clear (`separateBodies` starting from these offsets).
+   */
+  offsets(t: number): Map<string, FloorPoint> {
+    const h = this.smoothing;
+    if (!(h > 0)) return this.at(t);
+    this.extend(t + h);
+    const out = new Map<string, FloorPoint>();
+    if (this.times.length === 0) return out;
+    let total = 0;
+    const steps = 8;
+    for (let k = 1; k < steps; k++) {
+      const w = 1 - Math.abs((2 * k) / steps - 1);
+      const sample = this.at(t - h + (2 * h * k) / steps);
+      for (const [id, q] of sample) {
+        const o = out.get(id) ?? { x: 0, z: 0 };
+        out.set(id, { x: o.x + w * q.x, z: o.z + w * q.z });
+      }
+      total += w;
+    }
+    for (const [id, o] of out) out.set(id, { x: o.x / total, z: o.z / total });
+    return out;
+  }
+
+  /** Every player's offset at time t as solved (linear between solved moments; held outside the span). */
+  protected at(t: number): Map<string, FloorPoint> {
+    this.extend(t);
+    const ts = this.times;
+    if (ts.length === 0) return new Map();
+    if (t <= ts[0]) return new Map(this.solved[0]);
+    if (t >= ts[ts.length - 1]) return new Map(this.solved[ts.length - 1]);
+    let a = 0, b = ts.length - 1;
+    while (b - a > 1) {
+      const m = (a + b) >> 1;
+      if (ts[m] <= t) a = m;
+      else b = m;
+    }
+    const u = (t - ts[a]) / (ts[b] - ts[a]);
+    const A = this.solved[a], B = this.solved[b];
+    const out = new Map<string, FloorPoint>();
+    for (const id of new Set([...A.keys(), ...B.keys()])) {
+      const p = A.get(id) ?? { x: 0, z: 0 }, q = B.get(id) ?? { x: 0, z: 0 };
+      out.set(id, { x: p.x + (q.x - p.x) * u, z: p.z + (q.z - p.z) * u });
+    }
+    return out;
+  }
+}
+
+/**
  * How far every player is slid aside through a rally (seconds `start` to `end`), solved moment by moment from the
  * start: each moment begins from the last one's offsets, eased back toward the player's own path, and adds only what
  * the bodies need there. Moments are close enough that nobody moves more than a few centimetres between them, so
  * players step around each other smoothly instead of jumping, and the same time always gives the same picture.
  * Moments are solved as they are first asked for (playback runs forward); `offsets(t)` interpolates between them.
  */
-export class SeparationTrack {
-  private readonly times: number[] = [];
-  private readonly solved: Offsets[] = [];
+export class SeparationTrack extends SeparationMoments {
   /** Per pair: the side chosen when they met (kept until they are well apart); while passing, the room opened so far. */
   private readonly sides = new Map<string, number>();
   private readonly o: Required<SeparationTrackOptions>;
   /** The players' floor points on the look-ahead grid (index k: time k * lookStep), from the current moment on. */
   private readonly grid = new Map<number, ReadonlyMap<string, FloorPoint>>();
 
-  constructor(private readonly moment: (t: number) => SeparationMoment, readonly start: number, readonly end: number,
+  constructor(private readonly moment: (t: number) => SeparationMoment, start: number, end: number,
     options: SeparationTrackOptions = {}) {
+    super(start, end, options.smoothing ?? 0.1);
     this.o = { margin: options.margin ?? 0.01, relaxTime: options.relaxTime ?? 0.5, stepDistance: options.stepDistance ?? 0.05,
       minStep: options.minStep ?? 1 / 240, maxStep: options.maxStep ?? 1 / 15, anticipation: options.anticipation ?? 0,
       passing: options.passing ?? { width: 1.2, time: 0.6 }, smoothing: options.smoothing ?? 0.1,
@@ -607,13 +728,19 @@ export class SeparationTrack {
     return { tau, points };
   }
 
-  /** How many moments are solved so far. */
-  get solvedCount(): number {
-    return this.times.length;
-  }
-
   private preparing?: ReturnType<typeof setTimeout>;
   private stopped = false;
+
+  /**
+   * Solves on for about `budget` milliseconds (at least one step), from where it got to; true once the whole rally is
+   * solved. However the work is cut up, the moments come out the same.
+   */
+  solveFor(budget: number): boolean {
+    const start = performance.now();
+    do this.extend((this.times.length ? this.times[this.times.length - 1] : this.start) + 0.02);
+    while (!this.complete && performance.now() - start < budget);
+    return this.complete;
+  }
 
   /**
    * Solves the rest of the rally in the background, `budget` milliseconds at a time, so playback finds it ready (web
@@ -622,10 +749,7 @@ export class SeparationTrack {
   prepare(budget = 6): void {
     if (this.preparing !== undefined || this.stopped) return;
     const pump = () => {
-      const start = performance.now();
-      while (!this.stopped && performance.now() - start < budget && !this.complete) {
-        this.extend((this.times.length ? this.times[this.times.length - 1] : this.start) + 0.02);
-      }
+      if (!this.stopped && !this.complete) this.solveFor(budget);
       this.preparing = this.stopped || this.complete ? undefined : setTimeout(pump, 16);
     };
     this.preparing = setTimeout(pump, 0);
@@ -638,12 +762,8 @@ export class SeparationTrack {
     this.preparing = undefined;
   }
 
-  private get complete(): boolean {
-    return this.times.length > 0 && this.times[this.times.length - 1] >= this.end - 1e-9;
-  }
-
   /** Solves moments until time t is covered. */
-  private extend(t: number) {
+  protected override extend(t: number) {
     const target = Math.min(t, this.end);
     while (this.times.length === 0 || this.times[this.times.length - 1] < target - 1e-9) {
       const k = this.times.length;
@@ -671,53 +791,6 @@ export class SeparationTrack {
     }
   }
   private lastMoment?: SeparationMoment;
-
-  /**
-   * Every player's offset at time t: the solved moments averaged over `smoothing` seconds either side (weighted toward
-   * t), so a quick step aside is spread over a few frames instead of showing in one. A touch the averaging lets
-   * through is for the moment's own separation to clear (`separateBodies` starting from these offsets).
-   */
-  offsets(t: number): Map<string, FloorPoint> {
-    const h = this.o.smoothing;
-    if (!(h > 0)) return this.at(t);
-    this.extend(t + h);
-    const out = new Map<string, FloorPoint>();
-    let total = 0;
-    const steps = 8;
-    for (let k = 1; k < steps; k++) {
-      const w = 1 - Math.abs((2 * k) / steps - 1);
-      const sample = this.at(t - h + (2 * h * k) / steps);
-      for (const [id, q] of sample) {
-        const o = out.get(id) ?? { x: 0, z: 0 };
-        out.set(id, { x: o.x + w * q.x, z: o.z + w * q.z });
-      }
-      total += w;
-    }
-    for (const [id, o] of out) out.set(id, { x: o.x / total, z: o.z / total });
-    return out;
-  }
-
-  /** Every player's offset at time t as solved (linear between solved moments; held outside the span). */
-  private at(t: number): Map<string, FloorPoint> {
-    this.extend(t);
-    const ts = this.times;
-    if (t <= ts[0]) return new Map(this.solved[0]);
-    if (t >= ts[ts.length - 1]) return new Map(this.solved[ts.length - 1]);
-    let a = 0, b = ts.length - 1;
-    while (b - a > 1) {
-      const m = (a + b) >> 1;
-      if (ts[m] <= t) a = m;
-      else b = m;
-    }
-    const u = (t - ts[a]) / (ts[b] - ts[a]);
-    const A = this.solved[a], B = this.solved[b];
-    const out = new Map<string, FloorPoint>();
-    for (const id of new Set([...A.keys(), ...B.keys()])) {
-      const p = A.get(id) ?? { x: 0, z: 0 }, q = B.get(id) ?? { x: 0, z: 0 };
-      out.set(id, { x: p.x + (q.x - p.x) * u, z: p.z + (q.z - p.z) * u });
-    }
-    return out;
-  }
 }
 
 /** The deepest overlap between any two of the bodies, metres (0 when none touch); for tests and checks. */
