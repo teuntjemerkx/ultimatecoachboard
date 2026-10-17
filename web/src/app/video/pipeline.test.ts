@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { V3 } from "../../core/spatial";
 import { CourtCalibration, VideoCamera } from "../../core/video";
-import { farCourtBand, pickBalls, samplePlan, sameFrame, withoutFixtures } from "./pipeline";
+import { oneBallEach } from "./detect";
+import { farCourtBand, frameGrid, onFrameGrid, pickBalls, samplePlan, sameFrame, withoutFixtures } from "./pipeline";
 
 /** A ball thrown across a 600 px frame at 30 frames a second, with an antenna top the detector likes better. */
 function flight(seconds: number) {
@@ -43,6 +44,63 @@ describe("Video to 3D ball sampling", () => {
     expect(picked.every((p, k) => p !== undefined && Math.abs(p.x - frames[k].balls[1].x) < 1e-9)).toBe(true);
     // A weak candidate alone does not start a path.
     expect(pickBalls([{ time: 0, balls: [{ x: 50, y: 50, score: 0.15 }] }], 600)).toEqual([undefined]);
+  });
+
+  it("drops a head that stands still for a fifth of a second", () => {
+    const frames = flight(1.5);
+    // A far player's head, seen in seven frames out of eight over 0.27 s, at the ball's score.
+    for (let k = 10; k <= 18; k++) if (k !== 13) frames[k].balls.push({ x: 455, y: 300 + (k % 2), score: 0.3 });
+    const kept = withoutFixtures(frames, 600);
+    expect(kept.every((b) => b.every((c) => c.x !== 455))).toBe(true);
+    expect(kept.every((b) => b.length === 1)).toBe(true);
+  });
+
+  it("starts a new path where the pick jumps", () => {
+    // A head the detector likes for four frames, then the ball elsewhere, weak after its first frame.
+    const frames = Array.from({ length: 9 }, (_, k) => ({
+      time: k / 30,
+      balls: k < 4 ? [{ x: 300, y: 300, score: 0.3 }] : [{ x: 420 - 20 * (k - 4), y: 240 + 15 * (k - 4), score: k === 4 ? 0.5 : 0.15 }],
+    }));
+    const picked = pickBalls(frames, 1280);
+    // Its speed is the ball's own, not the jump from the head: the weak frames are followed.
+    expect(picked.slice(4).map((p) => p?.x)).toEqual([420, 400, 380, 360, 340]);
+  });
+
+  it("keeps one candidate per ball where the tiles overlap, with a whole box's size", () => {
+    const merged = oneBallEach([
+      { x: 519, y: 602, score: 0.6 },
+      { x: 521, y: 601, score: 0.4, size: 27 },
+      { x: 900, y: 100, score: 0.3, size: 8 },
+    ]);
+    expect(merged).toEqual([{ x: 521, y: 601, score: 0.6, size: 27 }, { x: 900, y: 100, score: 0.3, size: 8 }]);
+  });
+
+  it("finds the frame grid of a clip with fewer frames than are read", () => {
+    // Reads at 30 a second; a seek shows the frame whose display interval holds the time.
+    const reads = (fps: number, phase: number, from = 3.2) => {
+      let previous: number | undefined;
+      return Array.from({ length: 301 }, (_, k) => {
+        const time = from + k / 30, frame = Math.floor(time * fps - phase);
+        const repeat = frame === previous;
+        previous = frame;
+        return { time, repeat, shown: (frame + phase) / fps };
+      });
+    };
+    for (const [fps, phase] of [[23.976, 0.98], [24, 0.3], [25, 0.55]]) {
+      const r = reads(fps, phase);
+      const grid = frameGrid(r)!;
+      expect(grid, `${fps} fps`).toBeDefined();
+      expect(grid.fps).toBe(fps);
+      // Each read lands within a few milliseconds of the time its frame came up.
+      for (const x of r) expect(Math.abs(onFrameGrid(x.time, grid) - x.shown), `${fps} fps at ${x.time}`).toBeLessThan(0.003);
+    }
+    // A clip with as many frames as are read hardly repeats; a still picture repeats every time.
+    expect(frameGrid(reads(30, 0.2))).toBeUndefined();
+    expect(frameGrid(reads(60, 0.2))).toBeUndefined();
+    expect(frameGrid(reads(24, 0.3).map((x) => ({ ...x, repeat: true })))).toBeUndefined();
+    // A few repeats hidden by compression noise, and a still moment, still give the grid.
+    const noisy = reads(25, 0.55).map((x, k) => ({ ...x, repeat: k === 30 || k === 90 ? !x.repeat : x.repeat }));
+    expect(frameGrid(noisy)?.fps).toBe(25);
   });
 
   it("tells a repeated frame from a new one", () => {

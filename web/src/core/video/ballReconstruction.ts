@@ -10,6 +10,26 @@ import { ImagePoint, LevenbergMarquardt, LinearAlgebra } from "./videoMath";
 export interface BallObservation {
   time: number;
   image: ImagePoint;
+  /**
+   * Web addition: the ball's diameter in the image (pixels, the detector's box), when known. It tells how far the ball
+   * is from the camera (`ballSize`), which the pixel alone does not along a viewing ray.
+   */
+  size?: number;
+}
+
+/**
+ * Web addition: the ball's diameter in the image at a point (pixels), seen through a camera. The size residual of a fit
+ * is the log of predicted over measured diameter in standard deviations of `sizeSigma`: 10% plus 0.8 px, weighed
+ * against pixel residuals that count a pixel each. On the Orion clip a still head's box varied by about 8% and the
+ * small boxes of the ball off the block by up to a third; with 20% plus 1.5 px the pixels still put that flight 3 m
+ * nearer the camera than the frames show, with this it crosses the net where the block was.
+ */
+export function ballSize(camera: VideoCamera, p: V3): number {
+  return (camera.focalLength * 2 * BallFlight.radius) / Math.max(p.sub(camera.center).length, 1e-6);
+}
+
+function sizeSigma(size: number): number {
+  return 0.1 + 0.8 / Math.max(size, 1);
 }
 
 /** The Swift Codable shape of a ball segment. */
@@ -218,10 +238,16 @@ export interface BallSettings {
    * going away from a low end-line camera is about 1 to 1.5 m, a ball along the ray of a far telephoto 3.5 m or more.
    */
   placedSigma: number;
+  /**
+   * A flight must fit the ball's measured sizes (`BallObservation.size`) too: the RMS of their residuals at most this,
+   * in standard deviations (`sizeSigma`). A head or a knee pad the detector took for the ball, which stands still and
+   * then jumps, fits the pixels only as a ball flying at the camera, where it would look many times larger.
+   */
+  sizeThreshold: number;
 }
 
 export const defaultBallSettings: Readonly<BallSettings> = { rmsThreshold: 3, pointThreshold: 7, minPoints: 5, maxGap: 0.35, drag: true, chain: true,
-  hallHalfWidth: 13.5, hallHalfLength: 19, maxHeight: 15, maxSpeed: 35, minTop: 0.5, placedSigma: 2.5 };
+  hallHalfWidth: 13.5, hallHalfLength: 19, maxHeight: 15, maxSpeed: 35, minTop: 0.5, placedSigma: 2.5, sizeThreshold: 2 };
 
 /** The flight model's free parameters: launch position and velocity, and the lift coefficient when it is free. */
 interface Fit {
@@ -233,10 +259,18 @@ interface Fit {
   cost: number;
   pixelCost: number;
   count: number;
+  /** Web addition: the size residuals' part of the cost and how many observations had a size. */
+  sizeCost: number;
+  sizeCount: number;
 }
 
 function fitRMS(f: Fit): number {
   return Math.sqrt(f.pixelCost / Math.max(f.count, 1));
+}
+
+/** Web addition: the RMS of a fit's size residuals in standard deviations (0 without sizes). */
+function sizeRMS(f: Fit): number {
+  return f.sizeCount > 0 ? Math.sqrt(f.sizeCost / f.sizeCount) : 0;
 }
 
 function fitParams(f: Fit): number[] {
@@ -289,15 +323,15 @@ class Problem {
 
   /**
    * Pixel residuals, floor penalties, anchor residuals (in sigmas) and the lift prior; undefined when the ball would be
-   * behind the camera.
+   * behind the camera. Web addition: the size residuals of observations with a size.
    */
-  residuals(x: readonly number[]): { all: number[]; pixelCost: number } | undefined {
+  residuals(x: readonly number[]): { all: number[]; pixelCost: number; sizeCost: number } | undefined {
     const b = this.bounds;
     const first = this.obs[0].time, last = this.obs[this.obs.length - 1].time;
     const speedTimes = b ? [first - speedStep, first + speedStep, last - speedStep, last + speedStep] : [];
     const ps = this.positions(x, [...this.obs.map((o) => o.time), ...this.anchors.map((a) => a.time), ...speedTimes]);
     const r: number[] = [];
-    let pixelCost = 0;
+    let pixelCost = 0, sizeCost = 0;
     for (let i = 0; i < this.obs.length; i++) {
       const o = this.obs[i], p = ps[i];
       const q = this.camera.project(p);
@@ -306,6 +340,11 @@ class Problem {
       r.push(dx, dy);
       pixelCost += dx * dx + dy * dy;
       r.push(Math.max(0, BallFlight.radius - p.y) * floorWeight);
+      if (o.size !== undefined) {
+        const e = Math.log(ballSize(this.camera, p) / o.size) / sizeSigma(o.size);
+        r.push(e);
+        sizeCost += e * e;
+      }
     }
     this.anchors.forEach((a, k) => {
       const p = ps[this.obs.length + k];
@@ -330,7 +369,7 @@ class Problem {
       }
     }
     if (this.fitsLift) r.push((x[6] - this.liftPrior.centre) / this.liftPrior.scale);
-    return { all: r, pixelCost };
+    return { all: r, pixelCost, sizeCost };
   }
 
   refine(x0: readonly number[], maxIterations = 60): Fit | undefined {
@@ -346,7 +385,8 @@ class Problem {
     const e = this.residuals(r.x);
     if (!e) return undefined;
     return { p0: new V3(r.x[0], r.x[1], r.x[2]), v0: new V3(r.x[3], r.x[4], r.x[5]), aero: this.aeroOf(r.x), fitsLift: this.fitsLift,
-      cost: r.cost, pixelCost: e.pixelCost, count: this.obs.length };
+      cost: r.cost, pixelCost: e.pixelCost, count: this.obs.length, sizeCost: e.sizeCost,
+      sizeCount: this.obs.filter((o) => o.size !== undefined).length };
   }
 
   /**
@@ -455,8 +495,9 @@ export const BallReconstruction = {
 
   /**
    * The best drag-free flight (t0 = the first observation): LM from the linear start and from depths of 3 to 40 m
-   * along the first ray, or from `warm`. Web addition: with `bounds` the fit keeps the ball in the hall and below the
-   * top speed, and the depths span the part of the ray inside the hall.
+   * along the first ray, or from `warm`. Web additions: with `bounds` the fit keeps the ball in the hall and below the
+   * top speed, and the depths span the part of the ray inside the hall; with sizes, also from the depth the first
+   * sized observation's size gives.
    */
   ballistic(obs: readonly BallObservation[], camera: VideoCamera, anchors: readonly BallAnchor[] = [], warm?: Fit,
     bounds?: Readonly<BallSettings>): Fit | undefined {
@@ -474,6 +515,12 @@ export const BallReconstruction = {
     const ray = camera.ray(obs[0].image);
     const inside = bounds ? BallReconstruction.hallSpan(ray, bounds) : undefined;
     const depths = inside ? [0, 1, 2, 3, 4, 5, 6].map((k) => inside[0] + ((inside[1] - inside[0]) * (k + 0.5)) / 7) : [3, 5, 8, 12, 18, 26, 40];
+    const sized = obs.find((o) => o.size !== undefined);
+    if (sized?.size) {
+      // Along the first ray, as far as the size says the ball was at the first sized observation.
+      const range = (camera.focalLength * 2 * BallFlight.radius) / sized.size;
+      depths.push(range * camera.ray(sized.image).direction.dot(ray.direction));
+    }
     for (const depth of depths) {
       const s = BallReconstruction.linearStart(obs, t0, camera, ray.origin.add(ray.direction.mul(depth)));
       if (!s) continue;
@@ -577,8 +624,9 @@ export const BallReconstruction = {
 
   /**
    * Splits a ball track into flights at contacts: a flight grows point by point while its drag-free fit stays below
-   * `rmsThreshold` and the new point below `pointThreshold`; then each boundary moves by up to three points to the
-   * split with the lowest total error. Groups shorter than `minPoints` are dropped (a held ball, noise).
+   * `rmsThreshold` and the new point below `pointThreshold` (web addition: and the fit's sizes within `sizeThreshold`);
+   * then each boundary moves by up to three points to the split with the lowest total error. Groups shorter than
+   * `minPoints` are dropped (a held ball, noise).
    */
   split(observations: readonly BallObservation[], camera: VideoCamera, settings: Partial<BallSettings> = {}): BallObservation[][] {
     const s = { ...defaultBallSettings, ...settings };
@@ -601,13 +649,14 @@ export const BallReconstruction = {
         continue;
       }
       let fit = BallReconstruction.ballistic(obs.slice(start, end), camera);
-      if (!fit || !(fitRMS(fit) <= s.rmsThreshold)) {
+      if (!fit || !(fitRMS(fit) <= s.rmsThreshold) || !(sizeRMS(fit) <= s.sizeThreshold)) {
         start += 1;
         continue;
       }
       while (end < n && obs[end].time - obs[end - 1].time <= s.maxGap) {
         const candidate: Fit | undefined = BallReconstruction.ballistic(obs.slice(start, end + 1), camera, [], fit);
-        if (!candidate || !(fitRMS(candidate) <= s.rmsThreshold) || !(pointError(candidate, obs[end], obs[start].time) <= s.pointThreshold)) break;
+        if (!candidate || !(fitRMS(candidate) <= s.rmsThreshold) || !(sizeRMS(candidate) <= s.sizeThreshold)
+          || !(pointError(candidate, obs[end], obs[start].time) <= s.pointThreshold)) break;
         fit = candidate;
         end += 1;
       }
@@ -658,6 +707,8 @@ export const BallReconstruction = {
     // something to place the flight: an anchor (a hand, the floor), or an image that fixes it to `placedSigma` (a fast
     // serve going away from a low camera, a little over the top speed); a ball moving along the ray of a far camera
     // has neither.
+    // Web addition: a flight that does not fit the ball's sizes is not the ball.
+    fits.forEach((f, i) => { if (f && !(sizeRMS(f) <= s.sizeThreshold)) fits[i] = undefined; });
     const bounded = groups.map(() => false);
     groups.forEach((g, i) => {
       const seg = segment(i), f = fits[i];
@@ -668,7 +719,8 @@ export const BallReconstruction = {
       const refit = placed ? BallReconstruction.bestFit(g, camera, own(g), s.drag, s) : undefined;
       fits[i] = refit;
       const kept = segment(i);
-      if (!refit || !kept || !(fitRMS(refit) <= s.rmsThreshold * 1.25) || !BallReconstruction.plausible(kept, s)) fits[i] = undefined;
+      if (!refit || !kept || !(fitRMS(refit) <= s.rmsThreshold * 1.25) || !(sizeRMS(refit) <= s.sizeThreshold)
+        || !BallReconstruction.plausible(kept, s)) fits[i] = undefined;
       bounded[i] = fits[i] !== undefined;
     });
     // Contact times where consecutive flights pass closest.

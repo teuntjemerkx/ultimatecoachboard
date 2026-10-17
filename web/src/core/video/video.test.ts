@@ -13,7 +13,7 @@ import { CourtCalibration, CourtLandmark, VideoCamera } from "./courtCalibration
 import { CleanPlate, HallEnvironment } from "./environment";
 import { PersonDetection, PlayerTracker, type TrackedPlayer, type VideoFrameObservation } from "./playerTracking";
 import { PoseFitter, type PoseTrackFrame } from "./poseFitting";
-import { SplitMix64, Synth, chance, shuffled, uniform, unit } from "./testSupport";
+import { SplitMix64, Synth, chance, gaussian, shuffled, uniform, unit } from "./testSupport";
 import { Hungarian, ImagePoint, LevenbergMarquardt, LinearAlgebra, Matrix3, wrappedAngle } from "./videoMath";
 import { VideoPlayerSample, VideoPlayerTrack, VideoReconstructor, VideoScene, type ReconstructionStage } from "./videoScene";
 
@@ -700,6 +700,45 @@ describe("BallVideoTests", () => {
       const obs = observe(rolling, 0, 0.25, 30, unit(rng), cam, rng);
       expect(BallReconstruction.reconstruct([obs], cam).length, `rolling ball, seed ${seed}`).toBe(0);
     }
+  }, 60_000);
+
+  /**
+   * Web addition: a club's camera 2.2 m up and 14 m behind our end line (the Orion clip) sees a ball come off the block
+   * at the net and land behind our end line nearly along its viewing rays, and the pixels alone often place it metres
+   * nearer the camera, slower. The ball's size in the picture (the detector's box, here good to 15%) says how far it is.
+   * And the clip's false flight, a far player's head standing still and then a knee pad below it, fits the pixels as a
+   * ball flying at the camera at over 30 m/s: there the ball would look many times larger than the head did.
+   */
+  it("places a flight by the ball's size, and a head is no ball flying at the camera", () => {
+    const cam = CourtCalibration.solveNearHalf([{ x: 1213, y: 632 }, { x: 30, y: 632 }], [{ x: 420, y: 448 }, { x: 848, y: 448 }],
+      "home", 1280, 720)!.camera;
+    const size = (p: V3) => (cam.focalLength * 2 * BallFlight.radius) / p.sub(cam.center).length;
+    const from = new V3(2, 3, 0.3), to = new V3(-1, 0.1, 10.2), duration = 0.67;
+    const deflection = new SyntheticFlight(from, new V3((to.x - from.x) / duration,
+      (to.y - from.y + 0.5 * BallFlight.gravity * duration * duration) / duration, (to.z - from.z) / duration), Aero.soft, duration);
+    let lost = 0;
+    for (let seed = 1; seed <= 12; seed++) {
+      const rng = new SplitMix64(900 + seed);
+      // Seen from a quarter of a second after the block, at 24 frames a second, as on the clip.
+      const obs = observe(deflection.position, 0.25, 0.6, 24, unit(rng), cam, rng)
+        .map((o) => ({ ...o, size: size(deflection.position(o.time)) * Math.exp(0.15 * gaussian(rng)) }));
+      const worst = (sized: boolean) => {
+        const segments = BallReconstruction.reconstruct([sized ? obs : obs.map(({ time, image }) => ({ time, image }))], cam);
+        expect(segments.length, `seed ${seed}`).toBe(1);
+        return Math.max(...obs.map((o) => segments[0].position(o.time).sub(deflection.position(o.time)).length));
+      };
+      if (worst(false) > 1.5) lost += 1;
+      expect(worst(true), `seed ${seed}: placed by its size`).toBeLessThan(1);
+    }
+    expect(lost, "pixels alone more than 1.5 m off").toBeGreaterThan(2);
+
+    // The head and the knee pad (read times and pixels from the clip, the box sizes from a build).
+    const head = [[7.867, 533, 377, 12.5], [7.9, 533, 378, 13.5], [7.933, 535, 378, 10], [7.967, 535, 378, 9], [8.033, 532, 418, 10]];
+    const plain = BallReconstruction.reconstruct([head.map(([time, x, y]) => ({ time, image: { x, y } }))], cam);
+    expect(plain.length).toBe(1);
+    expect(plain[0].v0.length).toBeGreaterThan(30);
+    expect(plain[0].position(plain[0].t1).sub(cam.center).length).toBeLessThan(1.5);
+    expect(BallReconstruction.reconstruct([head.map(([time, x, y, s]) => ({ time, image: { x, y }, size: s }))], cam)).toEqual([]);
   }, 60_000);
 
   /**

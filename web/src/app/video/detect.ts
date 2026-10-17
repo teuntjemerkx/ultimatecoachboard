@@ -21,8 +21,11 @@ export interface DetectedPerson {
 
 export interface FrameDetections {
   people: DetectedPerson[];
-  /** Ball candidates, best first. */
-  balls: { x: number; y: number; score: number }[];
+  /**
+   * Ball candidates, best first: the centre of the box and, when the box is whole (not cut by the frame or a tile edge),
+   * its smaller side (`size`, the ball's diameter; motion blur only stretches the box along the motion).
+   */
+  balls: { x: number; y: number; score: number; size?: number }[];
 }
 
 /**
@@ -135,7 +138,8 @@ export class Detector {
       for (const d of this.people.detect(tile).detections) {
         const b = d.boundingBox!, c = d.categories[0];
         if (c.categoryName === "sports ball") {
-          balls.push({ x: (b.originX + b.width / 2 + x0) / S, y: (b.originY + b.height / 2) / S, score: c.score });
+          const box = { x: (b.originX + x0) / S, y: b.originY / S, w: b.width / S, h: b.height / S };
+          balls.push(ballCandidate(box, c.score, { x: x0 / S, y: 0, w: tw / S, h: height }, width, height));
         } else {
           raw.push({ box: { x: (b.originX + x0) / S, y: b.originY / S, w: b.width / S, h: b.height / S }, score: c.score, keypoints: {} });
         }
@@ -146,8 +150,7 @@ export class Detector {
     raw.sort((a, b) => b.score - a.score);
     const people: DetectedPerson[] = [];
     for (const p of raw) if (!people.some((q) => iou(q.box, p.box) > 0.5)) people.push(p);
-    balls.sort((a, b) => b.score - a.score);
-    return { people, balls };
+    return { people, balls: oneBallEach(balls) };
   }
 
   /**
@@ -167,7 +170,7 @@ export class Detector {
         const b = d.boundingBox!, c = d.categories[0];
         const box = { x: x0 + b.originX * s, y: y0 + b.originY * s, w: b.width * s, h: b.height * s };
         if (c.categoryName === "sports ball") {
-          if (band.balls) balls.push({ x: box.x + box.w / 2, y: box.y + box.h / 2, score: c.score });
+          if (band.balls) balls.push(ballCandidate(box, c.score, { x: x0, y: y0, w: side, h: side }, width, height));
           continue;
         }
         const cut = (x0 > 0 && box.x <= x0 + edge) || (x0 + side < width && box.x + box.w >= x0 + side - edge)
@@ -176,6 +179,34 @@ export class Detector {
       }
     }
   }
+}
+
+/**
+ * A ball candidate from its box (frame pixels) in a tile: the centre, and the smaller side as the ball's diameter
+ * unless the frame's edge or the tile's cuts the box (within 2 px).
+ */
+function ballCandidate(box: DetectedPerson["box"], score: number, tile: DetectedPerson["box"], width: number, height: number):
+  FrameDetections["balls"][number] {
+  const at = { x: box.x + box.w / 2, y: box.y + box.h / 2, score };
+  const edge = 2;
+  const cut = box.x <= Math.max(0, tile.x) + edge || box.y <= Math.max(0, tile.y) + edge
+    || box.x + box.w >= Math.min(width, tile.x + tile.w) - edge || box.y + box.h >= Math.min(height, tile.y + tile.h) - edge;
+  return cut ? at : { ...at, size: Math.min(box.w, box.h) };
+}
+
+/**
+ * Ball candidates best first, one per ball: the tiles overlap, and where a tile's edge cuts a ball's box the other
+ * tile sees it whole, so of two candidates closer than half a ball (at least 4 px) the better scoring stays, with the
+ * centre and size of a whole box when it has none.
+ */
+export function oneBallEach(balls: readonly FrameDetections["balls"][number][]): FrameDetections["balls"] {
+  const kept: FrameDetections["balls"] = [];
+  for (const b of [...balls].sort((p, q) => q.score - p.score)) {
+    const twin = kept.find((k) => Math.hypot(k.x - b.x, k.y - b.y) <= Math.max(4, 0.5 * (k.size ?? b.size ?? 0)));
+    if (!twin) kept.push({ ...b });
+    else if (twin.size === undefined && b.size !== undefined) Object.assign(twin, { x: b.x, y: b.y, size: b.size });
+  }
+  return kept;
 }
 
 /** The object detector's input (EfficientDet-Lite2: 448 x 448). */

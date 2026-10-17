@@ -13,7 +13,7 @@ export {
   type PoseEstimate, type PoseTrackFrame, type PoseTrackResult, type PoseFitterSettings, type FrameRun,
 } from "./poseFitting";
 export {
-  BallSegment, BallAnchor, BallReconstruction, defaultBallSettings,
+  BallSegment, BallAnchor, BallReconstruction, ballSize, defaultBallSettings,
   type BallObservation, type BallSegmentJSON, type BallSettings,
 } from "./ballReconstruction";
 export { CleanPlate, HallEnvironment, type HallEnvironmentJSON } from "./environment";

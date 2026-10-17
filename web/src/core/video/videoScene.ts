@@ -387,7 +387,7 @@ export const VideoReconstructor = {
     const scene = new VideoScene({ title: options.title ?? "Video rally", duration: frames[frames.length - 1]?.time ?? 0, camera,
       environment: options.environment ?? new HallEnvironment(), players, netHeight: options.netHeight ?? 2.43 });
     const ballObs: BallObservation[] = [];
-    for (const f of frames) if (f.ball) ballObs.push({ time: f.time, image: f.ball });
+    for (const f of frames) if (f.ball) ballObs.push(f.ballSize !== undefined ? { time: f.time, image: f.ball, size: f.ballSize } : { time: f.time, image: f.ball });
     const flights = BallReconstruction.split(ballObs, camera);
     const anchors: BallAnchor[] = [];
     for (const flight of flights) {
@@ -461,7 +461,8 @@ export const VideoReconstructor = {
       BallAnchor.hand(c.t, c.point, 0.3, atStart && c.posture ? BallReconstruction.expectedAero(c.posture) : undefined);
     const fitThrough = (c: HandOnRay) => BallReconstruction.bestFit(flight, scene.camera, [anchorAt(c)], settings.drag, settings);
     const chosen = best, through = fitThrough(best);
-    if (!through || !(Math.sqrt(through.pixelCost / through.count) <= settings.rmsThreshold)) return undefined;
+    if (!through || !(Math.sqrt(through.pixelCost / through.count) <= settings.rmsThreshold)
+      || !(Math.sqrt(through.sizeCost / Math.max(through.sizeCount, 1)) <= settings.sizeThreshold)) return undefined;
     const variance = Math.max(1, through.pixelCost / (2 * through.count));
     for (const c of nearest.values()) {
       if (c === chosen || !(c.d <= rivalDistance) || !(Math.abs(c.depth - chosen.depth) > depthSpread)) continue;
@@ -485,7 +486,8 @@ export const VideoReconstructor = {
     if (past.length < 2) return false;
     const all = [...flight, ...past].sort((a, b) => a.time - b.time);
     const fit = BallReconstruction.bestFit(all, camera, [], false, s);
-    if (!fit || !(Math.sqrt(fit.pixelCost / fit.count) <= s.rmsThreshold)) return false;
+    if (!fit || !(Math.sqrt(fit.pixelCost / fit.count) <= s.rmsThreshold)
+      || !(Math.sqrt(fit.sizeCost / Math.max(fit.sizeCount, 1)) <= s.sizeThreshold)) return false;
     const seg = new BallSegment(all[0].time, all[all.length - 1].time, fit.p0, fit.v0, fit.aero);
     if (!BallReconstruction.plausible(seg, s)) return false;
     return past.every((o) => {

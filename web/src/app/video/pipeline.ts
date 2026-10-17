@@ -78,7 +78,7 @@ export function jerseyColour(p: Person, pixels: Uint8ClampedArray, width: number
  * floor beside them, metres away on the court: a keypoint outside the person's box (with a little room) is left out,
  * and the feet are read from joints the model is fairly sure of (0.3), else from the bottom of the box.
  */
-export function observation(time: number, d: FrameDetections, camera: VideoCamera, ball?: ImagePoint,
+export function observation(time: number, d: FrameDetections, camera: VideoCamera, ball?: BallPick,
   appearance?: readonly (number[] | undefined)[]): VideoFrameObservation {
   const detections: PersonDetection[] = [];
   for (const [i, p] of d.people.entries()) {
@@ -93,15 +93,27 @@ export function observation(time: number, d: FrameDetections, camera: VideoCamer
     });
     if (det) detections.push(det);
   }
-  return ball ? { time, detections, ball } : { time, detections };
+  return ball ? { time, detections, ...ballObservation(ball) } : { time, detections };
 }
 
 type BallCandidates = FrameDetections["balls"];
 
+/** The ball picked in a frame: its pixel, and its diameter when the detector's box was whole. */
+export type BallPick = ImagePoint & { size?: number };
+
+/** A picked ball as the fields of a frame observation. */
+function ballObservation(b: BallPick): Pick<VideoFrameObservation, "ball" | "ballSize"> {
+  return b.size !== undefined ? { ball: { x: b.x, y: b.y }, ballSize: b.size } : { ball: { x: b.x, y: b.y } };
+}
+
 /**
  * The ball candidates without the ones that stay put: about the same pixel in at least four frames spread over a
- * second or more (an antenna top, a logo, a spare ball by the bench, a ball held before the serve). The detector
- * finds those in most frames, often above the ball in flight.
+ * second or more (an antenna top, a logo, a spare ball by the bench, a ball held before the serve), or in five frames
+ * or more over 0.2 s or longer without a break of 0.1 s (the head or a knee pad of a player standing still: the ball
+ * in flight leaves its pixel within a few frames, even at the top of a set). The detector finds those in most frames,
+ * often above the ball in flight. On the Orion clip a far player's head stood at one pixel for about a second (just
+ * over on the read times, just under on the frame grid), and was then picked as the ball for 0.7 s instead of the
+ * start of the attack off our block.
  */
 export function withoutFixtures(frames: readonly { time: number; balls: BallCandidates }[], width: number): BallCandidates[] {
   const r = Math.max(2, 0.006 * width);
@@ -114,23 +126,29 @@ export function withoutFixtures(frames: readonly { time: number; balls: BallCand
       grid.set(key, cell);
     }
   });
-  const fixed = (b: { x: number; y: number }) => {
+  const fixed = (b: { x: number; y: number }, time: number) => {
     const cx = Math.floor(b.x / r), cy = Math.floor(b.y / r);
-    const seen = new Set<number>();
+    const seen = new Map<number, number>();
     let t0 = Infinity, t1 = -Infinity;
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
         for (const a of grid.get(`${cx + dx},${cy + dy}`) ?? []) {
           if (Math.hypot(a.x - b.x, a.y - b.y) > r) continue;
-          seen.add(a.frame);
+          seen.set(a.frame, a.time);
           t0 = Math.min(t0, a.time);
           t1 = Math.max(t1, a.time);
         }
       }
     }
-    return seen.size >= 4 && t1 - t0 >= 1;
+    if (seen.size >= 4 && t1 - t0 >= 1) return true;
+    // The unbroken run of frames around this one.
+    const times = [...seen.values()].sort((a, c) => a - c);
+    let lo = times.indexOf(time), hi = lo;
+    while (lo > 0 && times[lo] - times[lo - 1] <= 0.1) lo -= 1;
+    while (hi >= 0 && hi < times.length - 1 && times[hi + 1] - times[hi] <= 0.1) hi += 1;
+    return lo >= 0 && hi - lo + 1 >= 5 && times[hi] - times[lo] >= 0.2;
   };
-  return frames.map((f) => f.balls.filter((b) => !fixed(b)));
+  return frames.map((f) => f.balls.filter((b) => !fixed(b, f.time)));
 }
 
 /**
@@ -139,13 +157,14 @@ export function withoutFixtures(frames: readonly { time: number; balls: BallCand
  * leads is taken, also a weak one (down to the detector's threshold), so a stronger stray elsewhere (a second ball,
  * a light, a head) does not break the flight; otherwise the best candidate scoring 0.2 or more.
  */
-export function pickBalls(frames: readonly { time: number; balls: BallCandidates }[], width: number): (ImagePoint | undefined)[] {
+export function pickBalls(frames: readonly { time: number; balls: BallCandidates }[], width: number): (BallPick | undefined)[] {
   const moving = withoutFixtures(frames, width);
   const path: { t: number; p: ImagePoint }[] = [];
   return frames.map((f, i) => {
     const candidates = moving[i];
     let choice = candidates.find((b) => b.score >= 0.2);
     const last = path[path.length - 1], before = path[path.length - 2];
+    let onPath = false;
     if (last && f.time - last.t < 0.5) {
       // Carried on at its last speed in the image (from two picks less than 0.3 s apart), else where it was.
       const k = before && last.t - before.t < 0.3 ? (f.time - last.t) / (last.t - before.t) : 0;
@@ -154,10 +173,13 @@ export function pickBalls(frames: readonly { time: number; balls: BallCandidates
       const reach = width * (0.04 + 0.8 * (f.time - last.t));
       const near = candidates.filter((b) => dist(b) <= reach).sort((a, b) => dist(a) - dist(b))[0];
       if (near) choice = near;
+      onPath = near !== undefined;
     }
     if (!choice) return undefined;
+    // A pick off the path starts a new one: its speed is not the jump from the old path.
+    if (!onPath) path.length = 0;
     path.push({ t: f.time, p: { x: choice.x, y: choice.y } });
-    return { x: choice.x, y: choice.y };
+    return choice.size !== undefined ? { x: choice.x, y: choice.y, size: choice.size } : { x: choice.x, y: choice.y };
   });
 }
 
@@ -256,6 +278,49 @@ export function sameFrame(a: Uint8ClampedArray, b: Uint8ClampedArray): boolean {
   return true;
 }
 
+/** Frame rates a clip with fewer frames than a build reads is likely to have (film, PAL and NTSC video). */
+const CLIP_RATES = [23.976, 24, 25, 29.97];
+
+/**
+ * The frame grid of a clip with fewer frames a second than a build reads, from which reads repeated the frame before
+ * (`sameFrame`): its rate and phase, so that the read at clip time t shows frame floor(t * fps - phase), which a seek
+ * shows from (frame + phase) / fps on. A 24 fps clip read every 33 ms repeats a frame every fifth read and is read up
+ * to 33 ms after its frame came up, so the read times step 33 ms where the frames step 42 ms, and a ball coming at
+ * the camera seems to slow down and speed up. The rate and phase that predict the repeats best, when they predict all
+ * but a few (a still picture repeats too; compression noise can hide a repeat); undefined when the reads hardly
+ * repeat (the clip has as many frames as are read, or more) or no common rate fits.
+ */
+export function frameGrid(reads: readonly { time: number; repeat: boolean }[]): { fps: number; phase: number } | undefined {
+  const repeats = reads.filter((r, i) => i > 0 && r.repeat).length;
+  if (reads.length < 10 || repeats < 3) return undefined;
+  let best: { fps: number; phase: number; misses: number } | undefined;
+  for (const fps of CLIP_RATES) {
+    // Phases in steps of 1/200 of a frame; the middle of the best run of them (a run can wrap around 1).
+    const misses = Array.from({ length: 200 }, (_, k) => {
+      const phase = k / 200;
+      const frame = (t: number) => Math.floor(t * fps - phase + 1e-9);
+      let n = 0;
+      for (let i = 1; i < reads.length; i++) if ((frame(reads[i].time) === frame(reads[i - 1].time)) !== reads[i].repeat) n += 1;
+      return n;
+    });
+    const least = Math.min(...misses);
+    if (best && least >= best.misses) continue;
+    let run = { start: 0, length: 0 };
+    for (let k = 0; k < 200; k++) {
+      let length = 0;
+      while (length < 200 && misses[(k + length) % 200] === least) length += 1;
+      if (length > run.length) run = { start: k, length };
+    }
+    best = { fps, phase: ((run.start + (run.length - 1) / 2) / 200) % 1, misses: least };
+  }
+  return best && best.misses <= Math.max(2, 0.15 * repeats) ? { fps: best.fps, phase: best.phase } : undefined;
+}
+
+/** The time a read at clip time t shows a frame from, on a clip's frame grid (`frameGrid`). */
+export function onFrameGrid(t: number, grid: { fps: number; phase: number }): number {
+  return (Math.floor(t * grid.fps - grid.phase + 1e-9) + grid.phase) / grid.fps;
+}
+
 /** A worker job: posts the request and resolves with its final reply (progress replies go to `onProgress`). */
 function runWorker(request: RebuildRequest, transfer: Transferable[], signal: AbortSignal | undefined,
   onProgress?: (fraction: number, stage: string) => void): Promise<RebuildReply> {
@@ -342,6 +407,8 @@ export async function buildRally(options: {
   const sampled: { time: number; detections: FrameDetections; appearance: (number[] | undefined)[]; repeat: boolean }[] = [];
   const ballOnly: { time: number; balls: BallCandidates }[] = [];
   let repeats = 0;
+  // Every read's clip time and whether it repeated the frame before, for the clip's own frame grid.
+  const reads: { time: number; repeat: boolean }[] = [];
   const plateFrames: Uint8Array[] = [], plateMasks: Uint8Array[] = [];
   let nextPlate = 0;
   const total = plan.reduce((n, s) => n + (s.pose ? 1 : BALL_FRAME_COST), 0);
@@ -354,10 +421,11 @@ export async function buildRally(options: {
     const repeat = previous !== undefined && sameFrame(fingerprint, previous);
     previous = fingerprint;
     if (repeat) repeats += 1;
+    reads.push({ time: s.time, repeat });
     done += s.pose ? 1 : BALL_FRAME_COST;
     if (!s.pose) {
       // The ball alone; a repeated frame adds nothing (its ball was seen at the earlier time).
-      if (!repeat) ballOnly.push({ time: s.time - start, balls: det.detectBalls(work, clip.width, clip.height, band) });
+      if (!repeat) ballOnly.push({ time: s.time, balls: det.detectBalls(work, clip.width, clip.height, band) });
       onProgress(0.04 + (0.56 * done) / total, "Finding players and the ball");
       await tick();
       continue;
@@ -365,7 +433,7 @@ export async function buildRally(options: {
     const i = sampled.length;
     const d = det.detect(work, clip.width, clip.height, nearCourt, band);
     const pixels = work.getContext("2d", { willReadFrequently: true })!.getImageData(0, 0, clip.width, clip.height).data;
-    sampled.push({ time: s.time - start, detections: d, repeat,
+    sampled.push({ time: s.time, detections: d, repeat,
       appearance: d.people.map((p) => jerseyColour(p, pixels, clip.width, clip.height)) });
     if (i >= nextPlate && plateFrames.length < plateCount) {
       nextPlate += plateEvery;
@@ -392,31 +460,40 @@ export async function buildRally(options: {
   const plate = plateReply.kind === "plate" ? await plateBlob(plateReply.pixels, pw, ph) : undefined;
   aborted(signal);
 
+  // The ball at the time its frame came up in the clip (`frameGrid`), from the start of the rally: a 24 fps frame can be
+  // read 33 ms after it came up, in which a spike moves a metre. The players stay at the read times (they move a few
+  // centimetres in that time, and the tracker is sensitive to uneven spacing: on the Orion clip ±10 ms of jitter moves
+  // the share of unseen samples between 28% and 37%, the frame grid gave 35%). A clip with as many frames as are read
+  // keeps the read times, and a pose frame's ball stays with its people.
+  const grid = frameGrid(reads);
+  const ballTime = (t: number) => (grid ? onFrameGrid(t, grid) : t) - start;
   // The ball over all frames read, in time order (a repeated pose frame keeps its people but not the ball).
   const frames = [
-    ...sampled.map((f, k) => ({ time: f.time, pose: k, balls: f.repeat ? [] : f.detections.balls })),
-    ...ballOnly.map((f) => ({ time: f.time, pose: -1, balls: f.balls })),
+    ...sampled.map((f, k) => ({ time: ballTime(f.time), pose: k, balls: f.repeat ? [] : f.detections.balls })),
+    ...ballOnly.map((f) => ({ time: ballTime(f.time), pose: -1, balls: f.balls })),
   ].sort((a, b) => a.time - b.time);
   const balls = pickBalls(frames, clip.width);
-  const ballAt = new Map<number, ImagePoint>();
+  const ballAt = new Map<number, BallPick>();
   const observations: VideoFrameObservation[] = [];
   frames.forEach((f, k) => {
     const ball = balls[k];
-    if (f.pose >= 0) {
-      if (ball) ballAt.set(f.pose, ball);
-    } else if (ball) {
-      observations.push({ time: f.time, detections: [], ball });
-    }
+    if (!ball) return;
+    if (f.pose >= 0 && !grid) ballAt.set(f.pose, ball);
+    else observations.push({ time: f.time, detections: [], ...ballObservation(ball) });
   });
-  observations.push(...sampled.map((f, k) => observation(f.time, f.detections, camera, ballAt.get(k), f.appearance)));
+  observations.push(...sampled.map((f, k) => observation(f.time - start, f.detections, camera, ballAt.get(k), f.appearance)));
   observations.sort((a, b) => a.time - b.time);
-  if (import.meta.env.DEV) (globalThis as { __videoDebug?: unknown }).__videoDebug = { observations, camera: camera.encode(), locks: options.locks };
+  if (import.meta.env.DEV) {
+    (globalThis as { __videoDebug?: unknown }).__videoDebug = { observations, camera: camera.encode(), locks: options.locks, start, grid,
+      reads, ballFrames: frames.map((f) => ({ time: f.time, balls: f.balls })), width: clip.width };
+  }
   const people = sampled.map((f) => f.detections.people.length), posed = sampled.map((f) =>
     f.detections.people.filter((p) => Object.keys(p.keypoints).length > 0).length);
   let report = `${count} frames and ${ballOnly.length} for the ball alone (${repeats} repeated frames skipped), `
     + `people per frame ${Math.min(...people)}-${Math.max(...people)} (with pose ${Math.min(...posed)}-${Math.max(...posed)}), `
     + `detections ${observations.reduce((n, o) => n + o.detections.length, 0)}, ball points ${balls.filter(Boolean).length}; `
-    + `camera ${camera.center.y.toFixed(1)} m up, ${camera.center.z.toFixed(1)} m back, fovY ${((camera.fovY * 180) / Math.PI).toFixed(1)} deg`;
+    + `camera ${camera.center.y.toFixed(1)} m up, ${camera.center.z.toFixed(1)} m back, fovY ${((camera.fovY * 180) / Math.PI).toFixed(1)} deg`
+    + (grid ? `; ball on a ${grid.fps} fps frame grid` : "");
 
   onProgress(0.7, "Tracking players");
   const reply = await runWorker({ kind: "reconstruct", frames: observations, camera: camera.encode(), netHeight: options.netHeight,

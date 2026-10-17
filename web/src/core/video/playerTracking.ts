@@ -110,6 +110,8 @@ export interface VideoFrameObservation {
   time: number;
   detections: PersonDetection[];
   ball?: ImagePoint;
+  /** Web addition: the ball's apparent diameter in pixels (the detector's box), when the box was whole. */
+  ballSize?: number;
 }
 
 /** One frame of a tracked player. */
