@@ -742,6 +742,35 @@ describe("BallVideoTests", () => {
   }, 60_000);
 
   /**
+   * Web addition: on the OK Hoče clip (a tripod 2.6 m up, 14 m behind our end line) the ball's size places a ball held
+   * by the server near the camera, and the ball at the top of his toss, well enough to look believable, but neither
+   * moves in the picture, so the fit makes them balls flying along the view at 24 and 18 m/s. The image must fix a
+   * flight's speed too (`placedSpeed`); the serve that follows keeps its flight.
+   */
+  it("a ball held or at the top of a toss near a low camera is no flight", () => {
+    const cam = CourtCalibration.solveNearHalf([{ x: 13, y: 695 }, { x: 1272, y: 692 }], [{ x: 943, y: 550 }, { x: 164, y: 550 }],
+      "home", 1280, 720)!.camera;
+    // Read times, pixels and box sizes (0: cut by the frame's edge) from a build of the clip.
+    const held = [[1.233, 21.8, 568.3, 0], [1.3, 24.3, 568.8, 41.5], [1.333, 24.5, 569.5, 43], [1.367, 24.5, 572.3, 0], [1.4, 27.8, 575.3, 37.5]];
+    const tossTop = [[5.633, 189, 291, 28], [5.7, 190, 288, 27], [5.733, 194.5, 287.5, 25], [5.767, 198.3, 287.8, 20.5], [5.8, 199.3, 287, 20]];
+    const serve = [[5.9, 263, 263, 28], [5.933, 290.5, 253.5, 28], [5.967, 315, 245.8, 27.5], [6, 336, 239.3, 25.5], [6.067, 371.8, 233.5, 26],
+      [6.133, 386.5, 233.3, 25.5], [6.167, 401.3, 236.3, 20.5], [6.2, 410, 238.3, 22], [6.233, 421, 242.5, 20], [6.3, 428.5, 246.3, 18],
+      [6.333, 438, 252, 18], [6.367, 444.3, 259, 16], [6.4, 450, 264.3, 16.5], [6.467, 456, 270.8, 19.5], [6.5, 461.3, 281.8, 17.5]];
+    const obs = (points: number[][]): BallObservation[] =>
+      points.map(([time, x, y, size]) => (size > 0 ? { time, image: { x, y }, size } : { time, image: { x, y } }));
+    for (const [name, points] of [["held", held], ["toss top", tossTop]] as const) {
+      const loose = BallReconstruction.reconstruct([obs(points)], cam, [], { placedSpeed: Infinity });
+      expect(loose.length, `${name}: believable without the speed check`).toBe(1);
+      expect(BallReconstruction.plausible(loose[0]), name).toBe(true);
+      expect(BallReconstruction.reconstruct([obs(points)], cam), name).toEqual([]);
+    }
+    const flights = BallReconstruction.reconstruct([obs(serve)], cam);
+    expect(flights.length).toBe(1);
+    expect(flights[0].v0.length).toBeLessThanOrEqual(defaultBallSettings.maxSpeed);
+    expect(flights[0].position(5.9).sub(new V3(-2.8, 2.9, 10.1)).length, "from the server").toBeLessThan(0.5);
+  }, 60_000);
+
+  /**
    * Web addition: the far broadcast camera of the Tokyo clip sees an opponent pass the ball at the far side along a
    * viewing ray that also runs through the raised hands of a home player more than 5 m nearer the camera. That hand is
    * nearer the ray than the passer's forearms, and the nearest hand was the contact; now the contact is the passer's

@@ -239,6 +239,13 @@ export interface BallSettings {
    */
   placedSigma: number;
   /**
+   * A flight without an anchor of its own is kept (or refitted) only when the image fixes its speed too: the velocity's
+   * standard deviation at its middle (as `placedSigma`) at most this, metres a second. A ball held or at the top of a
+   * toss hardly moves in the picture, and its size (good to a tenth or so) leaves its speed along the view free: on the
+   * OK Hoče clip such fits were 28 to 32 m/s, the serve and the Orion clip's toss and attack 0.9 to 1.6 m/s.
+   */
+  placedSpeed: number;
+  /**
    * A flight must fit the ball's measured sizes (`BallObservation.size`) too: the RMS of their residuals at most this,
    * in standard deviations (`sizeSigma`). A head or a knee pad the detector took for the ball, which stands still and
    * then jumps, fits the pixels only as a ball flying at the camera, where it would look many times larger.
@@ -247,7 +254,7 @@ export interface BallSettings {
 }
 
 export const defaultBallSettings: Readonly<BallSettings> = { rmsThreshold: 3, pointThreshold: 7, minPoints: 5, maxGap: 0.35, drag: true, chain: true,
-  hallHalfWidth: 13.5, hallHalfLength: 19, maxHeight: 15, maxSpeed: 35, minTop: 0.5, placedSigma: 2.5, sizeThreshold: 2 };
+  hallHalfWidth: 13.5, hallHalfLength: 19, maxHeight: 15, maxSpeed: 35, minTop: 0.5, placedSigma: 2.5, placedSpeed: 10, sizeThreshold: 2 };
 
 /** The flight model's free parameters: launch position and velocity, and the lift coefficient when it is free. */
 interface Fit {
@@ -394,6 +401,23 @@ class Problem {
    * of the parameters with one-pixel measurement noise.
    */
   positionSigma(fit: Fit, t: number): number {
+    return this.sigmaOf(fit, (x) => this.positions(x, [t])[0]);
+  }
+
+  /**
+   * Web addition: the same for the fitted velocity at time t (metres a second). A ball that hardly moves in the picture
+   * (held, or at the top of a toss) leaves its speed along the viewing ray free, even when its size places it.
+   */
+  velocitySigma(fit: Fit, t: number): number {
+    const h = 0.005;
+    return this.sigmaOf(fit, (x) => {
+      const [a, b] = this.positions(x, [t - h, t + h]);
+      return b.sub(a).mul(1 / (2 * h));
+    });
+  }
+
+  /** Standard deviation (all axes together) of a point that follows from the parameters, as `positionSigma`. */
+  private sigmaOf(fit: Fit, of: (x: readonly number[]) => V3): number {
     const x = fitParams(fit), n = x.length;
     const r0 = this.residuals(x)?.all;
     if (!r0) return Infinity;
@@ -408,7 +432,7 @@ class Problem {
       const rp = this.residuals(xp)?.all, rm = this.residuals(xm)?.all;
       if (!rp || !rm) return Infinity;
       for (let i = 0; i < m; i++) jac[i * n + j] = (rp[i] - rm[i]) / (2 * h);
-      const pp = this.positions(xp, [t])[0], pm = this.positions(xm, [t])[0];
+      const pp = of(xp), pm = of(xm);
       jp[0][j] = (pp.x - pm.x) / (2 * h);
       jp[1][j] = (pp.y - pm.y) / (2 * h);
       jp[2][j] = (pp.z - pm.z) / (2 * h);
@@ -706,16 +730,23 @@ export const BallReconstruction = {
     // a little, a flight the image puts at the camera ten times that); otherwise it is dropped. The refit needs
     // something to place the flight: an anchor (a hand, the floor), or an image that fixes it to `placedSigma` (a fast
     // serve going away from a low camera, a little over the top speed); a ball moving along the ray of a far camera
-    // has neither.
+    // has neither. Without an anchor the image must also fix the flight's speed (`placedSpeed`), believable or not: a
+    // ball held near a low camera or at the top of a toss hardly moves in the picture, and fits as a ball flying along
+    // the view at up to the top speed.
     // Web addition: a flight that does not fit the ball's sizes is not the ball.
     fits.forEach((f, i) => { if (f && !(sizeRMS(f) <= s.sizeThreshold)) fits[i] = undefined; });
     const bounded = groups.map(() => false);
     groups.forEach((g, i) => {
       const seg = segment(i), f = fits[i];
-      if (!seg || !f || BallReconstruction.plausible(seg, s)) return;
+      if (!seg || !f) return;
       const middle = (g[0].time + g[g.length - 1].time) / 2;
-      const placed = own(g).length > 0
-        || BallReconstruction.problemFor(f, g, camera, []).positionSigma(f, middle) * Math.max(1, fitRMS(f)) <= s.placedSigma;
+      const problem = BallReconstruction.problemFor(f, g, camera, []), scale = Math.max(1, fitRMS(f));
+      const speedFree = () => !(problem.velocitySigma(f, middle) * scale <= s.placedSpeed);
+      if (BallReconstruction.plausible(seg, s)) {
+        if (own(g).length === 0 && speedFree()) fits[i] = undefined;
+        return;
+      }
+      const placed = own(g).length > 0 || (problem.positionSigma(f, middle) * scale <= s.placedSigma && !speedFree());
       const refit = placed ? BallReconstruction.bestFit(g, camera, own(g), s.drag, s) : undefined;
       fits[i] = refit;
       const kept = segment(i);

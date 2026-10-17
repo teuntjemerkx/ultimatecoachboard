@@ -469,8 +469,8 @@ export async function buildRally(options: {
   const ballTime = (t: number) => (grid ? onFrameGrid(t, grid) : t) - start;
   // The ball over all frames read, in time order (a repeated pose frame keeps its people but not the ball).
   const frames = [
-    ...sampled.map((f, k) => ({ time: ballTime(f.time), pose: k, balls: f.repeat ? [] : f.detections.balls })),
-    ...ballOnly.map((f) => ({ time: ballTime(f.time), pose: -1, balls: f.balls })),
+    ...sampled.map((f, k) => ({ time: ballTime(f.time), read: f.time - start, pose: k, balls: f.repeat ? [] : f.detections.balls })),
+    ...ballOnly.map((f) => ({ time: ballTime(f.time), read: f.time - start, pose: -1, balls: f.balls })),
   ].sort((a, b) => a.time - b.time);
   const balls = pickBalls(frames, clip.width);
   const ballAt = new Map<number, BallPick>();
@@ -485,7 +485,7 @@ export async function buildRally(options: {
   observations.sort((a, b) => a.time - b.time);
   if (import.meta.env.DEV) {
     (globalThis as { __videoDebug?: unknown }).__videoDebug = { observations, camera: camera.encode(), locks: options.locks, start, grid,
-      reads, ballFrames: frames.map((f) => ({ time: f.time, balls: f.balls })), width: clip.width };
+      reads, ballFrames: frames.map((f) => ({ time: f.time, read: f.read, balls: f.balls })), width: clip.width };
   }
   const people = sampled.map((f) => f.detections.people.length), posed = sampled.map((f) =>
     f.detections.people.filter((p) => Object.keys(p.keypoints).length > 0).length);
