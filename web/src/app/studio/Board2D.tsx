@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import type { FloorPoint } from "../../core/match/court";
 import { Zone, sceneTimeline, type SceneFrame, type SnapTarget } from "../../core/zones";
 import type { InkStroke } from "../../core/match/liveTypes";
@@ -74,9 +75,13 @@ function inkPath(points: FloorPoint[], view: (x: number, z: number) => { u: numb
  * The Studio's 2D board: zones under the players, ink, the ball in flight. Move: drag a player (it snaps to the
  * formation's spots) or a zone; tap to select. Draw: ink with one finger. Zone: draw a shape, it becomes a zone.
  */
-export function Board2D({ frame, vertical }: { frame: SceneFrame; vertical: boolean }) {
-  const st = useStudio();
+export function Board2D({ vertical }: { vertical: boolean }) {
+  // The board follows playback (the time); the rest of the Studio does not have to.
+  useStudio(useShallow((s) => [s.version, s.time, s.selectedToken, s.selectedZone, s.highlights, s.tool, s.zoneStyle, s.flipped,
+    s.playing, s.aimingLanding]));
+  const st = useStudio.getState();
   const scene = st.scene();
+  const frame: SceneFrame = st.frame();
   const { view } = courtView(vertical, st.flipped);
   const [drag, setDrag] = useState<{ kind: "token" | "zone"; id: string; start: FloorPoint; at: FloorPoint; moved: boolean } | null>(null);
   const [stroke, setStroke] = useState<FloorPoint[] | null>(null);

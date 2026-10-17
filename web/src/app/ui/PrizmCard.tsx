@@ -3,6 +3,30 @@ import { useRef, useState, type ReactNode } from "react";
 /** A card's finish, after the trading cards: base (squad), chrome, prizm (holographic) and gold. */
 export type PrizmTier = "base" | "chrome" | "prizm" | "gold";
 
+/** CSS `ease-in-out` (cubic-bezier(0.42, 0, 0.58, 1)) at progress u. */
+function easeInOut(u: number): number {
+  const bez = (t: number, a: number, b: number) => 3 * (1 - t) * (1 - t) * t * a + 3 * (1 - t) * t * t * b + t * t * t;
+  let lo = 0, hi = 1;
+  for (let k = 0; k < 40; k++) {
+    const mid = (lo + hi) / 2;
+    if (bez(mid, 0.42, 0.58) < u) lo = mid; else hi = mid;
+  }
+  return bez((lo + hi) / 2, 0, 1);
+}
+
+/**
+ * Where the light rests on a card nobody holds, a fraction `f` of the way round its drift (light at --mx/--my, the
+ * refraction at --bgx/--bgy): from the top left (22%, 18%) to the bottom right (78%, 70%) and back, easing in and out.
+ * Each number has its own place on the way, so a team's cards do not all shine alike. The light no longer drifts by
+ * itself: a card that keeps moving keeps the iPad drawing it.
+ */
+function restingLight(f: number): Record<string, string> {
+  const half = f < 0.5;
+  const e = easeInOut(half ? f / 0.5 : (f - 0.5) / 0.5);
+  const at = (a: number, b: number) => `${(half ? a + (b - a) * e : b + (a - b) * e).toFixed(3)}%`;
+  return { "--mx": at(22, 78), "--my": at(18, 70), "--bgx": at(40, 60), "--bgy": at(36, 64) };
+}
+
 /**
  * A player as a trading card in 3D, built like a real Prizm refractor: a deep prism burst on foil with fine rainbow
  * diffraction lines fanning out from the light, a refraction that slides as the card turns, a glare, print grain and
@@ -37,6 +61,7 @@ export function PrizmCard({ number, name, role, line, tier = "prizm", tag, back,
   // Each number its own place in the prism, so a team's cards do not all look alike.
   const seed = ((typeof number === "number" ? number : Number(number) || 0) * 47) % 360;
   const hue = `${seed}deg`;
+  const light = restingLight(seed / 360);
 
   const tilt = (e: React.PointerEvent) => {
     const el = card.current;
@@ -55,8 +80,9 @@ export function PrizmCard({ number, name, role, line, tier = "prizm", tag, back,
     const el = card.current;
     if (!el) return;
     el.classList.remove("tilting");
-    // Back to the drifting light (the animation sets these again).
-    for (const v of ["--rx", "--ry", "--mx", "--my", "--bgx", "--bgy"]) el.style.removeProperty(v);
+    // Back level, the light gliding back to where it rests.
+    for (const v of ["--rx", "--ry"]) el.style.removeProperty(v);
+    for (const [k, v] of Object.entries(light)) el.style.setProperty(k, v);
   };
   const activate = () => {
     if (onSelect) onSelect();
@@ -65,7 +91,7 @@ export function PrizmCard({ number, name, role, line, tier = "prizm", tag, back,
 
   return (
     <div className={`pcard-scene ${className}`}>
-      <div ref={card} className={`pcard tier-${tier}${flipped ? " flipped" : ""}`} style={{ ["--hue" as string]: hue, ["--delay" as string]: `${(-seed / 360) * 11}s` }}
+      <div ref={card} className={`pcard tier-${tier}${flipped ? " flipped" : ""}`} style={{ ["--hue" as string]: hue, ...light }}
            role="button" tabIndex={0} aria-pressed={back ? flipped : undefined}
            aria-label={label ?? `${name ? `${name}, ` : ""}number ${number}${role ? `, ${role}` : ""}${back ? (flipped ? ", showing the back" : ", tap to turn over") : ""}`}
            onPointerDown={(e) => { press.current = { x: e.clientX, y: e.clientY, moved: false }; card.current?.classList.add("tilting"); tilt(e); }}

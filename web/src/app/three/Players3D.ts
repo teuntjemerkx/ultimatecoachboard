@@ -84,6 +84,8 @@ function skin(rest: RestBuffers, dq: Float64Array, pos: Float32Array, nrm: Float
 
 interface Avatar {
   stature: number;
+  /** The posed player it shows now (a new one is posed again). */
+  posed?: PosedPlayer;
   /** The real athlete, once the models are loaded; until then (or if they cannot load) the drawn mannequin. */
   athlete?: Athlete;
   mesh: THREE.Mesh;
@@ -191,6 +193,40 @@ function ribbon(points: readonly FloorPoint[], width: number, lift: number, clos
   return g;
 }
 
+/** The theme colours the board draws with besides BoardColors, read from the CSS variables once per theme. */
+interface ThemeColors {
+  libero: string;
+  led: string;
+  labelInk: string;
+  labelFill: string;
+  zoneA: string;
+  zoneB: string;
+  ink: string;
+  text: string;
+}
+
+function themeColors(c: BoardColors): ThemeColors {
+  return {
+    libero: cssColor("libero", "#F5F5F5"), led: cssColor("led", "#2D7DFF"),
+    // Labels as the 2D tokens: the token's fill and lettering (white with ink on the dark themes' lit court).
+    labelInk: cssColor("tokenLabel", "#0A1A33"), labelFill: cssColor("tokenFill", "#FFFFFF"),
+    zoneA: cssColor("zoneA", c.home), zoneB: cssColor("zoneB", c.opponent), ink: cssColor("ink", "#7C3AED"), text: cssColor("text", "#0A1A33"),
+  };
+}
+
+/** Shirt-number ink per jersey colour: white or navy, whichever stands out against it. */
+const numberInks = new Map<string, string>();
+
+function numberInk(team: string): string {
+  let ink = numberInks.get(team);
+  if (!ink) {
+    const c = new THREE.Color(team);
+    ink = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b > 0.45 ? "#11183A" : "#FFFFFF";
+    numberInks.set(team, ink);
+  }
+  return ink;
+}
+
 const patternTextures = new Map<string, THREE.CanvasTexture>();
 
 /** One cell of a zone fill pattern, white on transparent (the material tints it), repeated in world metres. */
@@ -223,6 +259,24 @@ function patternTexture(pattern: string): THREE.CanvasTexture | undefined {
   return t;
 }
 
+const ids = new WeakMap<object, number>();
+let nextId = 1;
+
+/** A number for an object (arrays the Studio hands over again unchanged keep theirs). */
+function idOf(o: object): number {
+  let id = ids.get(o);
+  if (id === undefined) {
+    id = nextId++;
+    ids.set(o, id);
+  }
+  return id;
+}
+
+/** Which pattern texture a zone's fill needs: its pattern at its spacing and angle. */
+function patternKey(z: Zone): string {
+  return `${z.style.pattern}|${Math.max(0.12, z.style.spacing)}|${z.style.angle}`;
+}
+
 /**
  * The Studio's players on the 3D board (Section 3.2): dual-quaternion skinned avatars in team colours with a label
  * over the head and a ring on the floor, the ball, zones and ink on the floor, and sight lines. Rebuilt only when
@@ -231,6 +285,11 @@ function patternTexture(pattern: string): THREE.CanvasTexture | undefined {
 export class Players3D {
   private avatars = new Map<string, Avatar>();
   private overlay = new THREE.Group();
+  /** The overlay in parts, each rebuilt only when what it shows changed (its key). */
+  private parts = new Map<string, { key: string; group: THREE.Group }>();
+  /** Zone fill patterns at a spacing and angle (a texture each), kept while a zone uses them. */
+  private patterns = new Map<string, THREE.Texture>();
+  private theme?: { colors: BoardColors; css: ThemeColors };
   private ball: THREE.Mesh;
   private ballShadow: THREE.Mesh;
   private posed: PosedPlayer[] = [];
@@ -245,6 +304,7 @@ export class Players3D {
       if (this.disposed) return;
       this.athletes = t;
       if (this.last) this.update(this.last);
+      board.invalidate(true);
     }).catch(() => {
       // Offline before the models were cached: the mannequins stay, and bodies are kept apart as mannequins.
       PlayerBodies.athletes = false;
@@ -261,8 +321,12 @@ export class Players3D {
     this.disposed = true;
     for (const a of this.avatars.values()) this.removeAvatar(a);
     this.avatars.clear();
-    this.clearOverlay();
+    for (const part of this.parts.values()) this.clearGroup(part.group);
+    this.parts.clear();
+    for (const t of this.patterns.values()) t.dispose();
+    this.patterns.clear();
     this.board.dynamic.remove(this.overlay, this.ball, this.ballShadow);
+    this.board.invalidate(true);
   }
 
   update(input: Players3DInput) {
@@ -270,11 +334,9 @@ export class Players3D {
     this.posed = input.players;
     const seen = new Set<string>();
     const jersey = { home: input.colors.home, opponent: input.colors.opponent };
-    const libero = cssColor("libero", "#F5F5F5");
-    const led = cssColor("led", "#2D7DFF");
-    // Labels as the 2D tokens: the token's fill and lettering (white with ink on the dark themes' lit court).
-    const labelInk = cssColor("tokenLabel", "#0A1A33");
-    const labelFill = cssColor("tokenFill", "#FFFFFF");
+    if (this.theme?.colors !== input.colors) this.theme = { colors: input.colors, css: themeColors(input.colors) };
+    const { libero, led, labelInk, labelFill } = this.theme.css;
+    let moved = false;
     for (const p of input.players) {
       seen.add(p.id);
       const stature = p.skeleton.metrics.stature;
@@ -295,13 +357,20 @@ export class Players3D {
         a.athlete = new Athlete(template);
         this.board.dynamic.add(a.athlete.root);
         a.mesh.visible = false;
+        a.posed = undefined;
+      }
+      // Posing is the expensive part: only a player posed anew (a new moment, a drag) is posed again.
+      const pose = a.posed !== p;
+      if (pose) {
+        a.posed = p;
+        moved = true;
       }
       if (a.athlete) {
         const h = hashOf(p.id);
         a.athlete.setColors({ jersey: team, shorts: input.colors.shorts, skin: skinTones[h % skinTones.length],
           hair: hairColours[(h >>> 8) % hairColours.length] });
-        a.athlete.pose(p);
-      } else {
+        if (pose) a.athlete.pose(p);
+      } else if (pose || a.colorKey !== colorKey) {
         if (a.colorKey !== colorKey) this.paint(a, team, input.colors, colorKey);
         // Skin into the mesh.
         const dqs = p.skeleton.skin(p.joints);
@@ -331,7 +400,7 @@ export class Players3D {
       (a.ring.material as THREE.MeshBasicMaterial).color.set(selected ? led : jersey[p.token.side]);
       this.placeNumbers(a, p, team);
     }
-    for (const [id, a] of this.avatars) if (!seen.has(id)) { this.removeAvatar(a); this.avatars.delete(id); }
+    for (const [id, a] of this.avatars) if (!seen.has(id)) { this.removeAvatar(a); this.avatars.delete(id); moved = true; }
     this.applyHidden();
 
     if (input.ball) {
@@ -341,40 +410,79 @@ export class Players3D {
       (this.ball.material as THREE.MeshLambertMaterial).color.set(input.colors.ball);
     } else this.ball.visible = this.ballShadow.visible = false;
 
-    this.clearOverlay();
-    const zoneA = cssColor("zoneA", input.colors.home), zoneB = cssColor("zoneB", input.colors.opponent);
-    const tint = (t: string) => (t === "pink" ? zoneA : zoneB);
-    input.zones.forEach((z, i) => this.addZone(z, tint(z.style.tint), input.selectedZone === z.id, led, 0.004 + i * 0.0005));
-    const ink = cssColor("ink", "#7C3AED");
-    for (const s of input.ink) this.addRibbon(s.points, Math.max(0.05, s.width), ink, 0.02);
-    if (input.stroke && input.stroke.points.length > 1) {
-      this.addRibbon(input.stroke.points, 0.07, input.stroke.zone ? tint(input.stroke.tint) : ink, 0.022);
-    }
-    for (const g of input.gaze ?? []) {
-      const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(g.from.x, g.from.y, g.from.z), new THREE.Vector3(g.to.x, g.to.y, g.to.z)]);
-      const mat = g.visible
-        ? new THREE.LineBasicMaterial({ color: cssColor("text", "#0A1A33"), transparent: true, opacity: 0.85 })
-        : new THREE.LineDashedMaterial({ color: "#FF3B1A", dashSize: 0.15, gapSize: 0.1 });
-      const line = new THREE.Line(geo, mat);
-      if (!g.visible) line.computeLineDistances();
-      this.overlay.add(line);
-    }
-    for (const h of input.highlights ?? []) {
-      if (h.kind === "line") this.addRibbon([h.from, h.to], 0.06, led, 0.026);
-      else if (h.kind === "point") {
-        const { x, z } = h.point;
-        this.addRibbon([{ x: x - 0.25, z }, { x: x + 0.25, z }], 0.06, led, 0.026);
-        this.addRibbon([{ x, z: z - 0.25 }, { x, z: z + 0.25 }], 0.06, led, 0.026);
-      } else {
-        const { min, max } = h;
-        this.addRibbon([min, { x: max.x, z: min.z }, max, { x: min.x, z: max.z }], 0.06, led, 0.026, true);
+    this.updateOverlay(input, this.theme.css);
+    this.board.invalidate(moved);
+  }
+
+  /** Zones, ink, the stroke being drawn, sight lines, snap highlights and the ball's flights, each rebuilt only when changed. */
+  private updateOverlay(input: Players3DInput, css: ThemeColors) {
+    const { led, ink } = css;
+    const tint = (t: string) => (t === "pink" ? css.zoneA : css.zoneB);
+    const used = new Set<string>();
+    // Zones are worked out anew for every moment (they can change shape over a rally): compared by value.
+    this.part("zones", JSON.stringify([input.zones, input.selectedZone, css.zoneA, css.zoneB, led]), () => {
+      input.zones.forEach((z, i) => this.addZone(z, tint(z.style.tint), input.selectedZone === z.id, led, 0.004 + i * 0.0005, used));
+    }, () => input.zones.forEach((z) => used.add(patternKey(z))));
+    // Pattern textures no zone uses any more.
+    for (const [key, t] of this.patterns) if (!used.has(key)) { t.dispose(); this.patterns.delete(key); }
+    this.part("ink", `${idOf(input.ink)}|${ink}`, () => {
+      for (const s of input.ink) this.addRibbon(s.points, Math.max(0.05, s.width), ink, 0.02);
+    });
+    this.part("stroke", `${input.stroke ? idOf(input.stroke.points) : 0}|${input.stroke?.zone}|${input.stroke?.tint}|${ink}|${css.zoneA}|${css.zoneB}`, () => {
+      if (input.stroke && input.stroke.points.length > 1) {
+        this.addRibbon(input.stroke.points, 0.07, input.stroke.zone ? tint(input.stroke.tint) : ink, 0.022);
       }
+    });
+    this.part("gaze", JSON.stringify([input.gaze ?? null, css.text]), () => {
+      for (const g of input.gaze ?? []) {
+        const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(g.from.x, g.from.y, g.from.z), new THREE.Vector3(g.to.x, g.to.y, g.to.z)]);
+        const mat = g.visible
+          ? new THREE.LineBasicMaterial({ color: css.text, transparent: true, opacity: 0.85 })
+          : new THREE.LineDashedMaterial({ color: "#FF3B1A", dashSize: 0.15, gapSize: 0.1 });
+        const line = new THREE.Line(geo, mat);
+        if (!g.visible) line.computeLineDistances();
+        this.current!.add(line);
+      }
+    });
+    this.part("highlights", `${input.highlights?.length ? idOf(input.highlights) : 0}|${led}`, () => {
+      for (const h of input.highlights ?? []) {
+        if (h.kind === "line") this.addRibbon([h.from, h.to], 0.06, led, 0.026);
+        else if (h.kind === "point") {
+          const { x, z } = h.point;
+          this.addRibbon([{ x: x - 0.25, z }, { x: x + 0.25, z }], 0.06, led, 0.026);
+          this.addRibbon([{ x, z: z - 0.25 }, { x, z: z + 0.25 }], 0.06, led, 0.026);
+        } else {
+          const { min, max } = h;
+          this.addRibbon([min, { x: max.x, z: min.z }, max, { x: min.x, z: max.z }], 0.06, led, 0.026, true);
+        }
+      }
+    });
+    this.part("ballPaths", `${input.ballPaths ? idOf(input.ballPaths) : 0}|${input.colors.ball}`, () => {
+      for (const path of input.ballPaths ?? []) {
+        if (path.length < 2) continue;
+        const geo = new THREE.BufferGeometry().setFromPoints(path.map((q) => new THREE.Vector3(q.x, q.y, q.z)));
+        this.current!.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: input.colors.ball, transparent: true, opacity: 0.7 })));
+      }
+    });
+  }
+
+  /** The group being rebuilt (addRibbon and addZone draw into it). */
+  private current?: THREE.Group;
+
+  /** One part of the overlay: rebuilt by `build` when its key changed since it was last built; otherwise `keep` notes what it still uses. */
+  private part(name: string, key: string, build: () => void, keep?: () => void) {
+    let part = this.parts.get(name);
+    if (part?.key === key) { keep?.(); return; }
+    if (!part) {
+      part = { key, group: new THREE.Group() };
+      this.parts.set(name, part);
+      this.overlay.add(part.group);
     }
-    for (const path of input.ballPaths ?? []) {
-      if (path.length < 2) continue;
-      const geo = new THREE.BufferGeometry().setFromPoints(path.map((q) => new THREE.Vector3(q.x, q.y, q.z)));
-      this.overlay.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: input.colors.ball, transparent: true, opacity: 0.7 })));
-    }
+    part.key = key;
+    this.clearGroup(part.group);
+    this.current = part.group;
+    build();
+    this.current = undefined;
   }
 
   /**
@@ -390,9 +498,7 @@ export class Players3D {
       }
       return;
     }
-    const c = new THREE.Color(team);
-    const lum = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
-    const ink = lum > 0.45 ? "#11183A" : "#FFFFFF";
+    const ink = numberInk(team);
     const key = `${label}|${ink}`;
     if (a.numbers?.key !== key) {
       if (a.numbers) for (const m of [a.numbers.front, a.numbers.back]) { this.board.dynamic.remove(m); m.geometry.dispose(); (m.material as THREE.Material).dispose(); }
@@ -435,6 +541,7 @@ export class Players3D {
     if (this.hidden === id) return;
     this.hidden = id;
     this.applyHidden();
+    this.board.invalidate(true);
   }
 
   /** The eye of a posed player (for the eye-view hiding test). */
@@ -549,9 +656,10 @@ export class Players3D {
     }
   }
 
-  private clearOverlay() {
-    for (const o of [...this.overlay.children]) {
-      this.overlay.remove(o);
+  /** Frees what a group of the overlay drew (its pattern textures are kept in `patterns`). */
+  private clearGroup(group: THREE.Group) {
+    for (const o of [...group.children]) {
+      group.remove(o);
       const m = o as THREE.Mesh;
       m.geometry?.dispose();
       (m.material as THREE.Material | undefined)?.dispose();
@@ -563,11 +671,29 @@ export class Players3D {
     if (!g) return;
     const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: opacity < 1, opacity, depthWrite: false }));
     m.renderOrder = 2;
-    this.overlay.add(m);
+    this.current!.add(m);
+  }
+
+  /** A zone fill pattern at the zone's spacing and angle, made once and shared by the zones that use it. */
+  private pattern(z: Zone, used: Set<string>): THREE.Texture | null {
+    const tex = patternTexture(z.style.pattern);
+    if (!tex) return null;
+    const key = patternKey(z);
+    used.add(key);
+    let map = this.patterns.get(key);
+    if (!map) {
+      map = tex.clone();
+      const sp = Math.max(0.12, z.style.spacing);
+      map.repeat.set(1 / sp, 1 / sp);
+      map.rotation = z.style.angle;
+      map.needsUpdate = true;
+      this.patterns.set(key, map);
+    }
+    return map;
   }
 
   /** A zone on the floor: its pattern (lines, cross-hatch, dots, glow) clipped to its outline, and the outline. */
-  private addZone(z: Zone, color: string, selected: boolean, led: string, lift: number) {
+  private addZone(z: Zone, color: string, selected: boolean, led: string, lift: number, used: Set<string>) {
     const outline = Zone.outline(z);
     if (outline.length < 3) return;
     const s = z.style;
@@ -577,21 +703,14 @@ export class Players3D {
     const tex = patternTexture(s.pattern);
     if (tex || s.pattern === "glowFill") {
       const geo = new THREE.ShapeGeometry(shape);
-      let map: THREE.Texture | null = null;
-      if (tex) {
-        map = tex.clone();
-        const sp = Math.max(0.12, s.spacing);
-        map.repeat.set(1 / sp, 1 / sp);
-        map.rotation = s.angle;
-        map.needsUpdate = true;
-      }
+      const map = this.pattern(z, used);
       const mat = new THREE.MeshBasicMaterial({ color, map, transparent: true, opacity: tex ? opacity : 0.32 * opacity,
         depthWrite: false, side: THREE.DoubleSide });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.y = lift;
       mesh.renderOrder = 1;
-      this.overlay.add(mesh);
+      this.current!.add(mesh);
     }
     this.addRibbon(outline, selected ? 0.09 : 0.05, color, lift + 0.001, true, Math.max(0.4, opacity));
     if (selected) this.addRibbon(outline, 0.03, led, lift + 0.002, true);
@@ -614,7 +733,7 @@ export class Players3D {
       const wall = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false,
         side: THREE.DoubleSide }));
       wall.renderOrder = 3;
-      this.overlay.add(wall);
+      this.current!.add(wall);
     }
   }
 }

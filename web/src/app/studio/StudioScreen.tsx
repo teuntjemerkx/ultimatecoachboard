@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import * as THREE from "three";
+import { useShallow } from "zustand/react/shallow";
 import "./studio.css";
 import type { Side } from "../../core/match/court";
 import { TeamSystem } from "../../core/match/teamSystem";
@@ -16,7 +17,15 @@ import { useNav } from "../store/nav";
 import { netHeight, useSettings } from "../store/settings";
 import { Board2D } from "./Board2D";
 import { StudioBoard3D, sightLines, studioOrbit } from "./StudioBoard3D";
-import { deleteBoard, listBoards, studioBodies, useStudio, type BoardRecord, type StudioTool } from "./studio";
+import { deleteBoard, listBoards, studioBodies, useStudio, type BoardRecord, type StudioState, type StudioTool } from "./studio";
+
+/**
+ * The Studio fields a control shows: it re-renders when one of them changes, and not at every frame of playback (the
+ * time changes 60 times a second) unless it picks the time. Actions and derived values come from the store as it is.
+ */
+function useStudioFields<K extends keyof StudioState>(...keys: K[]): Pick<StudioState, K> {
+  return useStudio(useShallow((s: StudioState) => Object.fromEntries(keys.map((k) => [k, s[k]])) as Pick<StudioState, K>));
+}
 
 /** Plain names on the timeline: the receive marker is the pass. */
 const phaseName: Record<RallyPhase, string> = {
@@ -94,7 +103,9 @@ export function Studio({ boardId }: { boardId?: string }) {
   const themeId = useSettings((s) => s.themeId);
   // Net height and player statures follow Settings > Players (set before the scene's ball flights are solved).
   PlayerBodies.women = women;
-  const st = useStudio();
+  useStudioFields("editor", "version", "tool", "selectedToken", "selectedZone", "view3D", "pov", "gaze", "alternative",
+    "aimingLanding", "snapping", "flipped");
+  const st = useStudio.getState();
   const [boxRef, box] = useBoxSize<HTMLDivElement>();
   const [dockRef, dock] = useBoxSize<HTMLDivElement>();
   const board3D = useRef<Board3D | null>(null);
@@ -126,22 +137,16 @@ export function Studio({ boardId }: { boardId?: string }) {
   if (!st.editor) return <div className="screen"><Bar title="Studio" /><div className="empty">Opening the board…</div></div>;
 
   const scene = st.scene();
-  const frame = st.frame();
   const timeline = scene.phases ?? [];
   const vertical = box.h > box.w * 1.1;
   // In 3D the strips float over the board; the camera centres the court in the part above them.
   const inset = st.view3D ? dock.h : 0;
-  const selected = st.selectedToken ? frame.tokens.find((t) => t.id === st.selectedToken) : undefined;
-  const povToken = st.pov ? frame.tokens.find((t) => t.id === st.pov) : undefined;
+  const selected = st.selectedToken ? scene.tokens.find((t) => t.id === st.selectedToken) : undefined;
+  const povToken = st.pov ? scene.tokens.find((t) => t.id === st.pov) : undefined;
   const showHint = timeline.length === 0 && scene.zones.length === 0 && scene.ink.length === 0 && !st.selectedToken;
   const hint = st.tool === "pen" ? "Draw with one finger"
     : st.tool === "zone" ? "Draw a zone with one finger"
     : st.view3D ? "Drag a player to move them, or drag the floor to turn the court" : "Drag a player to move them, or play a rally below";
-  const posed = st.view3D && st.gaze ? studioBodies(scene, st.time, frame) : undefined;
-  const gaze = posed && st.gaze
-    ? sightLines(posed, st.gaze, { id: st.pov, yaw: st.povYaw, pitch: st.povPitch }, st.ball(), box.w / Math.max(box.h, 1),
-      st.gazeTargetList(posed))
-    : undefined;
   const nameBoard = () => setNaming({ heading: "Name this board", label: "Name", value: scene.title, save: (v) => st.rename(v) });
   const namePlayer = (id: string, label: string) =>
     setNaming({ heading: "Name or shirt number", label: "Name or number", value: label, save: (v) => st.setLabel(id, v) });
@@ -236,28 +241,11 @@ export function Studio({ boardId }: { boardId?: string }) {
             {st.view3D
               ? <StudioBoard3D themeKey={themeId} netHeight={netHeight(women)} onBoard={(b) => { board3D.current = b; }}
                                inset={inset} size={box} />
-              : <Board2D frame={frame} vertical={vertical} />}
+              : <Board2D vertical={vertical} />}
             {showHint && <div className="hint-pill studio-hint" style={{ bottom: inset + 14 }}>{hint}</div>}
             {(st.tool === "zone" || st.selectedZone) && <ZoneStrip advanced={advanced} />}
             {st.view3D && st.pov && <FieldRings width={box.w} centerY={(box.h - inset) / 2} />}
-            {gaze && (
-              <div className="panel studio-gaze" role="status">
-                <span className="studio-label">What they can see</span>
-                {gaze.readouts.length === 0 && (
-                  <span className="muted">{st.pov ? "Tap a player to check if they can be seen" : "No players to check"}</span>
-                )}
-                {gaze.readouts.map((r) => (
-                  <div key={`${r.targetID}-${r.aim}`} className="studio-gaze-row">
-                    <i style={{ background: r.visibility.fraction >= 0.5 ? "var(--c-text)" : "#FF3B1A" }} />{r.text}
-                  </div>
-                ))}
-                {st.pov && (
-                  <small className="muted">
-                    Shows where the head points, not the eyes. The rings mark sharp and side vision. Tap a player to add or remove them.
-                  </small>
-                )}
-              </div>
-            )}
+            {st.view3D && st.gaze && <GazePanel aspect={box.w / Math.max(box.h, 1)} />}
             {st.alternative && alternative && (
               <button type="button" className="studio-alt" style={{ left: alternative.x, top: alternative.y }}
                       onClick={() => st.acceptAlternative()} aria-label={`Make it a ${shapeName(st.alternative.kind).toLowerCase()}`}>
@@ -280,6 +268,37 @@ export function Studio({ boardId }: { boardId?: string }) {
 
       {sheet && <BoardsSheet onClose={() => setSheet(false)} />}
       {naming && <NameSheet naming={naming} onClose={() => setNaming(null)} />}
+    </div>
+  );
+}
+
+/**
+ * What the sight-line player can see (Section 5.6), for the moment shown: it follows playback, so it picks the time
+ * (and the bodies, which settle once the rally's separation is solved).
+ */
+function GazePanel({ aspect }: { aspect: number }) {
+  const f = useStudioFields("version", "time", "bodiesVersion", "gaze", "gazeTargets", "pov", "povYaw", "povPitch");
+  const st = useStudio.getState();
+  if (!f.gaze) return null;
+  const posed = studioBodies(st.scene(), f.time, st.frame());
+  const gaze = sightLines(posed, f.gaze, { id: f.pov, yaw: f.povYaw, pitch: f.povPitch }, st.ball(), aspect, st.gazeTargetList(posed));
+  if (!gaze) return null;
+  return (
+    <div className="panel studio-gaze" role="status">
+      <span className="studio-label">What they can see</span>
+      {gaze.readouts.length === 0 && (
+        <span className="muted">{f.pov ? "Tap a player to check if they can be seen" : "No players to check"}</span>
+      )}
+      {gaze.readouts.map((r) => (
+        <div key={`${r.targetID}-${r.aim}`} className="studio-gaze-row">
+          <i style={{ background: r.visibility.fraction >= 0.5 ? "var(--c-text)" : "#FF3B1A" }} />{r.text}
+        </div>
+      ))}
+      {f.pov && (
+        <small className="muted">
+          Shows where the head points, not the eyes. The rings mark sharp and side vision. Tap a player to add or remove them.
+        </small>
+      )}
     </div>
   );
 }
@@ -312,10 +331,11 @@ function alternativeSpot(anchor: { x: number; z: number }, box: { w: number; h: 
  * 5.1); Advanced adds the sight lines.
  */
 function PlayerStrip({ advanced, onName }: { advanced: boolean; onName: (id: string, label: string) => void }) {
-  const st = useStudio();
-  const frame = st.frame();
-  const selected = st.selectedToken ? frame.tokens.find((t) => t.id === st.selectedToken) : undefined;
-  const povToken = st.pov ? frame.tokens.find((t) => t.id === st.pov) : undefined;
+  useStudioFields("version", "selectedToken", "pov", "view3D", "gaze", "povYaw", "povPitch");
+  const st = useStudio.getState();
+  const tokens = st.scene().tokens;
+  const selected = st.selectedToken ? tokens.find((t) => t.id === st.selectedToken) : undefined;
+  const povToken = st.pov ? tokens.find((t) => t.id === st.pov) : undefined;
   if (st.view3D && povToken) {
     return (
       <div className="panel studio-emphasis">
@@ -349,8 +369,9 @@ function PlayerStrip({ advanced, onName }: { advanced: boolean; onName: (id: str
 
 /** Posture chips for the selected player in 3D (Section 5.2's library), at the current marker; they scroll. */
 function PostureChips() {
-  const st = useStudio();
-  const explicit = st.selectedPosture();
+  // At the marker shown (the time), so the posture itself is what it picks.
+  const explicit = useStudio((s) => s.selectedPosture());
+  const st = useStudio.getState();
   return (
     <div className="studio-body-chips">
       <span className="studio-label">Body</span>
@@ -369,11 +390,13 @@ function PostureChips() {
  * contact. The readout describes the flight in the air now.
  */
 function BallStrip() {
-  const st = useStudio();
-  const phase = st.currentPhase();
+  useStudioFields("version", "selectedToken", "aimingLanding");
+  // The marker and the flight readout follow the time; they change only now and then.
+  const phase = useStudio((s) => s.currentPhase());
+  const summary = useStudio((s) => s.ballSummary());
+  const st = useStudio.getState();
   const selected = st.selectedToken ? st.scene().tokens.find((t) => t.id === st.selectedToken) : undefined;
   const contact = st.currentContact();
-  const summary = st.ballSummary();
   return (
     <div className="panel">
       <span className="studio-label">Ball</span>
@@ -404,7 +427,12 @@ function BallStrip() {
  * marker. Edits made while resting on a later marker become keyframes there; the first marker holds the base scene.
  */
 function TimelineStrip({ advanced }: { advanced: boolean }) {
-  const st = useStudio();
+  useStudioFields("version", "playing", "selectedToken", "selectedZone");
+  // The marker lit and the one rested on follow the time; they change only when the playhead passes a marker.
+  const shown = useStudio((s) => Math.round(s.time));
+  const phase = useStudio((s) => s.currentPhase());
+  const hidden = useStudio((s) => (s.selectedZone && s.currentPhase() ? (s.frame().intensities.get(s.selectedZone) ?? 1) < 0.5 : false));
+  const st = useStudio.getState();
   const timeline = st.scene().phases ?? [];
   if (timeline.length === 0) {
     return (
@@ -415,10 +443,7 @@ function TimelineStrip({ advanced }: { advanced: boolean }) {
       </div>
     );
   }
-  const shown = Math.round(st.time);
-  const phase = st.currentPhase();
   const editing = advanced && (st.selectedToken || st.selectedZone) && phase && timeline[0] !== phase;
-  const hidden = st.selectedZone ? (st.frame().intensities.get(st.selectedZone) ?? 1) < 0.5 : false;
   return (
     <div className="panel">
       <button type="button" className="studio-chip prominent studio-play" onClick={() => st.togglePlay()}
@@ -453,7 +478,8 @@ function TimelineStrip({ advanced }: { advanced: boolean }) {
  * side-out), who serves, and one tap to play a rally out. Advanced adds the opponent's system and rotation.
  */
 function LineupBar({ advanced }: { advanced: boolean }) {
-  const st = useStudio();
+  useStudioFields("version");
+  const st = useStudio.getState();
   const setup = st.setup();
   const playing = (st.scene().phases ?? []).length > 0;
   return (
@@ -490,7 +516,8 @@ function LineupBar({ advanced }: { advanced: boolean }) {
 
 /** The system as a menu (the device's own picker); choosing one starts in its first rotation. */
 function SystemMenu({ side, title }: { side: Side; title?: string }) {
-  const st = useStudio();
+  useStudioFields("version");
+  const st = useStudio.getState();
   const current = TeamSystem.fromRawValue(SceneSetup.system(st.setup(), side)) ?? TeamSystem.fiveOneOutside;
   const choose = (id: string) => {
     const r = rotationsOf(id)[0] ?? 1;
@@ -510,7 +537,8 @@ function SystemMenu({ side, title }: { side: Side; title?: string }) {
 }
 
 function RotationStepper({ side, rotation, advanced }: { side: Side; rotation: number; advanced: boolean }) {
-  const st = useStudio();
+  useStudioFields("version");
+  const st = useStudio.getState();
   const many = st.rotations(side).length > 1;
   return (
     <div className="studio-stepper" style={{ opacity: many ? 1 : 0.5 }}>
@@ -533,7 +561,8 @@ function RotationStepper({ side, rotation, advanced }: { side: Side; rotation: n
  * stroke. Simple shows a fill and whose colour; Advanced adds the shape, density, angle, edge and the tag.
  */
 function ZoneStrip({ advanced }: { advanced: boolean }) {
-  const st = useStudio();
+  useStudioFields("version", "selectedZone", "zoneStyle", "zoneTag", "forcedShape");
+  const st = useStudio.getState();
   const zone = st.selectedZone ? st.scene().zones.find((z) => z.id === st.selectedZone) : undefined;
   const style = st.stripStyle();
   const [density, setDensity] = useState<number | null>(null);
@@ -632,7 +661,8 @@ function FieldRings({ width, centerY }: { width: number; centerY: number }) {
 
 /** Boards: start a new one from a formation, open or delete a saved one. */
 function BoardsSheet({ onClose }: { onClose: () => void }) {
-  const st = useStudio();
+  useStudioFields("editor");
+  const st = useStudio.getState();
   const current = st.editor?.scene.id;
   const [boards, setBoards] = useState<BoardRecord[]>([]);
   const [system, setSystem] = useState<TeamSystem>(TeamSystem.fiveOneOutside);
