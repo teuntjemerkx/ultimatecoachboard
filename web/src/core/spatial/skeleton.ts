@@ -296,10 +296,11 @@ export class SkeletonModel {
    * direction, horizon levelled, 90 degrees horizontal field of view at the given aspect. Free-look adds yaw and pitch
    * relative to the head, limited to the neck's range (yaw +-70, pitch -50...+60 degrees).
    */
-  povPose(posed: readonly Rigid[], aspect: number, options: { fovX?: number; yaw?: number; pitch?: number } = {}): CameraPose {
+  povPose(posed: readonly Rigid[], aspect: number, options: { fovX?: number; yaw?: number; pitch?: number; forward?: V3 } = {}): CameraPose {
     const fovX = options.fovX ?? Math.PI / 2;
     const head = posed[Joint.head].rotation;
-    let forward = head.rotate(new V3(0, 0, 1));
+    // `forward`: where something outside the pose says the player looks (the video's gaze), instead of the head.
+    let forward = options.forward ?? head.rotate(new V3(0, 0, 1));
     const yaw = (Math.max(-70, Math.min(70, ((options.yaw ?? 0) * 180) / Math.PI)) * Math.PI) / 180;
     const pitch = (Math.max(-50, Math.min(60, ((options.pitch ?? 0) * 180) / Math.PI)) * Math.PI) / 180;
     forward = Quat.fromAxisAngle(V3.up, yaw).rotate(forward);

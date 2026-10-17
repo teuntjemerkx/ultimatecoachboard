@@ -17,6 +17,7 @@ export {
   type BallObservation, type BallSegmentJSON, type BallSettings,
 } from "./ballReconstruction";
 export { CleanPlate, HallEnvironment, type HallEnvironmentJSON } from "./environment";
+export { VideoGaze } from "./videoGaze";
 export {
   VideoPlayerSample, VideoPlayerTrack, VideoFrame, VideoScene, VideoReconstructor,
   type VideoMarker, type VideoSceneJSON, type ReconstructionStage,

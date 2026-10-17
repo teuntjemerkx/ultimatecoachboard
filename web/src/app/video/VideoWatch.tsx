@@ -210,7 +210,7 @@ function Watch({ data }: { data: Loaded }) {
       <div className="video-stage" ref={stageRef}>
         {threeD && (
           <div className="video-board">
-            <WatchBoard scene={scene} plateURL={plateURL} view={view} themeKey={themeId} onTap={onTap} onLook={onLook} />
+            <WatchBoard scene={scene} view={view} themeKey={themeId} onTap={onTap} onLook={onLook} />
           </div>
         )}
         <div className={videoClass} style={pov ? { aspectRatio: `${scene.camera.width} / ${scene.camera.height}` }

@@ -1,12 +1,12 @@
 import { useEffect, useRef, type MutableRefObject } from "react";
 import * as THREE from "three";
 import type { PosedPlayer } from "../../core/spatial";
-import type { VideoCamera, VideoScene } from "../../core/video";
+import { VideoGaze, type VideoCamera, type VideoScene } from "../../core/video";
+import { V3 } from "../../core/spatial/math3d";
 import { videoBodies } from "../../core/video/videoBodies";
 import type { Board3D, BoardColors, Orbit } from "../three/Board3D";
 import { Court3DView, boardColors } from "../three/Court3DView";
-import { Players3D, cssColor } from "../three/Players3D";
-import { Hall3D } from "./Hall3D";
+import { Players3D } from "../three/Players3D";
 
 /**
  * The orbit camera placed where the video was filmed, so the 3D view opens on the picture the coach knows. A
@@ -51,13 +51,12 @@ export interface WatchView {
 }
 
 /**
- * The rebuilt rally on the 3D board: the players posed as reconstructed, the ball and its flights, and the hall from
- * the video around the court. One finger turns the court (in eye view: looks around), two fingers turn and pinch;
- * a tap picks a player.
+ * The rebuilt rally on the 3D board: the players posed as reconstructed, the ball and its flights, on the court in
+ * its arena as in the Studio (the hall itself is not rebuilt). One finger turns the court (in eye view: looks
+ * around), two fingers turn and pinch; a tap picks a player. In eye view the player follows the ball (VideoGaze).
  */
-export function WatchBoard({ scene, plateURL, view, themeKey, onTap, onLook }: {
+export function WatchBoard({ scene, view, themeKey, onTap, onLook }: {
   scene: VideoScene;
-  plateURL?: string;
   view: MutableRefObject<WatchView>;
   themeKey: string;
   /** A tap on the board: the player under it, if any. */
@@ -68,7 +67,7 @@ export function WatchBoard({ scene, plateURL, view, themeKey, onTap, onLook }: {
   const boardRef = useRef<Board3D | null>(null);
   const playersRef = useRef<Players3D | null>(null);
   const posedRef = useRef<PosedPlayer[]>([]);
-  const extrasRef = useRef<{ hall: Hall3D; paths: THREE.Group } | null>(null);
+  const extrasRef = useRef<{ paths: THREE.Group } | null>(null);
   const colorsRef = useRef<BoardColors | null>(null);
   const look = useRef<{ x: number; y: number } | null>(null);
   const tapRef = useRef(onTap);
@@ -85,7 +84,6 @@ export function WatchBoard({ scene, plateURL, view, themeKey, onTap, onLook }: {
     playersRef.current = null;
     const extras = extrasRef.current;
     if (extras) {
-      extras.hall.dispose();
       b.dynamic.remove(extras.paths);
       for (const o of extras.paths.children) {
         (o as THREE.Line).geometry.dispose();
@@ -100,7 +98,6 @@ export function WatchBoard({ scene, plateURL, view, themeKey, onTap, onLook }: {
     boardRef.current = b;
     const players = new Players3D(b);
     playersRef.current = players;
-    const hall = new Hall3D(b.scene, scene, plateURL, cssColor("hall", "#B8BEC8"), () => b.invalidate());
     // The ball's flights as thin lines.
     const paths = new THREE.Group();
     const ballColor = boardColors().ball;
@@ -114,7 +111,7 @@ export function WatchBoard({ scene, plateURL, view, themeKey, onTap, onLook }: {
         new THREE.LineBasicMaterial({ color: ballColor, transparent: true, opacity: 0.55 })));
     }
     b.dynamic.add(paths);
-    extrasRef.current = { hall, paths };
+    extrasRef.current = { paths };
     b.setOrbit(videoOrbit(scene.camera, b.camera.aspect), false);
     let shown = { time: NaN, selected: undefined as string | undefined, theme: null as BoardColors | null };
     // The watch screen's clock moves the view (a ref): read it every frame (the board draws only what changed; the eye
@@ -138,7 +135,10 @@ export function WatchBoard({ scene, plateURL, view, themeKey, onTap, onLook }: {
             const w = view.current;
             const p = posedRef.current.find((q) => q.id === w.pov);
             if (!p) return { pos: b.camera.position.clone(), quat: b.camera.quaternion.clone(), fov: b.camera.fov };
-            const pose = p.skeleton.povPose(p.joints, b.camera.aspect, { yaw: w.povYaw, pitch: w.povPitch });
+            // The eyes on the ball (or the play across the net), the drag on top of that.
+            const eye = p.skeleton.eye(p.joints);
+            const forward = VideoGaze.direction(scene, p.token.side, new V3(eye.x, eye.y, eye.z), w.time);
+            const pose = p.skeleton.povPose(p.joints, b.camera.aspect, { yaw: w.povYaw, pitch: w.povPitch, forward });
             const r = pose.rotation;
             return { pos: new THREE.Vector3(pose.eye.x, pose.eye.y, pose.eye.z), quat: new THREE.Quaternion(r.x, r.y, r.z, r.w),
                      fov: (pose.fovY * 180) / Math.PI };
