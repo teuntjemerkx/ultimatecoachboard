@@ -5,7 +5,8 @@
 //   const f = await import("/tools/videoflow.js");
 //   await f.importClip(); await f.markCorners(); await f.build();
 // `importClip` deletes earlier videos first; `markCorners` drags the dots to the corners measured on that frame
-// (RealCalibrationTests). After a build in dev, `compare` runs tracker variants on the same observations.
+// (RealCalibrationTests). After a build in dev, `compare` runs tracker variants on the same observations, and `unseen`
+// and `stillPeople` give the numbers in HANDOFF.md (unseen samples of the picked players, people on the still).
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function importClip() {
@@ -65,6 +66,49 @@ export async function build() {
   while (document.querySelector(".video-stage-name")) await wait(1000);
   return { seconds: Math.round((performance.now() - t0) / 1000), title: document.querySelector(".bar h1")?.textContent };
 }
+/**
+ * After a build in dev: how much of the picked players' clip the detector saw (the share of their samples with no
+ * detection, overall and per side) and the ball points, from the build's observations and locks.
+ */
+export async function unseen() {
+  const v = await import("/src/core/video/index.ts");
+  const { RallyTracker } = await import("/src/app/video/rallyTracker.ts");
+  const { observations, camera, locks } = globalThis.__videoDebug;
+  const cam = v.VideoCamera.decode(camera);
+  const tracks = RallyTracker.forCamera(cam, locks ?? []).track(observations, cam);
+  const share = (ts) => {
+    const all = ts.flatMap((t) => t.samples);
+    return all.length ? Math.round((100 * all.filter((s) => !s.measured).length) / all.length) : 0;
+  };
+  return {
+    unseen: share(tracks), home: share(tracks.filter((t) => t.side === "home")), away: share(tracks.filter((t) => t.side !== "home")),
+    players: tracks.length, ballPoints: observations.filter((o) => o.ball).length,
+  };
+}
+
+/**
+ * After a build in dev: the people the detector finds on the still (start + 0.2 s) of the clip in the "video-test"
+ * cache, where they stand, and how many stand inside the lines on each side (with the players step's 15 cm).
+ */
+export async function stillPeople(time = 0.2) {
+  const v = await import("/src/core/video/index.ts");
+  const { openClip, grabFrame } = await import("/src/app/video/clip.ts");
+  const { peopleOnStill } = await import("/src/app/video/pipeline.ts");
+  const cam = v.VideoCamera.decode(globalThis.__videoDebug.camera);
+  const blob = await (await (await caches.open("video-test")).match("/__test/rally.mp4")).blob();
+  const clip = await openClip(blob);
+  const still = document.createElement("canvas");
+  await grabFrame(clip, time, still);
+  clip.close();
+  const t0 = performance.now();
+  const people = await peopleOnStill(still, cam);
+  const ms = Math.round(performance.now() - t0);
+  const inside = (f) => Math.abs(f.x) <= 4.65 && Math.abs(f.z) <= 9.15;
+  const rows = people.map((p) => ({ x: +p.detection.floor.x.toFixed(1), z: +p.detection.floor.z.toFixed(1),
+    box: [p.box.x, p.box.y, p.box.w, p.box.h].map(Math.round) }));
+  return { ms, ours: rows.filter((r) => inside(r) && r.z > 0).length, theirs: rows.filter((r) => inside(r) && r.z < 0).length, rows };
+}
+
 export async function compare(variants) {
   const v = await import("/src/core/video/index.ts");
   const { RallyTracker } = await import("/src/app/video/rallyTracker.ts");

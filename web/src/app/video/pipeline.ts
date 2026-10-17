@@ -1,8 +1,9 @@
+import { V3 } from "../../core/spatial";
 import {
   PersonDetection, VideoScene, type ImagePoint, type Keypoints, type TrackLock, type VideoCamera, type VideoFrameObservation,
 } from "../../core/video";
 import { grabFrame, type Clip } from "./clip";
-import { Detector, type FrameDetections } from "./detect";
+import { Detector, zoomTiles, type FrameDetections, type ZoomBand } from "./detect";
 import type { RebuildReply, RebuildRequest } from "./rebuild.worker";
 
 /** The MediaPipe models, loaded once per session (about 20 MB, cached for offline use). */
@@ -169,13 +170,50 @@ export function standsNearCourt(camera: VideoCamera) {
 }
 
 /**
+ * The court around the net and their half, which the detector reads again zoomed (`ZoomBand`): their half from 0.5 m
+ * on our side of the net to 3 m behind their end line, 0.5 m past the sidelines, from the floor to 2.4 m, and down to
+ * the floor 3 m into our half, so our players at the net stand whole in the zoomed tiles too. A box found there counts
+ * when it is upright and at least 0.7 of the height of a person standing at its foot (not legs alone or a group;
+ * from a camera at head height a box cut at the hips still passes, its foot lands where people look that small).
+ * Undefined when that part of the court is not in view, or its tiles would not be much smaller than the main ones
+ * (0.6 of the frame's width): from a camera high at the side, their half is large in the picture already.
+ */
+export function farCourtBand(camera: VideoCamera, balls = false): ZoomBand | undefined {
+  const xs: number[] = [], ys: number[] = [];
+  for (const x of [-5, 5]) {
+    for (const z of [0.5, -12]) {
+      for (const y of [0, 2.4]) {
+        const p = camera.project(new V3(x, y, z));
+        if (!p) return undefined;
+        xs.push(p.x);
+        ys.push(p.y);
+      }
+    }
+  }
+  const near = camera.project(new V3(0, 0, 3));
+  if (!near) return undefined;
+  const x0 = Math.max(0, Math.min(...xs)), x1 = Math.min(camera.width, Math.max(...xs));
+  const y0 = Math.max(0, Math.min(...ys)), y1 = Math.min(camera.height, Math.max(near.y + 8, ...ys));
+  if (!(x1 - x0 > 8 && y1 - y0 > 8)) return undefined;
+  const rect = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  if (zoomTiles(rect, camera.width, camera.height)[0].side > 0.4 * camera.width) return undefined;
+  const whole = (box: { x: number; y: number; w: number; h: number }) => {
+    const f = camera.floorPoint({ x: box.x + box.w / 2, y: box.y + box.h });
+    if (!f) return false;
+    const feet = camera.project(V3.fromFloor(f, 0)), head = camera.project(V3.fromFloor(f, 1.75));
+    return feet !== undefined && head !== undefined && box.h >= 0.7 * (feet.y - head.y) && box.h >= 1.4 * box.w;
+  };
+  return { ...rect, whole, balls };
+}
+
+/**
  * The people on one frame (the still the coach taps the players on), found as a build finds them, so a tap on one
  * of them is the detection the build sees in that frame.
  */
 export async function peopleOnStill(still: HTMLCanvasElement, camera: VideoCamera):
   Promise<{ detection: PersonDetection; box: { x: number; y: number; w: number; h: number } }[]> {
   const det = await loadDetector();
-  const found = det.detect(still, still.width, still.height, standsNearCourt(camera));
+  const found = det.detect(still, still.width, still.height, standsNearCourt(camera), farCourtBand(camera));
   return found.people.flatMap((p) => {
     const [detection] = observation(0, { people: [p], balls: [] }, camera).detections;
     return detection ? [{ detection, box: p.box }] : [];
@@ -253,10 +291,18 @@ async function plateBlob(pixels: Uint8Array, width: number, height: number): Pro
   return new Promise((resolve) => c.toBlob((b) => resolve(b ?? undefined), "image/jpeg", 0.9));
 }
 
+/**
+ * Whether the zoomed band's ball candidates count (the ball-only frames read the band only then). Off: on the Orion clip
+ * they were heads, knee pads and shoes (38 ball points became 52 and 1 flight 2, both false) for 32 s more per 10 s.
+ */
+const ZOOM_BALLS = false;
 /** Frames read for the ball alone between two pose frames (30 frames a second in all). */
 const BALL_FRAMES_BETWEEN = 2;
-/** The time a ball-only frame takes against a pose frame (the object detector without the pose model), for progress. */
-const BALL_FRAME_COST = 0.3;
+/**
+ * The time a ball-only frame takes against a pose frame (the object detector's two tiles, without the zoomed band and the
+ * pose model), for progress.
+ */
+const BALL_FRAME_COST = 0.2;
 
 /**
  * Video to 3D (Section 4) for a clip and a calibrated camera (for frames of the clip's working size): people and the
@@ -281,6 +327,7 @@ export async function buildRally(options: {
   const plateEvery = count / plateCount;
   const pw = Math.min(960, clip.width), ph = Math.round((pw * clip.height) / clip.width);
   const nearCourt = standsNearCourt(camera);
+  const band = farCourtBand(camera, ZOOM_BALLS);
   const work = document.createElement("canvas");
   const small = document.createElement("canvas");
   small.width = pw;
@@ -310,13 +357,13 @@ export async function buildRally(options: {
     done += s.pose ? 1 : BALL_FRAME_COST;
     if (!s.pose) {
       // The ball alone; a repeated frame adds nothing (its ball was seen at the earlier time).
-      if (!repeat) ballOnly.push({ time: s.time - start, balls: det.detectBalls(work, clip.width, clip.height) });
+      if (!repeat) ballOnly.push({ time: s.time - start, balls: det.detectBalls(work, clip.width, clip.height, band) });
       onProgress(0.04 + (0.56 * done) / total, "Finding players and the ball");
       await tick();
       continue;
     }
     const i = sampled.length;
-    const d = det.detect(work, clip.width, clip.height, nearCourt);
+    const d = det.detect(work, clip.width, clip.height, nearCourt, band);
     const pixels = work.getContext("2d", { willReadFrequently: true })!.getImageData(0, 0, clip.width, clip.height).data;
     sampled.push({ time: s.time - start, detections: d, repeat,
       appearance: d.people.map((p) => jerseyColour(p, pixels, clip.width, clip.height)) });

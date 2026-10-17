@@ -2,9 +2,9 @@ import { FilesetResolver, ObjectDetector, PoseLandmarker } from "@mediapipe/task
 
 /**
  * People and the ball in one video frame with Google's MediaPipe models, running in the browser on the iPad (no
- * Apple frameworks, nothing uploaded). Two stages, as broadcast footage needs: a person detector finds everyone
- * (also the small players on the far side) on an upscaled, tiled frame, then the pose model reads each person from
- * a crop of their own. Pixel coordinates of the frame, origin top-left.
+ * Apple frameworks, nothing uploaded). Two stages, as broadcast footage needs: a person detector finds everyone on a
+ * tiled frame (and again, zoomed, in a band over the far court where the players are small), then the pose model reads
+ * each person from a crop of their own. Pixel coordinates of the frame, origin top-left.
  */
 export type BodyKeypoint =
   | "nose" | "leftEye" | "rightEye" | "leftEar" | "rightEar" | "neck"
@@ -23,6 +23,34 @@ export interface FrameDetections {
   people: DetectedPerson[];
   /** Ball candidates, best first. */
   balls: { x: number; y: number; score: number }[];
+}
+
+/**
+ * A band of the frame the detector reads again, zoomed (the far court around the net, where players are small), and
+ * which of the people found there count: a box in a zoomed tile can be a torso or legs of someone the tile cuts off.
+ */
+export interface ZoomBand {
+  x: number; y: number; w: number; h: number;
+  /** Whether a box found in the band is a whole person. */
+  whole: (box: DetectedPerson["box"]) => boolean;
+  /** Whether the band's ball candidates count too. */
+  balls: boolean;
+}
+
+/** Tiles across a zoom band (on the Orion clip 2 tiles left 34% of the picked players' samples unseen, 3 left 30%, 4 left 36%). */
+const ZOOM_TILES = 3;
+
+/**
+ * The tiles a zoom band is read in, frame pixels: `ZOOM_TILES` across it, overlapping by a quarter, each as tall as it
+ * is wide (the detector stretches any picture to its own square input, so only a square tile keeps people their
+ * shape), standing on the band's bottom.
+ */
+export function zoomTiles(band: { x: number; y: number; w: number; h: number }, width: number, height: number):
+  { x: number; y: number; side: number }[] {
+  const n = ZOOM_TILES;
+  const side = Math.min(width, height, Math.max(band.h, band.w / (n - (n - 1) / 4)));
+  const y = Math.max(0, Math.min(height - side, band.y + band.h - side));
+  return Array.from({ length: n }, (_, k) => ({ x: Math.max(0, Math.min(width - side, band.x + (k * (band.w - side)) / (n - 1))), y, side }));
 }
 
 /** MediaPipe's 33 pose landmarks to the 19 keypoints the reconstruction reads (left and right are the player's own). */
@@ -60,11 +88,11 @@ export class Detector {
 
   /**
    * Everyone in a frame and the ball candidates. `wantsPose`, when given, says which people get the pose model (the
-   * others keep their box only), e.g. not the spectators in the stands.
+   * others keep their box only), e.g. not the spectators in the stands; `band`, when given, is read again zoomed.
    */
   detect(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number,
-    wantsPose?: (box: DetectedPerson["box"]) => boolean): FrameDetections {
-    const { people, balls } = this.objects(frame, width, height);
+    wantsPose?: (box: DetectedPerson["box"]) => boolean, band?: ZoomBand): FrameDetections {
+    const { people, balls } = this.objects(frame, width, height, band);
     // Pose from a square crop around each person, about 256 px tall.
     const crop = canvas(256, 256);
     const g = crop.getContext("2d")!;
@@ -87,13 +115,14 @@ export class Detector {
   }
 
   /** The ball candidates in a frame, best first: the object detector alone, for the frames between the pose frames. */
-  detectBalls(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number): FrameDetections["balls"] {
-    return this.objects(frame, width, height).balls;
+  detectBalls(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number, band?: ZoomBand): FrameDetections["balls"] {
+    return this.objects(frame, width, height, band?.balls ? band : undefined).balls;
   }
 
   /** People (boxes only) and ball candidates from the object detector. */
-  private objects(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number): FrameDetections {
-    // Upscale so far players are large enough, and cut into two overlapping tiles (the detector's input is square-ish).
+  private objects(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number, band?: ZoomBand): FrameDetections {
+    // Two overlapping tiles (the detector's input is square-ish). It stretches each tile to its own 448 x 448 input,
+    // so the upscale does not make anyone larger to it: the zoomed band does that.
     const S = width < 1400 ? 2 : 1;
     const big = canvas(width * S, height * S);
     big.getContext("2d")!.drawImage(frame, 0, 0, big.width, big.height);
@@ -112,6 +141,7 @@ export class Detector {
         }
       }
     }
+    if (band) this.zoomed(frame, width, height, band, raw, balls);
     // The tiles overlap: one person, one box.
     raw.sort((a, b) => b.score - a.score);
     const people: DetectedPerson[] = [];
@@ -119,7 +149,37 @@ export class Detector {
     balls.sort((a, b) => b.score - a.score);
     return { people, balls };
   }
+
+  /**
+   * The band read again in its tiles (`zoomTiles`). A person box that a tile's edge cuts (not the frame's: the next
+   * tile or the main pass sees that person whole) is left out, as is one the band says is not a whole person.
+   */
+  private zoomed(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number, band: ZoomBand,
+    people: DetectedPerson[], balls: FrameDetections["balls"]) {
+    const tile = canvas(MODEL_INPUT, MODEL_INPUT);
+    const g = tile.getContext("2d")!;
+    g.imageSmoothingQuality = "high";
+    for (const { x: x0, y: y0, side } of zoomTiles(band, width, height)) {
+      const s = side / MODEL_INPUT, edge = 2 * s;
+      g.clearRect(0, 0, MODEL_INPUT, MODEL_INPUT);
+      g.drawImage(frame, x0, y0, side, side, 0, 0, MODEL_INPUT, MODEL_INPUT);
+      for (const d of this.people.detect(tile).detections) {
+        const b = d.boundingBox!, c = d.categories[0];
+        const box = { x: x0 + b.originX * s, y: y0 + b.originY * s, w: b.width * s, h: b.height * s };
+        if (c.categoryName === "sports ball") {
+          if (band.balls) balls.push({ x: box.x + box.w / 2, y: box.y + box.h / 2, score: c.score });
+          continue;
+        }
+        const cut = (x0 > 0 && box.x <= x0 + edge) || (x0 + side < width && box.x + box.w >= x0 + side - edge)
+          || (y0 > 0 && box.y <= y0 + edge) || (y0 + side < height && box.y + box.h >= y0 + side - edge);
+        if (!cut && band.whole(box)) people.push({ box, score: c.score, keypoints: {} });
+      }
+    }
+  }
 }
+
+/** The object detector's input (EfficientDet-Lite2: 448 x 448). */
+const MODEL_INPUT = 448;
 
 function canvas(w: number, h: number): HTMLCanvasElement {
   const c = document.createElement("canvas");
