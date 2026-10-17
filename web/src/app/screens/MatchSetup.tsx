@@ -7,6 +7,7 @@ import { useNav } from "../store/nav";
 import { netHeight, useSettings } from "../store/settings";
 import { TeamSystem, type Side } from "../../core/match";
 import { MatchSession, useMatch, type PlayerRef } from "../match/session";
+import { matchNotes } from "../match/notes";
 import { roleChip, seasonOf, type Player } from "./Players";
 import { PrizmCard } from "../ui/PrizmCard";
 import { useFitColumns } from "../hooks/useViewport";
@@ -50,6 +51,8 @@ export function MatchSetup() {
   const [typed, setTyped] = useState("");
   const [error, setError] = useState("");
   const [starting, setStarting] = useState(false);
+  /** Notes on the opponent, shown in every time-out of this match. */
+  const [notes, setNotes] = useState("");
 
   useEffect(() => { all<Player>("players").then((p) => setRoster(p.sort((a, b) => a.number - b.number))); }, []);
 
@@ -92,6 +95,7 @@ export function MatchSetup() {
     try { localStorage.setItem(SETUP_KEY, JSON.stringify({ opponentName: setup.opponentName, system, slots, libero, setterPosition: setter })); } catch { /* ignore */ }
     try {
       const session = await MatchSession.start(setup);
+      matchNotes.write(session.id, notes);
       open(session);
       go({ name: "live", matchId: session.id });
     } catch (e) {
@@ -108,7 +112,7 @@ export function MatchSetup() {
 
   return (
     <div className="screen">
-      <Bar title="New match" />
+      <Bar title="New match" back={{ to: { name: "home" }, label: "Match" }} />
       <main className="fill setup-fill">
         <section className="locker-card">
           <div className="plate-head">
@@ -190,7 +194,7 @@ export function MatchSetup() {
                     <button key={sys} type="button" className={`btn ${system === sys ? "on" : ""}`} aria-pressed={system === sys}
                             onClick={() => setSystem(sys)} title={TeamSystem.displayName(sys)}
                             style={{ minHeight: 64, flexDirection: "column", gap: 2, padding: "4px 6px", whiteSpace: "normal", borderRadius: 18 }}>
-                      <span style={{ font: `400 ${main.length > 4 ? 24 : 28}px/1 var(--font-display-big)`, whiteSpace: "nowrap" }}>{main}</span>
+                      <span style={{ font: `700 ${main.length > 4 ? 18 : 21}px/1 var(--font-display)`, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>{main}</span>
                       {sub && <small style={{ fontSize: 12, fontWeight: 600, opacity: 0.85, lineHeight: 1.1 }}>{sub}</small>}
                     </button>
                   );
@@ -218,6 +222,10 @@ export function MatchSetup() {
                 </button>
               </div>
             </div>
+            <label className="field">
+              <span className="label">Notes on them · shown in your time-outs</span>
+              <input id="match-notes" value={notes} placeholder="Their 7 hits line; serve short to their 4" onChange={(e) => setNotes(e.target.value)} />
+            </label>
             <div className="stack" style={{ gap: 8, marginTop: "auto" }}>
               {error && <p role="alert" style={{ margin: 0, color: "var(--c-fault)", fontWeight: 600 }}>{error}</p>}
               <button className="btn primary wide" disabled={!ready || starting} onClick={start}><Icon name="play" /> Start match</button>
@@ -284,7 +292,7 @@ function PickSheet({ title, roster, onCourt, libero, line, typed, setTyped, onPi
         <form className="row" onSubmit={(e) => { e.preventDefault(); const n = Number(typed); if (typed.trim() !== "" && Number.isInteger(n) && n >= 0 && n <= 99) onPick({ id: crypto.randomUUID().toUpperCase(), number: n }); }}>
           <span className="label">{roster.length ? "Not in the team?" : "Shirt number"}</span>
           <input id="type-number" className="input" inputMode="numeric" placeholder="#" value={typed} onChange={(e) => setTyped(e.target.value)}
-                 style={{ width: 120, font: "400 34px/1 var(--font-display-big)", textAlign: "center" }} />
+                 style={{ width: 120, font: "800 28px/1 var(--font-num)", textAlign: "center" }} />
           <button className="btn big" type="submit">Use this number</button>
         </form>
       </div>

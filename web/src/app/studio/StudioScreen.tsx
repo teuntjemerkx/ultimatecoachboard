@@ -11,6 +11,7 @@ import {
 import { loadTemplate } from "../../core/zones/templateAccess";
 import type { Board3D } from "../three/Board3D";
 import { Bar } from "../ui/Bar";
+import { Tabs } from "../ui/Tabs";
 import { Choice } from "../ui/Choice";
 import { Icon } from "../ui/Icon";
 import { useNav } from "../store/nav";
@@ -177,13 +178,12 @@ export function Studio({ boardId }: { boardId?: string }) {
   return (
     <div className="screen studio">
       <header className="bar studio-bar">
-        <button className="btn home-btn" onClick={() => go({ name: "home" })} aria-label="Home">
-          <Icon name="back" /><span className="studio-wide">Home</span>
-        </button>
         <button className="studio-title" onClick={nameBoard} aria-label={`Rename this board: ${scene.title}`}>
           <span>{scene.title}</span><Icon name="pen" size={16} />
         </button>
         {advanced && <span className="studio-count">{scene.zones.length} zone{scene.zones.length === 1 ? "" : "s"}</span>}
+        <span className="spacer" />
+        <Tabs compact />
         <span className="spacer" />
         {advanced && (
           <button className={`btn quiet${st.snapping ? " on" : ""}`} onClick={() => st.set({ snapping: !st.snapping })}

@@ -20,13 +20,13 @@ const prizm: Theme = {
   dark: true,
   colors: {
     onHome: "#0D0C18", onOpponent: "#0D0C18", eyebrow: "#EACC88", strip: "transparent", seam: "transparent",
-    bg: "#0D0C18", wall: "#151326", surface: "#1E1E37", surface2: "#262545", hairline: "rgba(160,150,240,0.16)",
-    text: "#FFFFFF", text2: "#A3A2BC", accent: "#9C85FF", onAccent: "#0D0C18", primary: "#9C85FF", onPrimary: "#0D0C18",
+    bg: "#0B0A14", wall: "#13111F", surface: "#1B1A2E", surface2: "#24233B", hairline: "rgba(255,255,255,0.08)",
+    text: "#FFFFFF", text2: "#A6A4BD", accent: "#9C85FF", onAccent: "#FFFFFF", primary: "#8B70FF", onPrimary: "#FFFFFF",
     plate: "#0D0C18", plateText: "#EACC88", fault: "#FF7A7A", home: "#9C85FF", opponent: "#E8B84A",
     tokenFill: "#FFFFFF", tokenLabel: "#0D0C18", hallFloor: "#0D0C18", freeZone: "#2B2652", court: "#F3EEE2",
     courtLine: "#0D0C18", net: "#0D0C18", ink: "#5AEBF3", ball: "#FFE14D", skin: "#C9A68A", shorts: "#1E1E37",
     pads: "#262545", shoes: "#FFFFFF", hair: "#2B2118", focus: "#9C85FF",
-    band: "#0D0C18", bandText: "#FFFFFF", bandSoft: "#A3A2BC", led: "#9C85FF", zoneA: "#9C85FF", zoneB: "#E8B84A",
+    band: "#0B0A14", bandText: "#FFFFFF", bandSoft: "#A6A4BD", led: "#9C85FF", zoneA: "#9C85FF", zoneB: "#E8B84A",
   },
 };
 

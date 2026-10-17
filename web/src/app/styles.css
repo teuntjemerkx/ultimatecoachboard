@@ -1,32 +1,42 @@
 /* Coach Board on the web. Every screen fills the iPad (no page to scroll on an iPad held either way), with big cards
    and buttons; a phone scrolls where the screen is too small. Colours come from the template variables (--c-*), set
-   by applyTheme. The default look, Prizm, follows the trading cards: near-black ink with a violet glow, indigo cards,
-   gold lettering, violet for the one big action, and the players as chrome, prism and gold cards (PrizmCard). The
-   locker themes add the seams of a locker wall and a blue LED strip along the top of every card. */
+   by applyTheme. The look is today's iPad: dark glass over a soft glow of the team's colours, the system typeface in
+   ordinary case, round shapes nested inside each other, floating bars and buttons, and as little framing as will do;
+   the players stay trading cards (PrizmCard). */
 :root {
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  /* Athletic lettering for names, numbers and calls to action (the locker nameplate); running text stays the system
-     face so every eye reads it easily. */
-  --font-athletic: "Barlow Condensed", "Arial Narrow", "Helvetica Neue Condensed", sans-serif;
-  /* The big headings and numbers (Bebas Neue: one heavy weight, tall and narrow). */
+  /* Numbers: the system face, heavy, every digit as wide as the next (scores, stats, shirt numbers). */
+  --font-num: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  /* Small lettering on the boards and the 3D court: the system face too. */
+  --font-athletic: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  /* Only on the trading cards: Bebas Neue (one heavy weight, tall and narrow), the lettering of a printed card. */
   --font-display-big: "Bebas Neue", "Barlow Condensed", "Arial Narrow", sans-serif;
-  --radius: 14px;
-  --radius-card: 20px;
-  --radius-small: 10px;
+  --font-card-small: "Barlow Condensed", "Arial Narrow", "Helvetica Neue Condensed", sans-serif;
+  --radius: 16px;
+  --radius-card: 28px;
+  --radius-small: 12px;
   --target: 52px;
-  --target-primary: 72px;
+  --target-primary: 64px;
   --bar: 76px;
-  --gap: 18px;
+  --gap: 16px;
   --gutter-l: max(20px, env(safe-area-inset-left, 0px));
   --gutter-r: max(20px, env(safe-area-inset-right, 0px));
   --gutter-b: max(20px, env(safe-area-inset-bottom, 0px));
+  /* Glass: the text colour, faintly, over whatever is behind (light on a dark theme, dark on a light one). */
+  --glass: color-mix(in srgb, var(--c-text) 6%, transparent);
+  --glass-2: color-mix(in srgb, var(--c-text) 10%, transparent);
+  --glass-3: color-mix(in srgb, var(--c-text) 16%, transparent);
+  --stroke: color-mix(in srgb, var(--c-text) 9%, transparent);
+  --rim: inset 0 1px 0 color-mix(in srgb, #fff 9%, transparent), inset 0 0 0 1px var(--stroke);
+  --lift: 0 24px 48px -28px rgba(0,0,0,0.7);
+  --spring: cubic-bezier(0.2, 0.9, 0.25, 1.1);
   /* Prizm values until applyTheme runs. */
-  --c-bg: #0D0C18; --c-wall: #151326; --c-surface: #1E1E37; --c-surface2: #262545; --c-hairline: rgba(160,150,240,0.16);
-  --c-text: #FFFFFF; --c-text2: #A3A2BC; --c-accent: #9C85FF; --c-onAccent: #0D0C18; --c-primary: #9C85FF;
-  --c-onPrimary: #0D0C18; --c-plate: #0D0C18; --c-plateText: #EACC88; --c-fault: #FF7A7A; --c-home: #9C85FF;
-  --c-opponent: #E8B84A; --c-focus: #9C85FF; --c-band: #0D0C18; --c-bandText: #FFFFFF; --c-bandSoft: #A3A2BC; --c-led: #9C85FF;
+  --c-bg: #0B0A14; --c-wall: #13111F; --c-surface: #1B1A2E; --c-surface2: #24233B; --c-hairline: rgba(255,255,255,0.08);
+  --c-text: #FFFFFF; --c-text2: #A6A4BD; --c-accent: #9C85FF; --c-onAccent: #FFFFFF; --c-primary: #8B70FF;
+  --c-onPrimary: #FFFFFF; --c-plate: #0D0C18; --c-plateText: #EACC88; --c-fault: #FF7A7A; --c-home: #9C85FF;
+  --c-opponent: #E8B84A; --c-focus: #9C85FF; --c-band: #0B0A14; --c-bandText: #FFFFFF; --c-bandSoft: #A6A4BD; --c-led: #9C85FF;
   --c-eyebrow: #EACC88; --c-strip: transparent; --c-seam: transparent; --c-onHome: #0D0C18; --c-onOpponent: #0D0C18;
 }
 
@@ -38,7 +48,8 @@ body {
   margin: 0;
   background: var(--c-bg);
   color: var(--c-text);
-  font: 18px/1.4 var(--font);
+  font: 17px/1.4 var(--font);
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
   -webkit-user-select: none;
@@ -46,27 +57,29 @@ body {
   -webkit-touch-callout: none;
 }
 input, textarea, select { -webkit-user-select: text; user-select: text; font: inherit; color: inherit; }
-button { font: inherit; color: inherit; }
+button { font: inherit; color: inherit; letter-spacing: inherit; }
 :focus-visible { outline: 3px solid var(--c-focus); outline-offset: 2px; }
 
 .app { height: 100%; height: 100dvh; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 0px); background: var(--c-bg); }
 
-/* The wall behind everything: the glow of the light (violet in Prizm, the ceiling lights in a locker room), the seams
-   between the lockers where the theme has them, darkening downward. */
+/* Behind everything: the dark with a soft glow of the team's colours (violet high on the left, a trace of gold low on
+   the right), so the glass in front has something to show. Nothing here moves. */
 .screen {
   flex: 1; min-height: 0; display: flex; flex-direction: column;
   background:
-    radial-gradient(55% 60% at 22% 72%, color-mix(in srgb, var(--c-led) 16%, transparent), transparent 70%),
-    radial-gradient(120% 55% at 50% -12%, color-mix(in srgb, var(--c-led) 14%, transparent), transparent 62%),
-    repeating-linear-gradient(90deg, transparent 0 calc(100% / 6 - 2px), var(--c-seam) calc(100% / 6 - 2px) calc(100% / 6)),
-    linear-gradient(180deg, var(--c-wall), var(--c-bg) 85%);
+    radial-gradient(60% 55% at 12% 0%, color-mix(in srgb, var(--c-led) 22%, transparent), transparent 70%),
+    radial-gradient(45% 45% at 100% 100%, color-mix(in srgb, var(--c-opponent) 9%, transparent), transparent 70%),
+    radial-gradient(50% 60% at 60% 40%, color-mix(in srgb, var(--c-led) 6%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--c-wall), var(--c-bg) 70%);
+  animation: screen-in 0.22s ease-out backwards;
 }
+/* A new screen fades in (opacity only: a moving screen would carry its sheets with it). */
+@keyframes screen-in { from { opacity: 0; } }
 .scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-.page { padding: 20px var(--gutter-r) calc(28px + env(safe-area-inset-bottom, 0px)) var(--gutter-l); max-width: 1100px; margin: 0 auto; width: 100%; }
 /* A screen's working area: fills what the bar leaves, never scrolls on an iPad. */
 .fill {
   flex: 1; min-height: 0; display: grid; gap: var(--gap);
-  padding: var(--gap) var(--gutter-r) var(--gutter-b) var(--gutter-l);
+  padding: 4px var(--gutter-r) var(--gutter-b) var(--gutter-l);
 }
 @media (max-width: 700px), (max-height: 560px) {
   /* A phone: the same cards one under the other, scrolling. */
@@ -74,409 +87,374 @@ button { font: inherit; color: inherit; }
   .fill > * { grid-area: auto !important; min-height: 0; }
 }
 
-/* Top bar: a big Home button, the screen's name on a nameplate, then the screen's own actions. */
+/* Top bar: floating over the screen, no band. The screen's name on the left, the tab bar in the middle, the screen's
+   own actions on the right; the middle stays centred whatever the sides hold. */
 .bar {
   height: var(--bar); flex: none; display: flex; align-items: center; gap: 14px;
-  padding: 0 var(--gutter-r) 0 var(--gutter-l);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--c-band) 92%, var(--c-led)), var(--c-band));
-  color: var(--c-bandText);
-  box-shadow: inset 0 -1px 0 var(--c-hairline), inset 0 -3px 0 var(--c-strip), 0 8px 26px color-mix(in srgb, var(--c-led) 14%, transparent);
-  position: relative; z-index: 2;
+  padding: 0 var(--gutter-r) 0 var(--gutter-l); color: var(--c-text); position: relative; z-index: 2;
 }
+.bar:has(> .bar-lead) { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 16px; }
+.bar-lead { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.bar-titles { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bar-subtitle { font: 600 14px/1.2 var(--font); color: var(--c-text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bar h1 {
-  font: 400 38px/1 var(--font-display-big); text-transform: uppercase; letter-spacing: 0.02em; padding-top: 4px;
-  margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 700 28px/1.1 var(--font-display); letter-spacing: -0.025em;
+  margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.bar .btn { background: transparent; color: var(--c-bandText); border-color: transparent; }
-.bar .btn.secondary { border-color: color-mix(in srgb, var(--c-bandText) 45%, transparent); }
-.bar .btn.on { background: var(--c-bandText); color: var(--c-band); }
+/* Inside a section the back button shares the room: a smaller title. */
+.bar-lead:has(.back-btn) h1 { font-size: 24px; }
+.bar-trail { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 0; }
 .bar .spacer { flex: 1; }
-.bar .home-btn {
-  min-height: 52px; padding: 0 22px 0 16px; border-radius: 999px; gap: 8px;
-  background: color-mix(in srgb, var(--c-bandText) 9%, transparent);
-  border: 1.5px solid color-mix(in srgb, var(--c-bandText) 22%, transparent);
-  font: 700 18px/1 var(--font);
+.bar .back-btn, .bar .home-btn { min-height: 48px; padding: 0 18px 0 12px; gap: 4px; font: 600 16px/1 var(--font); flex: none; }
+.bar .back-btn .icon, .bar .home-btn .icon { width: 22px; height: 22px; }
+
+/* The tab bar: the sections in one capsule of glass, the chosen one lit; Settings as a round button beside it. */
+.tabs { display: flex; align-items: center; gap: 8px; }
+.tabs-track {
+  display: flex; gap: 2px; padding: 4px; border-radius: 999px;
+  background: color-mix(in srgb, var(--c-surface) 70%, transparent); box-shadow: var(--rim), 0 12px 30px -16px rgba(0,0,0,0.7);
+  -webkit-backdrop-filter: blur(20px) saturate(160%); backdrop-filter: blur(20px) saturate(160%);
 }
-.bar .home-btn .icon { width: 22px; height: 22px; }
+.tab {
+  min-height: 48px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; color: var(--c-text2); font: 600 16px/1 var(--font);
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.tab[aria-current="page"] { background: var(--glass-3); color: var(--c-text); box-shadow: var(--rim); }
+.tab[aria-current="page"] .icon { color: var(--c-accent); }
+.tab:active { transform: scale(0.96); }
+.tab-round {
+  width: 56px; min-height: 56px; padding: 0;
+  background: color-mix(in srgb, var(--c-surface) 70%, transparent); box-shadow: var(--rim), 0 12px 30px -16px rgba(0,0,0,0.7);
+}
+/* Icons only where the room is short (the Studio, a narrow or upright iPad). */
+.tabs.compact .tab span { display: none; }
+.tabs.compact .tab:not(.tab-round) { padding: 0; width: 52px; }
+@media (max-width: 1100px) {
+  .tabs .tab span { display: none; }
+  .tabs .tab:not(.tab-round) { padding: 0; width: 52px; }
+}
 
 /* Type */
-.title { font: 400 60px/0.92 var(--font-display-big); text-transform: uppercase; letter-spacing: 0.01em; margin: 0; text-wrap: balance; }
-.athletic { font-family: var(--font-athletic); text-transform: uppercase; letter-spacing: 0.05em; }
-.stars { color: var(--c-led); letter-spacing: 0.35em; font-size: 12px; }
+.title { font: 800 46px/1.02 var(--font-display); letter-spacing: -0.03em; margin: 0; text-wrap: balance; }
+.athletic { font-family: var(--font); font-weight: 600; }
 .subtitle { color: var(--c-text2); margin: 4px 0 0; }
-.group-title { font: 400 32px/1 var(--font-display-big); text-transform: uppercase; letter-spacing: 0.02em; margin: 0 0 12px; }
-/* Small lettering over things (gold in Prizm): wide-set capitals. */
-.label { font: 800 14px/1.2 var(--font-athletic); color: var(--c-eyebrow); letter-spacing: 0.18em; text-transform: uppercase; }
+.group-title { font: 700 24px/1.15 var(--font-display); letter-spacing: -0.02em; margin: 0 0 12px; }
+/* Small lettering over things: quiet, in ordinary case. */
+.label { font: 600 15px/1.2 var(--font); color: var(--c-text2); letter-spacing: -0.005em; }
 .muted { color: var(--c-text2); }
 .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.big-number { font: 400 72px/0.85 var(--font-display-big); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+.big-number { font: 800 56px/0.95 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.04em; }
 
-/* Buttons: never under 52 points; the primary one is gold (or the template's own), athletic and glowing. */
-/* Buttons are pills (52 points at least); the primary one is the theme's colour (violet in Prizm), bold and lit. */
+/* Buttons: capsules of glass, never under 52 points; the primary one filled with the theme's colour. */
 .btn {
-  min-height: var(--target); padding: 0 22px; border-radius: 999px; border: 1.5px solid var(--c-hairline);
-  display: inline-flex; align-items: center; justify-content: center; gap: 10px; font-weight: 700; font-size: 18px; cursor: pointer;
-  background: var(--c-surface2); color: var(--c-text); white-space: nowrap;
-  transition: transform 0.08s ease, filter 0.15s ease;
+  min-height: var(--target); padding: 0 22px; border-radius: 999px; border: 0;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px; font: 600 17px/1.1 var(--font); cursor: pointer;
+  background: var(--glass-2); color: var(--c-text); white-space: nowrap; box-shadow: var(--rim);
+  transition: transform 0.2s var(--spring), background-color 0.15s ease, filter 0.15s ease;
 }
-.btn:active { transform: scale(0.97); filter: brightness(0.92); }
+.btn:active { transform: scale(0.96); background-color: var(--glass-3); }
 .btn:disabled { opacity: 0.4; cursor: default; transform: none; }
 .btn.primary {
-  min-height: var(--target-primary); padding: 0 36px; border-color: transparent; border-radius: 999px;
-  background: var(--c-primary); color: var(--c-onPrimary);
-  font: 800 23px/1 var(--font); letter-spacing: 0.01em;
-  box-shadow: 0 14px 34px -12px color-mix(in srgb, var(--c-primary) 80%, transparent), inset 0 1px 0 rgba(255,255,255,0.3);
+  min-height: var(--target-primary); padding: 0 32px; font: 700 19px/1 var(--font); letter-spacing: -0.01em;
+  color: var(--c-onPrimary);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c-primary) 86%, #fff), color-mix(in srgb, var(--c-primary) 88%, #1a0f4a));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 14px 30px -14px color-mix(in srgb, var(--c-primary) 85%, transparent);
 }
-.btn.primary .icon { width: 26px; height: 26px; }
-.btn.secondary { background: color-mix(in srgb, var(--c-surface2) 70%, transparent); border-color: color-mix(in srgb, var(--c-text) 22%, transparent); }
-.btn.quiet { background: transparent; border-color: transparent; }
-.btn.big { min-height: 64px; font-size: 20px; padding: 0 24px; }
-.btn.small { min-height: 44px; padding: 0 14px; font-size: 16px; }
-.btn.on { background: var(--c-accent); color: var(--c-onAccent); border-color: transparent; box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-led) 30%, transparent); }
+.btn.primary:active { filter: brightness(1.08); }
+.btn.primary .icon { width: 24px; height: 24px; }
+.btn.secondary { background: var(--glass); }
+.btn.quiet { background: transparent; box-shadow: none; }
+.btn.big { min-height: 60px; font-size: 18px; padding: 0 24px; }
+.btn.small { min-height: 44px; padding: 0 16px; font-size: 15px; }
+.btn.on {
+  background: color-mix(in srgb, var(--c-accent) 30%, transparent); color: var(--c-text);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c-accent) 75%, transparent), 0 6px 20px -10px var(--c-accent);
+}
 .btn.danger { color: var(--c-fault); }
 .btn.wide { width: 100%; }
 .icon { width: 22px; height: 22px; flex: none; }
 
-/* Segmented choice: big halves, the chosen one lit. */
-/* Segmented choice: a dark pill track, the chosen half a lit pill. */
-.choice { display: flex; gap: 6px; padding: 6px; border-radius: 999px; background: color-mix(in srgb, var(--c-bg) 60%, var(--c-surface)); border: 1px solid var(--c-hairline); }
+/* Segmented choice: a glass track, the chosen half a brighter piece of glass. */
+.choice { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--glass); box-shadow: inset 0 0 0 1px var(--stroke); }
 .choice button {
-  flex: 1; min-height: var(--target); border: 0; border-radius: 999px; background: transparent; cursor: pointer;
-  font: 700 19px/1 var(--font); color: var(--c-text2);
+  flex: 1; min-height: calc(var(--target) - 4px); border: 0; border-radius: 999px; background: transparent; cursor: pointer;
+  font: 600 17px/1 var(--font); color: var(--c-text2); transition: background-color 0.2s ease, color 0.2s ease;
 }
-.choice button[aria-pressed="true"] { background: var(--c-text); color: var(--c-bg); box-shadow: 0 8px 20px -10px rgba(0,0,0,0.6); }
+.choice button[aria-pressed="true"] { background: var(--glass-3); color: var(--c-text); box-shadow: var(--rim), 0 6px 16px -8px rgba(0,0,0,0.5); }
 
-/* Cards: a locker. Raised navy (or white) panel, a blue LED strip along the top edge. */
+/* Cards: a sheet of glass, round, lifted a little; no frame, no strip. */
 .card, .locker-card {
-  position: relative; background: linear-gradient(180deg, color-mix(in srgb, var(--c-surface) 96%, white), var(--c-surface) 40%);
-  border: 1px solid var(--c-hairline); border-radius: 24px; padding: 22px;
-  box-shadow: 0 22px 44px -28px rgba(0,0,0,0.65), inset 0 1px 0 color-mix(in srgb, white 7%, transparent);
+  position: relative; border-radius: var(--radius-card); padding: 22px;
+  background: linear-gradient(180deg, var(--glass-2), var(--glass));
+  box-shadow: var(--rim), var(--lift);
 }
 .locker-card { display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 0; }
-.locker-card::before, .led-top::before {
-  content: ""; position: absolute; left: 22px; right: 22px; top: 0; height: 3px; border-radius: 0 0 3px 3px;
-  background: var(--c-strip); box-shadow: 0 0 16px 2px color-mix(in srgb, var(--c-strip) 70%, transparent); z-index: 1;
-}
-.locker-card > .card-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; padding: 18px 22px 22px; }
-/* A backlit nameplate across the top of a card. */
-/* A card's heading: the title on a tab (black with gold letters in Prizm, a backlit nameplate in a locker room). */
+.locker-card > .card-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; padding: 12px 24px 24px; }
+/* A card's heading: an icon in the accent and the title in ordinary case; a quiet note on the right. */
 .plate-head {
-  display: flex; align-items: center; gap: 12px; padding: 18px 22px 12px; flex: none;
-  font: 800 20px/1 var(--font-athletic); text-transform: uppercase; letter-spacing: 0.14em; color: var(--c-text);
+  display: flex; align-items: center; gap: 12px; padding: 20px 24px 6px; flex: none;
+  font: 700 19px/1.1 var(--font-display); letter-spacing: -0.015em; color: var(--c-text);
 }
-.plate-head .plate {
-  display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 7px; border-radius: 8px;
-  background: var(--c-plate); color: var(--c-plateText);
-  box-shadow: 0 0 24px -6px color-mix(in srgb, var(--c-plate) 55%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--c-plateText) 18%, transparent);
-}
-.plate-head .aside { margin-left: auto; font-size: 15px; letter-spacing: 0.18em; color: var(--c-text2); }
+.plate-head .plate { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.plate-head .plate .icon { color: var(--c-accent); }
+.plate-head .aside { margin-left: auto; font: 500 15px/1.2 var(--font); letter-spacing: 0; color: var(--c-text2); }
 
+/* A floating toolbar (the boards): glass with the screen behind it blurred. */
 .panel {
-  background: color-mix(in srgb, var(--c-surface) 94%, transparent); border: 1px solid var(--c-hairline);
-  border-radius: var(--radius); padding: 10px; box-shadow: 0 10px 28px -12px rgba(0,0,0,0.45);
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--c-surface) 72%, transparent); border-radius: 22px; padding: 8px;
+  box-shadow: var(--rim), 0 18px 40px -18px rgba(0,0,0,0.7);
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%);
 }
 .stack { display: flex; flex-direction: column; gap: 16px; }
 .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.grid-lockers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); }
-@media (min-width: 1000px) { .grid-lockers { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-@media (max-width: 520px) { .grid-lockers { grid-template-columns: 1fr; } }
-.grid-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: var(--gap); }
 
-.tile {
-  text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 6px; min-height: 140px;
-  background: var(--c-surface); border: 1px solid var(--c-hairline); border-radius: var(--radius-card); padding: 20px;
-}
-.tile:active { transform: scale(0.99); }
-.tile .tile-icon { width: 34px; height: 34px; color: var(--c-home); margin-bottom: 8px; }
-.tile strong { font: 700 21px/1.2 var(--font-display); }
-.tile span { color: var(--c-text2); font-size: 16px; }
-
-/* A locker you open: the start screen's tools. Nameplate, the glowing icon, the name in big letters, a line of text,
-   and the locker number large and faint behind it. */
-.locker-btn {
-  position: relative; text-align: left; cursor: pointer; padding: 0; overflow: hidden; display: flex; flex-direction: column;
-  min-height: 0; border-radius: 24px; border: 1px solid var(--c-hairline); color: var(--c-text);
-  background:
-    radial-gradient(90% 70% at 50% 0%, color-mix(in srgb, var(--c-led) 18%, transparent), transparent 70%),
-    linear-gradient(180deg, color-mix(in srgb, var(--c-surface) 92%, white), var(--c-surface) 45%);
-  box-shadow: 0 22px 44px -28px rgba(0,0,0,0.65), inset 0 1px 0 color-mix(in srgb, white 7%, transparent);
-  transition: transform 0.1s ease, box-shadow 0.2s ease;
-}
-.locker-btn::before {
-  content: ""; position: absolute; left: 22px; right: 22px; top: 0; height: 3px; border-radius: 0 0 3px 3px;
-  background: var(--c-strip); box-shadow: 0 0 16px 2px color-mix(in srgb, var(--c-strip) 70%, transparent);
-}
-.locker-btn:active { transform: scale(0.985); }
-.locker-btn .num {
-  position: absolute; right: 16px; bottom: -18px; font: 400 170px/1 var(--font-display-big); letter-spacing: 0;
-  color: transparent; -webkit-text-stroke: 2px color-mix(in srgb, var(--c-text) 14%, transparent); pointer-events: none;
-}
-.locker-btn .locker-body { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; padding: 18px 22px 22px; position: relative; }
-.locker-btn .locker-icon {
-  width: 58px; height: 58px; color: var(--c-led); margin-bottom: auto;
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--c-led) 70%, transparent));
-}
-.locker-btn .locker-title { font: 400 46px/0.9 var(--font-display-big); text-transform: uppercase; letter-spacing: 0.01em; }
-.locker-btn .locker-text { color: var(--c-text2); font-size: 17px; line-height: 1.3; }
-.locker-btn .locker-note {
-  position: absolute; top: 18px; right: 18px; padding: 6px 11px 5px; border-radius: 8px;
-  background: var(--c-plate); color: var(--c-plateText); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-plateText) 18%, transparent);
-  font: 800 14px/1 var(--font-athletic); text-transform: uppercase; letter-spacing: 0.14em;
-}
-
-/* A fan of the team's Prizm cards on the Players locker (decoration: the locker is the button). */
-.locker-fan {
-  position: absolute; right: 18px; top: 10%; width: 54%; max-width: 280px; height: 66%;
-  display: flex; justify-content: center; align-items: center; pointer-events: none;
-}
-/* The shadow under each card of the fan, rounded like the card's case (6% of its width): a box shadow is drawn once,
-   where a drop-shadow filter would draw the whole card again whenever it changes. */
-.locker-fan > div {
-  width: 40%; margin: 0 -6%; transform-origin: 50% 110%;
-  border-radius: 6% / 4.2857%; box-shadow: 0 10px 18px rgba(0,0,0,0.5);
-}
-.locker-btn .locker-body { z-index: 1; }
-
-/* The old locker tile (kept for screens not redrawn yet). */
-.locker {
-  text-align: left; cursor: pointer; padding: 0; overflow: hidden; display: flex; flex-direction: column;
-  background: var(--c-surface); border: 1px solid var(--c-hairline); border-radius: var(--radius-card);
-  min-height: 210px; box-shadow: 0 1px 0 var(--c-hairline);
-}
-.locker .plate {
-  background: var(--c-band); color: var(--c-bandText); padding: 12px 18px 11px; display: flex; align-items: center; gap: 10px;
-  font: 800 23px/1 var(--font-athletic); text-transform: uppercase; letter-spacing: 0.06em; box-shadow: inset 0 -3px 0 var(--c-led);
-}
-.locker .inside { flex: 1; padding: 16px 18px 14px; display: flex; flex-direction: column; gap: 8px; }
-.locker .inside span { color: var(--c-text2); font-size: 16px; }
-
-/* The hero: a navy wall with pinstripes and the team's nameplate (Video to 3D's first step uses it). */
-.hero {
-  position: relative; overflow: hidden; border-radius: var(--radius-card); padding: 26px 26px 24px;
-  background:
-    repeating-linear-gradient(90deg, transparent 0 46px, color-mix(in srgb, var(--c-bandText) 6%, transparent) 46px 48px),
-    linear-gradient(160deg, color-mix(in srgb, var(--c-band) 82%, #000) 0%, var(--c-band) 60%);
-  color: var(--c-bandText); box-shadow: inset 0 -4px 0 var(--c-led), 0 10px 30px color-mix(in srgb, var(--c-led) 22%, transparent);
-}
-.hero .label { color: var(--c-bandSoft); }
-.hero .btn.secondary { color: var(--c-bandText); border-color: color-mix(in srgb, var(--c-bandText) 45%, transparent); background: transparent; }
+/* A small lit label (a set, the libero): a capsule of glass. */
 .nameplate {
-  display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px 7px; border-radius: 8px;
-  background: var(--c-plate); color: var(--c-plateText); font: 800 18px/1 var(--font-athletic);
-  text-transform: uppercase; letter-spacing: 0.14em;
-  box-shadow: 0 0 24px -6px color-mix(in srgb, var(--c-plate) 55%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--c-plateText) 18%, transparent);
+  display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px;
+  background: var(--glass-2); box-shadow: inset 0 0 0 1px var(--stroke); color: var(--c-text);
+  font: 600 16px/1 var(--font);
 }
 
-.list { display: flex; flex-direction: column; border: 1px solid var(--c-hairline); border-radius: var(--radius-card); overflow: hidden; background: var(--c-surface); }
-.list > * { padding: 12px 18px; min-height: 64px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--c-hairline); }
+.list { display: flex; flex-direction: column; border-radius: var(--radius-card); overflow: hidden; background: var(--glass); box-shadow: var(--rim); }
+.list > * { padding: 12px 18px; min-height: 60px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--stroke); }
 .list > *:last-child { border-bottom: 0; }
 
 .field { display: flex; flex-direction: column; gap: 8px; }
 .field input, .field select, .input {
-  min-height: 60px; border-radius: var(--radius); border: 1.5px solid var(--c-hairline);
-  background: var(--c-surface2); padding: 0 16px; font-size: 20px; color: var(--c-text); width: 100%;
+  min-height: 56px; border-radius: var(--radius); border: 0; box-shadow: inset 0 0 0 1px var(--stroke);
+  background: var(--glass); padding: 0 16px; font-size: 19px; color: var(--c-text); width: 100%;
+  transition: box-shadow 0.15s ease, background-color 0.15s ease;
 }
-.field input::placeholder, .input::placeholder { color: color-mix(in srgb, var(--c-text2) 70%, transparent); }
-.field input:focus, .field select:focus, .input:focus { outline: none; border-color: var(--c-led); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-led) 35%, transparent); }
+.field input::placeholder, .input::placeholder { color: color-mix(in srgb, var(--c-text2) 65%, transparent); }
+.field input:focus, .field select:focus, .input:focus {
+  outline: none; background: var(--glass-2);
+  box-shadow: inset 0 0 0 1.5px var(--c-accent), 0 0 0 4px color-mix(in srgb, var(--c-accent) 25%, transparent);
+}
 
 .hint-pill {
-  background: color-mix(in srgb, var(--c-surface) 92%, transparent); border-radius: 999px; padding: 10px 18px;
-  color: var(--c-text2); font-weight: 600; box-shadow: 0 8px 20px -8px rgba(0,0,0,0.4); border: 1px solid var(--c-hairline);
+  background: color-mix(in srgb, var(--c-surface) 75%, transparent); border-radius: 999px; padding: 10px 18px; border: 0;
+  color: var(--c-text2); font-weight: 600; box-shadow: var(--rim), 0 10px 24px -10px rgba(0,0,0,0.5);
+  -webkit-backdrop-filter: blur(20px) saturate(160%); backdrop-filter: blur(20px) saturate(160%);
 }
 
 /* Live: the match is on screen but the iPad has not stored it. */
 .unsaved-pill {
   position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 2; cursor: pointer; white-space: nowrap;
-  font: 700 18px/1 var(--font); color: var(--c-text); border-color: var(--c-fault); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-fault) 30%, transparent);
+  font: 600 17px/1 var(--font); color: var(--c-text);
+  box-shadow: inset 0 0 0 1.5px var(--c-fault), 0 0 0 4px color-mix(in srgb, var(--c-fault) 25%, transparent);
 }
 
-.empty { text-align: center; padding: 40px 16px; color: var(--c-text2); display: flex; flex-direction: column; gap: 16px; align-items: center; justify-content: center; font-size: 19px; }
+.empty { text-align: center; padding: 40px 16px; color: var(--c-text2); display: flex; flex-direction: column; gap: 16px; align-items: center; justify-content: center; font-size: 18px; }
 
-.toast {
-  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
-  background: var(--c-accent); color: var(--c-onAccent); padding: 14px 24px; border-radius: 999px; font-weight: 700; z-index: 50;
-}
-
-/* A sheet over the screen (picking a player, the set break): dimmed wall, one card in the middle. */
+/* A sheet over the screen (picking a player, the set break): the screen blurred behind, one sheet of glass. */
 .sheet {
   position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 20px;
-  background: color-mix(in srgb, var(--c-bg) 78%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  background: color-mix(in srgb, var(--c-bg) 55%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%);
+  animation: sheet-fade 0.2s ease-out backwards;
 }
-.sheet > .card { width: min(760px, 100%); max-height: 100%; overflow-y: auto; }
+.sheet > .card {
+  width: min(760px, 100%); max-height: 100%; overflow-y: auto; border-radius: 34px; padding: 26px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c-surface2) 92%, transparent), color-mix(in srgb, var(--c-surface) 94%, transparent));
+  box-shadow: var(--rim), 0 40px 80px -30px rgba(0,0,0,0.8);
+  animation: sheet-rise 0.32s var(--spring) backwards;
+}
 .sheet > .pick-sheet { width: min(1080px, 100%); height: min(760px, 100%); overflow: hidden; display: flex; flex-direction: column; }
+@keyframes sheet-fade { from { opacity: 0; } }
+@keyframes sheet-rise { from { opacity: 0; transform: translateY(24px) scale(0.98); } }
 
 /* Big number pad buttons (shirt numbers). */
 .numbers { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 10px; }
-.numbers .btn { min-height: 76px; font: 400 40px/1 var(--font-display-big); padding: 0 4px; flex-direction: column; gap: 4px; border-radius: 18px; }
+.numbers .btn { min-height: 76px; font: 700 30px/1 var(--font-num); font-variant-numeric: tabular-nums; padding: 0 4px; flex-direction: column; gap: 4px; border-radius: 20px; }
 
 /* Start screen ------------------------------------------------------------------------------------------------- */
-.home-head {
-  display: flex; align-items: center; gap: 20px; flex: none;
-  padding: 22px var(--gutter-r) 4px var(--gutter-l);
-}
-.home-brand { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.home-team {
-  font: 400 76px/0.88 var(--font-display-big); text-transform: uppercase; letter-spacing: 0.01em; margin: 0;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  text-shadow: 0 0 40px color-mix(in srgb, var(--c-led) 40%, transparent);
-}
-.home-sub { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.home-head .settings-btn { min-height: 60px; border-radius: 999px; padding: 0 24px; font: 700 18px/1 var(--font); }
-.home-grid {
-  grid-template-columns: 1.4fr 1fr 1fr; grid-template-rows: 1fr 1fr;
-  grid-template-areas: "game studio video" "game players season";
-}
+/* The Match section: the next match large on the left; coming up and results beside it. */
+.match-home { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "hero coming" "hero results"; }
 @media (orientation: portrait) {
-  .home-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 1.35fr 1fr 1fr; grid-template-areas: "game game" "studio video" "players season"; }
+  .match-home { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "hero" "coming" "results"; }
 }
+.brand { color: var(--c-accent); }
+.rows { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: hidden; }
 .install-strip {
-  margin: 10px var(--gutter-r) 0 var(--gutter-l); display: flex; align-items: center; gap: 14px; padding: 10px 12px 10px 18px;
-  border-radius: var(--radius); background: color-mix(in srgb, var(--c-surface) 85%, transparent); border: 1px solid var(--c-hairline);
-  font-size: 16px; color: var(--c-text2);
+  margin: 0 var(--gutter-r) 12px var(--gutter-l); display: flex; align-items: center; gap: 14px; padding: 8px 8px 8px 18px;
+  border-radius: 999px; background: var(--glass); box-shadow: inset 0 0 0 1px var(--stroke);
+  font-size: 15px; color: var(--c-text2);
 }
 .install-strip strong { color: var(--c-text); }
 
-/* Game day: the next match, and the one gold button. */
+/* Game day: the next match on a lit sheet of glass, and the one big button. */
+.gameday {
+  background:
+    radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--c-led) 34%, transparent), transparent 65%),
+    radial-gradient(80% 70% at 100% 100%, color-mix(in srgb, var(--c-opponent) 12%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--glass-2), var(--glass));
+}
 .gameday .card-body { justify-content: space-between; }
-.gameday-vs { font: 800 16px/1 var(--font-athletic); text-transform: uppercase; letter-spacing: 0.2em; color: var(--c-eyebrow); }
-.gameday-opponent { font: 400 64px/0.9 var(--font-display-big); text-transform: uppercase; letter-spacing: 0.01em; margin: 8px 0 4px; overflow-wrap: anywhere; }
-.gameday-when { font-size: 20px; color: var(--c-text); font-weight: 600; }
+.gameday-vs { display: inline-flex; align-items: center; gap: 8px; font: 600 16px/1 var(--font); color: var(--c-text2); }
+.gameday-vs.live::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #FF5A5F; box-shadow: 0 0 10px #FF5A5F; }
+.gameday-opponent { font: 800 48px/1.02 var(--font-display); letter-spacing: -0.035em; margin: 10px 0 8px; overflow-wrap: anywhere; text-wrap: balance; }
+.gameday-when { font-size: 19px; color: var(--c-text); font-weight: 600; }
+/* The big numbers in the middle of the card: the score of a match in play, or the time of the next one. */
+.gameday-score { flex: 1; min-height: 0; display: flex; align-items: center; gap: 36px; }
+.gameday-score > div { display: flex; flex-direction: column; gap: 6px; }
+.gameday-score strong { font: 800 clamp(48px, 6.4vw, 84px)/0.95 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.045em; }
+.gameday-score > div + div strong { color: var(--c-text2); }
 .gameday-where { font-size: 16px; color: var(--c-text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .badge {
-  display: inline-flex; align-items: center; padding: 5px 10px 4px; border-radius: 6px;
-  font: 800 15px/1 var(--font-athletic); text-transform: uppercase; letter-spacing: 0.1em;
-  background: color-mix(in srgb, var(--c-text) 12%, transparent); color: var(--c-text);
+  display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 999px;
+  font: 600 14px/1 var(--font); background: var(--glass-2); color: var(--c-text);
 }
-.badge.home { background: color-mix(in srgb, var(--c-home) 25%, transparent); }
-.badge.away { background: color-mix(in srgb, var(--c-opponent) 25%, transparent); }
+.badge.home { background: color-mix(in srgb, var(--c-home) 28%, transparent); }
+.badge.away { background: color-mix(in srgb, var(--c-opponent) 26%, transparent); }
 .badge.won { background: color-mix(in srgb, var(--c-home) 30%, transparent); }
-.badge.lost { background: color-mix(in srgb, var(--c-opponent) 30%, transparent); }
+.badge.lost { background: color-mix(in srgb, var(--c-opponent) 28%, transparent); }
 .upnext { display: flex; flex-direction: column; gap: 8px; }
 .upnext-row {
-  display: flex; align-items: center; gap: 14px; min-height: 58px; padding: 0 16px; border-radius: var(--radius);
-  background: var(--c-surface2); border: 1px solid var(--c-hairline); cursor: pointer; text-align: left; width: 100%;
+  display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 0 16px; border-radius: 18px; border: 0;
+  background: var(--glass); box-shadow: inset 0 0 0 1px var(--stroke); cursor: pointer; text-align: left; width: 100%;
 }
-.upnext-row .when { font: 800 19px/1 var(--font-athletic); letter-spacing: 0.05em; text-transform: uppercase; color: var(--c-text2); min-width: 116px; }
-.upnext-row .who { flex: 1; min-width: 0; font-weight: 650; font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upnext-row:active { background: var(--glass-2); }
+.upnext-row .when { font: 600 15px/1 var(--font); color: var(--c-text2); min-width: 110px; }
+.upnext-row .who { flex: 1; min-width: 0; font-weight: 600; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .upnext-row:disabled { opacity: 0.45; }
 
 /* Settings ----------------------------------------------------------------------------------------------------- */
-.settings-fill { grid-template-columns: 300px minmax(0, 1fr); }
+.settings-fill { grid-template-columns: 280px minmax(0, 1fr); }
 @media (orientation: portrait) { .settings-fill { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); } }
-.rail { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+/* The sections as a sidebar, the chosen one a lit piece of glass. */
+.rail { display: flex; flex-direction: column; gap: 4px; min-height: 0; }
 @media (orientation: portrait) {
-  .rail { flex-direction: row; }
-  .rail .rail-btn { flex: 1 1 0; min-width: 0; padding: 0 8px; justify-content: center; gap: 8px; font-size: 19px; }
+  .rail { flex-direction: row; padding: 4px; border-radius: 999px; background: var(--glass); box-shadow: inset 0 0 0 1px var(--stroke); }
+  .rail .rail-btn { flex: 1 1 0; min-width: 0; min-height: 52px; padding: 0 8px; justify-content: center; gap: 8px; border-radius: 999px; }
 }
 .rail-btn {
-  display: flex; align-items: center; gap: 14px; min-height: 72px; padding: 0 20px; border-radius: var(--radius-card);
-  border: 1px solid var(--c-hairline); background: var(--c-surface); cursor: pointer; text-align: left;
-  font: 700 19px/1 var(--font); color: var(--c-text2);
+  display: flex; align-items: center; gap: 14px; min-height: 60px; padding: 0 18px; border-radius: 18px; border: 0;
+  background: transparent; cursor: pointer; text-align: left; font: 600 18px/1 var(--font); color: var(--c-text2);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
-.rail-btn .icon { width: 26px; height: 26px; }
-.rail-btn[aria-pressed="true"] {
-  color: var(--c-text); border: 2px solid var(--c-accent);
-  background: linear-gradient(90deg, color-mix(in srgb, var(--c-accent) 18%, var(--c-surface)), var(--c-surface));
-  box-shadow: 0 0 28px -12px var(--c-accent);
-}
+.rail-btn .icon { width: 24px; height: 24px; }
+.rail-btn[aria-pressed="true"] { color: var(--c-text); background: var(--glass-2); box-shadow: var(--rim); }
+.rail-btn[aria-pressed="true"] .icon { color: var(--c-accent); }
 .settings-panel .card-body { overflow-y: auto; gap: 22px; }
-.theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 .theme-card {
-  display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--radius-card); cursor: pointer; text-align: left;
-  border: 1.5px solid var(--c-hairline); background: var(--c-surface2);
+  display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 22px; cursor: pointer; text-align: left; border: 0;
+  background: var(--glass); box-shadow: inset 0 0 0 1px var(--stroke);
 }
-.theme-card[aria-pressed="true"] { border-color: var(--c-focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-focus) 40%, transparent); }
-.theme-card strong { font: 400 30px/1 var(--font-display-big); text-transform: uppercase; letter-spacing: 0.02em; }
+.theme-card[aria-pressed="true"] { background: var(--glass-2); box-shadow: inset 0 0 0 2px var(--c-focus), 0 0 0 4px color-mix(in srgb, var(--c-focus) 25%, transparent); }
+.theme-card strong { font: 700 21px/1.1 var(--font-display); letter-spacing: -0.02em; }
 .theme-card span { color: var(--c-text2); font-size: 15px; }
 .swatches { display: flex; gap: 6px; }
-.swatches i { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--c-hairline); }
+.swatches i { width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--stroke); }
 
 /* Players ------------------------------------------------------------------------------------------------------ */
-.players-fill { grid-template-columns: minmax(0, 1fr) 420px; }
-@media (orientation: portrait) { .players-fill { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; } }
-.jerseys { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); grid-auto-rows: 148px; gap: 14px; overflow-y: auto; align-content: start; padding: 2px; }
-.jersey {
-  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  border-radius: var(--radius-card); border: 1px solid var(--c-hairline); color: var(--c-text);
-  background: radial-gradient(80% 70% at 50% 0%, color-mix(in srgb, var(--c-led) 16%, transparent), transparent 70%), var(--c-surface);
-}
-.jersey svg.shirt { position: absolute; inset: 14px 22px 34px; width: calc(100% - 44px); height: calc(100% - 48px); color: color-mix(in srgb, var(--c-text) 9%, transparent); }
-.jersey .no { position: relative; font: 400 64px/1 var(--font-display-big); font-variant-numeric: tabular-nums; }
-.jersey .who { position: relative; font: 700 16px/1.2 var(--font); max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.jersey .role { position: relative; font: 800 13px/1 var(--font-athletic); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-text2); }
-.jersey .remove { position: absolute; top: 8px; right: 8px; min-height: 40px; width: 40px; padding: 0; border-radius: 12px; }
+/* The card form in a sheet over the team. */
+.sheet > .player-sheet { width: min(720px, 100%); display: flex; flex-direction: column; gap: 18px; }
 .role-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.role-chips .btn { min-height: 52px; font: 700 17px/1 var(--font); padding: 0 6px; }
+.role-chips .btn { min-height: 50px; font: 600 16px/1 var(--font); padding: 0 6px; }
 
 /* Season ------------------------------------------------------------------------------------------------------- */
 .season-fill { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "a b c d" "chart chart list list"; }
 @media (orientation: portrait) { .season-fill { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "a b" "c d" "chart chart" "list list"; } }
+.stat .plate-head { font: 600 16px/1.1 var(--font); color: var(--c-text2); letter-spacing: 0; }
 .stat .card-body { gap: 6px; padding-top: 6px; }
-.stat .big-number { font-size: 60px; }
+.stat .big-number { font-size: 52px; }
 .bars { flex: 1; min-height: 120px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; align-items: end; }
 .bars > div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; height: 100%; }
 .bars .bar-fill {
-  width: 100%; border-radius: 8px 8px 4px 4px;
-  background: linear-gradient(180deg, var(--c-led), color-mix(in srgb, var(--c-led) 45%, var(--c-surface)));
-  box-shadow: 0 0 22px -6px var(--c-led);
+  width: 100%; border-radius: 12px 12px 6px 6px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c-led) 90%, #fff), color-mix(in srgb, var(--c-led) 40%, transparent));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
 }
+.bar-value { font: 700 20px/1 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 .pager { display: flex; align-items: center; gap: 12px; }
 .pager .btn { flex: 1; }
-.pager span { min-width: 90px; text-align: center; color: var(--c-text2); font: 800 18px/1 var(--font-athletic); letter-spacing: 0.08em; text-transform: uppercase; }
+.pager span { min-width: 90px; text-align: center; color: var(--c-text2); font: 600 16px/1 var(--font); font-variant-numeric: tabular-nums; }
 .match-row {
-  display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 0 18px; border-radius: var(--radius); width: 100%;
-  background: var(--c-surface2); border: 1px solid var(--c-hairline); cursor: pointer; text-align: left;
+  display: flex; align-items: center; gap: 14px; min-height: 60px; padding: 0 18px; border-radius: 18px; width: 100%; border: 0;
+  background: var(--glass); box-shadow: inset 0 0 0 1px var(--stroke); cursor: pointer; text-align: left;
 }
-.match-row .date { font: 800 18px/1 var(--font-athletic); letter-spacing: 0.06em; text-transform: uppercase; color: var(--c-text2); width: 70px; }
-.match-row .who { flex: 1; min-width: 0; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.match-row .sets { font: 400 30px/1 var(--font-display-big); font-variant-numeric: tabular-nums; }
+.match-row:active { background: var(--glass-2); }
+.match-row .date { font: 600 15px/1 var(--font); color: var(--c-text2); width: 64px; }
+.match-row .who { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.match-row .sets { font: 800 24px/1 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 
 /* New match ---------------------------------------------------------------------------------------------------- */
 .setup-fill { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
 @media (orientation: portrait) { .setup-fill { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1.2fr) auto; } }
 .lineup { flex: 1; min-height: 0; display: grid; grid-template-rows: auto minmax(72px, 1fr) minmax(72px, 1fr); gap: 12px; }
-.lineup .net { height: 6px; border-radius: 3px; background: var(--c-text); box-shadow: 0 0 14px -2px color-mix(in srgb, var(--c-text) 60%, transparent); }
+.lineup .net { height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--c-text) 85%, transparent); }
 .lineup .lineup-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; min-height: 0; }
+/* An open position: a quiet piece of glass with a plus in a ring. */
 .slot {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 72px;
-  border-radius: var(--radius-card); border: 2px dashed color-mix(in srgb, var(--c-text) 28%, transparent);
-  background: color-mix(in srgb, var(--c-surface2) 60%, transparent); cursor: pointer; color: var(--c-text);
+  border-radius: 24px; border: 0; background: var(--glass); box-shadow: inset 0 0 0 1px var(--stroke);
+  cursor: pointer; color: var(--c-text2); transition: transform 0.2s var(--spring), background-color 0.15s ease;
 }
-.slot.filled { border-style: solid; border-color: color-mix(in srgb, var(--c-home) 70%, transparent); background: color-mix(in srgb, var(--c-home) 16%, var(--c-surface)); }
-.slot.picking { border-color: var(--c-focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-focus) 40%, transparent); }
+.slot:active { transform: scale(0.97); }
+.slot.picking { box-shadow: inset 0 0 0 2px var(--c-focus), 0 0 0 4px color-mix(in srgb, var(--c-focus) 28%, transparent); }
 /* The number grows with the slot (a container): big in a roomy landscape lineup, still clear in a short portrait one. */
 .slot { container-type: size; position: relative; }
-.slot .no { font: 800 clamp(26px, 52cqh, 64px)/1 var(--font-athletic); }
-.slot .nm { position: absolute; bottom: 8px; left: 12px; right: 12px; text-align: left; font: 700 clamp(12px, 11cqh, 17px)/1.1 var(--font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.slot .pos { position: absolute; top: 8px; left: 12px; font: 800 13px/1 var(--font-athletic); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-text2); }
+.slot:not(.filled) .no { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--glass-2); }
+.slot:not(.filled) .no .icon { width: 28px; height: 28px; }
+.slot .no { font: 800 clamp(26px, 50cqh, 60px)/1 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+.slot .nm { position: absolute; bottom: 10px; left: 14px; right: 14px; text-align: left; font: 600 clamp(12px, 11cqh, 16px)/1.1 var(--font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot .pos { position: absolute; top: 10px; left: 14px; font: 600 13px/1 var(--font); color: var(--c-text2); }
 .slot .tag {
-  position: absolute; bottom: 8px; right: 10px; padding: 4px 8px 3px; border-radius: 6px;
-  font: 800 13px/1 var(--font-athletic); letter-spacing: 0.1em; text-transform: uppercase;
-  background: var(--c-primary); color: var(--c-onPrimary);
+  position: absolute; bottom: 9px; right: 10px; padding: 5px 9px; border-radius: 999px;
+  font: 700 12px/1 var(--font); background: var(--c-primary); color: var(--c-onPrimary);
 }
+
 .chip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
 .chip-grid .btn { min-height: 60px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; padding: 6px 18px; white-space: normal; text-align: left; border-radius: 18px; }
 .chip-grid .btn small { font-size: 14px; font-weight: 500; opacity: 0.8; }
 .seg6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-.seg6 .btn { padding: 0; font: 400 30px/1 var(--font-display-big); }
+.seg6 .btn { padding: 0; font: 700 22px/1 var(--font-num); font-variant-numeric: tabular-nums; }
 
-/* Live: the scoreboard bar and the point buttons. */
-.scoreboard { gap: 18px; height: 88px; }
-.scoreboard .team { font: 400 34px/1 var(--font-display-big); text-transform: uppercase; letter-spacing: 0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-top: 4px; }
+/* Live: one screen that never changes shape. The score line on top; under it the counters, always in the same place;
+   the court; the big buttons on the right (under it when the iPad stands). */
+.scoreboard { gap: 16px; height: 84px; }
+.score-meta { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; flex: none; }
+.score-meta .muted { font: 600 14px/1 var(--font); }
+.score-line { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 16px; }
+.score-serve { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; flex: none; font: 600 17px/1.1 var(--font); white-space: nowrap; }
+.score-serve .muted { font-size: 15px; }
+.scoreboard .team { font: 700 24px/1.1 var(--font-display); letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scoreboard .digits {
-  font: 400 62px/1 var(--font-display-big); font-variant-numeric: tabular-nums; padding: 4px 16px 2px; border-radius: 10px;
-  background: #02060E; color: #FFFFFF; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12), 0 0 22px -6px var(--c-led);
-  text-shadow: 0 0 14px color-mix(in srgb, var(--c-led) 70%, transparent);
+  font: 800 48px/1 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; padding: 10px 22px; border-radius: 24px;
+  background: var(--glass-2); color: var(--c-text); box-shadow: var(--rim), 0 12px 30px -16px var(--c-led);
 }
+.scoreboard .digits .sep { opacity: 0.35; margin: 0 6px; }
+.live-info { flex: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 0 var(--gutter-r) 12px var(--gutter-l); }
+.info-chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border-radius: 999px;
+  background: var(--glass); box-shadow: inset 0 0 0 1px var(--stroke); font: 600 15px/1 var(--font); color: var(--c-text2); white-space: nowrap;
+}
+.info-chip b { color: var(--c-text); font: 800 17px/1 var(--font-num); font-variant-numeric: tabular-nums; }
+.info-chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--team, transparent); }
+/* The run and the lead keep their width as their words change, so nothing beside them moves. */
+.info-chip.run { min-width: 128px; justify-content: center; }
+.info-chip.lead { min-width: 104px; justify-content: center; }
+@media (max-width: 900px) {
+  .live-info { flex-wrap: nowrap; gap: 6px; padding-left: 12px; padding-right: 12px; }
+  .info-chip { padding: 0 10px; font-size: 13px; gap: 6px; }
+  .info-chip b { font-size: 15px; }
+  .info-chip.run { min-width: 104px; }
+  .info-chip.lead { min-width: 84px; }
+}
+.info-chip.warn { background: color-mix(in srgb, #F5A524 22%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, #F5A524 70%, transparent); color: var(--c-text); }
+.live-body { flex: 1; min-height: 0; display: flex; }
+.live-court { flex: 1; min-width: 0; min-height: 0; position: relative; }
+.court-hint { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); font: 600 14px/1 var(--font); color: color-mix(in srgb, var(--c-text) 55%, transparent); pointer-events: none; white-space: nowrap; }
 /* A point button in its team's colour, filled, with a sheen of light across it like the foil on the cards. */
 .point-btn {
   --team: var(--c-home); --on-team: var(--c-onHome);
   position: relative; overflow: hidden; isolation: isolate;
   flex: 1; min-height: 130px; border: 0; border-radius: var(--radius-card); cursor: pointer;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-  font: 400 52px/1 var(--font-display-big); text-transform: uppercase; letter-spacing: 0.04em; color: var(--on-team);
+  font: 800 40px/1 var(--font-display); letter-spacing: -0.03em; color: var(--on-team);
   background: linear-gradient(160deg, color-mix(in srgb, var(--team) 82%, #fff) 0%, var(--team) 42%, color-mix(in srgb, var(--team) 78%, #000) 100%);
   box-shadow: 0 18px 36px -18px color-mix(in srgb, var(--team) 75%, transparent), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(0,0,0,0.18);
   transition: transform 0.08s ease, filter 0.15s ease;
@@ -485,22 +463,21 @@ button { font: inherit; color: inherit; }
   content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: linear-gradient(115deg, transparent 28%, rgba(255,255,255,0.28) 44%, rgba(255,255,255,0.06) 52%, transparent 62%);
 }
-.point-btn small { font: 700 19px/1 var(--font); text-transform: none; letter-spacing: 0; color: var(--on-team); opacity: 0.8; }
+.point-btn small { font: 600 17px/1 var(--font); letter-spacing: -0.01em; color: var(--on-team); opacity: 0.8; }
 .point-btn:active { transform: scale(0.98); filter: brightness(1.08); }
 .point-btn:disabled { opacity: 0.4; }
 
 /* New match: who serves and their lineup side by side; their lineup in a sheet, the numbers in their gold. */
 .setup-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: end; }
 .their-btn { min-height: var(--target); width: 100%; padding: 4px 16px; }
-.their-btn.filled { flex-direction: column; gap: 6px; border-color: color-mix(in srgb, var(--c-opponent) 55%, transparent); }
+.their-btn.filled { flex-direction: column; gap: 6px; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c-opponent) 55%, transparent); }
 .their-btn small { font: 600 13px/1 var(--font); color: var(--c-text2); }
-.their-numbers { display: flex; gap: 8px; font: 400 24px/1 var(--font-display-big); color: var(--c-opponent); font-variant-numeric: tabular-nums; }
+.their-numbers { display: flex; gap: 8px; font: 800 19px/1 var(--font-num); color: var(--c-opponent); font-variant-numeric: tabular-nums; }
 .their-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 22px; }
 .their-lineup { min-height: 0; }
-.their-slot.set { border-style: solid; border-color: color-mix(in srgb, var(--c-opponent) 75%, transparent); background: color-mix(in srgb, var(--c-opponent) 14%, var(--c-surface)); }
+.their-slot.set { background: color-mix(in srgb, var(--c-opponent) 16%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c-opponent) 70%, transparent); color: var(--c-text); }
 .their-slot.set .no { color: var(--c-opponent); }
-.their-slot .no { font-family: var(--font-display-big); font-weight: 400; }
-.their-slot.dupe { border-color: var(--c-fault); }
+.their-slot.dupe { box-shadow: inset 0 0 0 2px var(--c-fault); }
 .their-slot .tag { background: var(--c-opponent); color: var(--c-onOpponent); }
 .their-pad { gap: 16px; justify-content: space-between; min-height: 0; }
 .their-keys { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -513,26 +490,25 @@ button { font: inherit; color: inherit; }
 
 /* Live: the side panel (points, time-outs, Sub, Undo) and the pills over the court. */
 .live-aside {
-  display: grid; gap: 12px; padding: 18px; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(180deg, var(--c-surface), color-mix(in srgb, var(--c-surface) 80%, var(--c-bg)));
+  display: grid; gap: 12px; padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
 }
 .live-aside.landscape {
-  width: 330px; border-left: 1px solid var(--c-hairline);
-  grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) repeat(3, auto);
+  width: 340px;
+  grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) repeat(2, auto);
 }
 .live-aside.landscape .point-btn { grid-column: 1 / -1; min-height: 0; }
-.live-aside.portrait { grid-template-columns: repeat(6, minmax(0, 1fr)); border-top: 1px solid var(--c-hairline); }
-.live-aside.portrait .point-btn { grid-column: span 3; min-height: 120px; }
-.live-aside.portrait .live-btn { grid-column: span 2; }
-.live-btn { min-height: 70px; min-width: 0; padding: 6px 12px; flex-direction: column; gap: 6px; border-radius: 24px; }
-.live-btn-title { display: inline-flex; align-items: center; gap: 8px; font: 800 18px/1 var(--font); }
+.live-aside.portrait { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.live-aside.portrait .point-btn { grid-column: span 2; min-height: 130px; }
+.live-aside.portrait .live-btn { grid-column: span 1; }
+.live-btn { min-height: 76px; min-width: 0; padding: 6px 12px; flex-direction: column; gap: 6px; border-radius: 24px; }
+.live-btn-title { display: inline-flex; align-items: center; gap: 8px; font: 700 17px/1 var(--font); }
 .live-btn small {
   display: block; max-width: 100%; font: 600 13px/1.1 var(--font); color: var(--c-text2);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .live-btn small.with-pips { display: flex; align-items: center; justify-content: center; gap: 7px; }
 .live-btn small .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.timeout-btn { border-color: color-mix(in srgb, var(--team) 45%, var(--c-hairline)); }
+.timeout-btn { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--team) 45%, transparent); }
 /* Time-outs left, as lit dots in the team's colour; a used one is an empty ring. */
 .pips { display: inline-flex; gap: 4px; flex: none; }
 .pip { width: 10px; height: 10px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--team) 55%, transparent); }
@@ -545,25 +521,41 @@ button { font: inherit; color: inherit; }
 .court-pills .unsaved-pill { position: static; transform: none; }
 .timeout-pill {
   display: inline-flex; align-items: center; gap: 12px; cursor: pointer; padding: 6px 16px 6px 18px; color: var(--c-text);
-  font: 800 19px/1 var(--font); border-color: color-mix(in srgb, var(--team) 70%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--team) 25%, transparent), 0 8px 20px -8px rgba(0,0,0,0.4);
+  font: 700 18px/1 var(--font);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--team) 70%, transparent), 0 0 0 4px color-mix(in srgb, var(--team) 22%, transparent), 0 10px 24px -10px rgba(0,0,0,0.5);
 }
 .timeout-pill .pip { width: 12px; height: 12px; }
-.timeout-pill .clock { font: 400 38px/1 var(--font-display-big); font-variant-numeric: tabular-nums; color: var(--team); padding-top: 4px; }
+.timeout-pill .clock { font: 800 28px/1 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--team); }
 .timeout-pill .icon { color: var(--c-text2); }
+/* The time-out: the clock in the calling team's colour, both rotations, side-out per rotation with counts, the notes. */
+.sheet > .timeout-view { width: min(900px, 100%); height: min(700px, 100%); display: flex; flex-direction: column; gap: 18px; }
+.timeout-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.timeout-clock { font: 800 84px/0.95 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.045em; color: var(--team); }
+.timeout-clock.done { color: var(--c-text); }
+.timeout-rotations { display: flex; gap: 28px; }
+.timeout-rotations > div { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.timeout-rotations strong { font: 800 44px/1 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+.so-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.so-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 6px; border-radius: 20px; background: var(--glass); box-shadow: inset 0 0 0 1px var(--stroke); }
+.so-cell.now { background: color-mix(in srgb, var(--c-home) 22%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c-home) 70%, transparent); }
+.so-cell strong { font: 800 28px/1 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+.so-r { font: 600 14px/1 var(--font); color: var(--c-text2); }
+.so-n { font: 600 14px/1 var(--font); color: var(--c-text2); font-variant-numeric: tabular-nums; }
+.notes { flex: 1; min-height: 70px; padding: 14px 16px; resize: none; line-height: 1.35; }
+
 /* The substitution sheet: the net over the six on court, and the line that explains a refusal. */
 .sub-net { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.sub-net .net { width: 100%; height: 6px; border-radius: 3px; background: var(--c-text); box-shadow: 0 0 14px -2px color-mix(in srgb, var(--c-text) 60%, transparent); }
+.sub-net .net { width: 100%; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--c-text) 85%, transparent); }
 .sub-message { margin: 0; min-height: 48px; display: grid; place-items: center; text-align: center; font: 600 18px/1.3 var(--font); color: var(--c-text2); text-wrap: balance; }
 .sub-message.refused { color: var(--c-fault); font-weight: 700; }
 /* Us | Them at the top of the sheet: the chosen team lit in its colour, with its substitutions left. */
 .sub-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: nowrap; }
-.team-switch { display: flex; gap: 6px; padding: 6px; min-width: 0; border-radius: 999px; background: color-mix(in srgb, var(--c-bg) 60%, var(--c-surface)); border: 1px solid var(--c-hairline); }
+.team-switch { display: flex; gap: 4px; padding: 4px; min-width: 0; border-radius: 999px; background: var(--glass); box-shadow: inset 0 0 0 1px var(--stroke); }
 .team-switch button {
   flex: 1 1 0; min-width: 0; width: 210px; min-height: 60px; padding: 4px 22px; border: 0; border-radius: 999px; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: transparent; color: var(--c-text2);
 }
-.team-switch .t { font: 400 30px/1 var(--font-display-big); text-transform: uppercase; letter-spacing: 0.03em; padding-top: 2px; color: var(--team); }
+.team-switch .t { font: 700 21px/1 var(--font-display); letter-spacing: -0.02em; color: var(--team); }
 .team-switch small { display: flex; max-width: 100%; font: 600 13px/1.1 var(--font); white-space: nowrap; }
 .team-switch small .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; margin-right: 0.3em; }
 .team-switch button[aria-pressed="true"] {
@@ -571,7 +563,7 @@ button { font: inherit; color: inherit; }
   background: linear-gradient(160deg, color-mix(in srgb, var(--team) 82%, #fff) 0%, var(--team) 45%, color-mix(in srgb, var(--team) 80%, #000) 100%);
 }
 .team-switch button[aria-pressed="true"] .t { color: var(--on-team); }
-.sub-set { margin-right: 14px; font: 800 18px/1 var(--font-athletic); letter-spacing: 0.14em; text-transform: uppercase; color: var(--team); vertical-align: 8px; }
+.sub-set { margin-right: 12px; font: 700 16px/1 var(--font); color: var(--team); vertical-align: 6px; }
 .sub-foot { display: flex; align-items: center; gap: 14px; }
 .sub-foot .sub-message { flex: 1; }
 /* Their cards in their gold, the role chip too. */
@@ -579,14 +571,14 @@ button { font: inherit; color: inherit; }
 /* Who comes on: the bench (or their players who went off) beside a number pad for a shirt number. */
 .sub-incoming { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 22px; }
 .sub-incoming > .card-rack, .sub-empty { min-height: 0; }
-.sub-empty { padding: 20px; border-radius: var(--radius-card); border: 2px dashed color-mix(in srgb, var(--c-text) 18%, transparent); }
+.sub-empty { padding: 20px; border-radius: var(--radius-card); background: var(--glass); box-shadow: inset 0 0 0 1px var(--stroke); }
 .sub-pad { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
 .sub-readout {
-  flex: none; height: 84px; border-radius: var(--radius-card); display: grid; place-items: center; padding-top: 6px;
-  font: 400 68px/1 var(--font-display-big); font-variant-numeric: tabular-nums; color: var(--team);
-  border: 2px solid color-mix(in srgb, var(--team) 70%, transparent); background: color-mix(in srgb, var(--team) 13%, var(--c-surface));
+  flex: none; height: 84px; border-radius: 24px; display: grid; place-items: center;
+  font: 800 52px/1 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; color: var(--team);
+  background: color-mix(in srgb, var(--team) 14%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--team) 70%, transparent);
 }
-.sub-readout.empty { color: color-mix(in srgb, var(--c-text) 30%, transparent); border-style: dashed; border-color: color-mix(in srgb, var(--c-text) 28%, transparent); background: transparent; }
+.sub-readout.empty { color: color-mix(in srgb, var(--c-text) 30%, transparent); background: var(--glass); box-shadow: inset 0 0 0 1px var(--stroke); }
 .sub-keys { flex: 1; min-height: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(56px, 1fr); }
 .sub-keys .btn { min-height: 56px; }
 .sub-keys .icon { width: 34px; height: 34px; }
@@ -602,10 +594,10 @@ button { font: inherit; color: inherit; }
 /* Match log: one card per rally. */
 .rally-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); grid-auto-rows: 74px; gap: 10px; overflow-y: auto; align-content: start; }
 .rally {
-  display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 0 12px; border-radius: var(--radius);
-  background: var(--c-surface2); border: 1px solid var(--c-hairline); border-left: 6px solid var(--team);
+  display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 0 12px 0 16px; border-radius: 18px;
+  background: var(--glass); box-shadow: inset 4px 0 0 var(--team), inset 0 0 0 1px var(--stroke);
 }
-.rally strong { font: 400 30px/1 var(--font-display-big); font-variant-numeric: tabular-nums; }
+.rally strong { font: 800 24px/1 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 .rally span { font-size: 13px; color: var(--c-text2); }
 /* The substitutions and time-outs before a rally, as marks in the team's colour under the score. */
 .rally strong, .rally span { white-space: nowrap; }
@@ -616,11 +608,9 @@ button { font: inherit; color: inherit; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 @media (max-width: 700px) {
-  .title { font-size: 38px; }
-  .home-team { font-size: 42px; }
-  .gameday-opponent { font-size: 42px; }
+  .title { font-size: 32px; }
+  .gameday-opponent { font-size: 34px; }
   .bar h1 { font-size: 24px; }
-  .locker-btn { min-height: 180px; }
 }
 
 /* Prizm cards ---------------------------------------------------------------------------------------------------- */
@@ -748,7 +738,7 @@ button { font: inherit; color: inherit; }
 .tier-base .pcard-glare { opacity: 0.25; }
 .pcard-tab {
   position: absolute; z-index: 4; top: 4.5cqw; left: 4.5cqw; padding: 1.6cqw 3cqw 1.3cqw; border-radius: 1.6cqw;
-  background: #0D0C18; color: #EACC88; font: 800 5.6cqw/1 var(--font-athletic); letter-spacing: 0.16em; text-transform: uppercase;
+  background: #0D0C18; color: #EACC88; font: 800 5.6cqw/1 var(--font-card-small); letter-spacing: 0.16em; text-transform: uppercase;
   box-shadow: 0 0.6cqw 1.6cqw rgba(0,0,0,0.35);
 }
 /* The number, outlined in white on the foil (in ink on gold). */
@@ -770,7 +760,7 @@ button { font: inherit; color: inherit; }
 .pcard-meta { display: flex; align-items: center; gap: 2.6cqw; min-width: 0; }
 .pcard-role {
   flex: none; padding: 1.3cqw 2.6cqw 1cqw; border-radius: 1.4cqw; background: #9C85FF; color: #0D0C18;
-  font: 800 5.4cqw/1 var(--font-athletic); letter-spacing: 0.12em; text-transform: uppercase;
+  font: 800 5.4cqw/1 var(--font-card-small); letter-spacing: 0.12em; text-transform: uppercase;
 }
 .pcard-line { color: rgba(255,255,255,0.86); font: 600 5.2cqw/1.1 var(--font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* The back: deep indigo inside the edge, the number and name, the facts, and the card's actions. */
@@ -784,7 +774,7 @@ button { font: inherit; color: inherit; }
 .pcard-backside .facts div { display: flex; justify-content: space-between; gap: 3cqw; padding: 2.4cqw 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
 .pcard-backside .facts span { color: #A3A2BC; }
 .pcard-backside .facts b { font-weight: 700; }
-.pcard-backside .eyebrow { font: 800 4.6cqw/1 var(--font-athletic); color: #EACC88; letter-spacing: 0.18em; text-transform: uppercase; }
+.pcard-backside .eyebrow { font: 800 4.6cqw/1 var(--font-card-small); color: #EACC88; letter-spacing: 0.18em; text-transform: uppercase; }
 .pcard-backside .btn { min-height: max(44px, 16cqw); font-size: clamp(14px, 7cqw, 19px); padding: 0 5cqw; margin-top: auto; }
 @media (prefers-reduced-motion: reduce) { .pcard { transition: none; } }
 
@@ -802,7 +792,7 @@ button { font: inherit; color: inherit; }
     linear-gradient(180deg, rgba(8,7,20,0.14), rgba(8,7,20,0.36)),
     conic-gradient(from var(--turn, 210deg) at 30% 34%,
       #4335BE, #275EBB, #1A8FA6, #257352, #A9892A, #A5552A, #9A2C35, #9F3594, #5A1F7E, #4335BE);
-  box-shadow: inset 0 0 0 4px rgba(255,255,255,0.3), inset 0 0 0 5px rgba(0,0,0,0.3), inset 0 6px 10px rgba(255,255,255,0.12), 0 14px 30px -16px rgba(0,0,0,0.8), 0 0 30px -12px #9C85FF;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.28), inset 0 1px 0 rgba(255,255,255,0.35), 0 16px 32px -18px rgba(0,0,0,0.85);
 }
 .slot.filled::before {
   content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; --space: 5%;
@@ -821,7 +811,7 @@ button { font: inherit; color: inherit; }
   background: repeating-conic-gradient(from 0deg at 80% 10%, rgba(255,255,255,0.3) 0deg 1.2deg, rgba(0,0,0,0.06) 1.2deg 3.6deg, transparent 3.6deg 7deg);
 }
 .slot.filled .no { position: relative; z-index: 1; color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,0.6); }
-.slot.filled .pos { color: #EACC88; z-index: 1; background: #0D0C18; padding: 4px 7px 3px; border-radius: 6px; top: 6px; left: 8px; }
+.slot.filled .pos { color: #fff; z-index: 1; background: rgba(13,12,24,0.5); padding: 5px 9px; border-radius: 999px; top: 8px; left: 8px; }
 .slot.filled .tag { z-index: 1; }
 .slot.filled .nm { z-index: 1; color: #fff; text-shadow: 0 1px 8px rgba(0,0,0,0.7); }
 .slot.filled:has(.tag) .nm { right: 96px; }

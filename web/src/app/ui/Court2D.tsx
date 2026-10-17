@@ -29,11 +29,13 @@ export function courtView(vertical: boolean, flipped = false) {
  * The court from above (Section 1.4) as SVG in metres. Landscape: the net runs top to bottom, home on the left as
  * seen from the bench. Portrait: the court stands upright, home at the bottom.
  */
-export function Court2D({ tokens, vertical, flipped = false, onPointer, children, ball }: {
+export function Court2D({ tokens, vertical, flipped = false, onPointer, onTokenTap, children, ball }: {
   tokens: CourtToken[];
   vertical: boolean;
   flipped?: boolean;
   onPointer?: (kind: "down" | "move" | "up", world: { x: number; z: number }, e: PointerEvent<SVGSVGElement>) => void;
+  /** A tap on a player (the live screen: a substitution starts with the player going off). */
+  onTokenTap?: (id: string) => void;
   children?: ReactNode;
   ball?: { x: number; z: number; height: number };
 }) {
@@ -45,7 +47,6 @@ export function Court2D({ tokens, vertical, flipped = false, onPointer, children
     return <line key={key} x1={a.u} y1={a.v} x2={b.u} y2={b.v} stroke="var(--c-courtLine)" strokeWidth={0.05} strokeDasharray={dash} />;
   };
   const corner = view(-4.5, -9), far = view(4.5, 9);
-  const free = { a: view(-7.5, -12), b: view(7.5, 12) };
 
   const toWorld = (e: PointerEvent<SVGSVGElement>) => {
     const svg = e.currentTarget;
@@ -59,12 +60,11 @@ export function Court2D({ tokens, vertical, flipped = false, onPointer, children
   return (
     <svg viewBox={`${-w / 2} ${-h / 2} ${w} ${h}`} preserveAspectRatio="xMidYMid meet"
          style={{ width: "100%", height: "100%", display: "block", touchAction: "none" }}
-         onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); onPointer?.("down", toWorld(e), e); }}
+         onPointerDown={(e) => { if (!onPointer) return; e.currentTarget.setPointerCapture(e.pointerId); onPointer("down", toWorld(e), e); }}
          onPointerMove={(e) => onPointer?.("move", toWorld(e), e)}
          onPointerUp={(e) => onPointer?.("up", toWorld(e), e)}>
-      <rect x={-w / 2} y={-h / 2} width={w} height={h} fill="var(--c-hallFloor)" />
-      <rect x={Math.min(free.a.u, free.b.u)} y={Math.min(free.a.v, free.b.v)} width={Math.abs(free.b.u - free.a.u)}
-            height={Math.abs(free.b.v - free.a.v)} fill="var(--c-freeZone)" />
+      {/* The floor around the court, a rounded panel within the view (the free zone runs past it on every side). */}
+      <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={0.9} fill="var(--c-freeZone)" stroke="rgba(255,255,255,0.07)" strokeWidth={0.04} />
       <rect x={Math.min(corner.u, far.u)} y={Math.min(corner.v, far.v)} width={Math.abs(far.u - corner.u)}
             height={Math.abs(far.v - corner.v)} fill="var(--c-court)" stroke="var(--c-courtLine)" strokeWidth={0.05} />
       {line(-4.5, 3, 4.5, 3, "a1")}
@@ -83,7 +83,11 @@ export function Court2D({ tokens, vertical, flipped = false, onPointer, children
         const tint = { fill: `color-mix(in srgb, ${ring} 30%, var(--c-tokenFill))` };
         const dir = t.facing !== undefined ? view(t.x + Math.sin(t.facing), t.z + Math.cos(t.facing)) : undefined;
         return (
-          <g key={t.id} transform={`translate(${p.u} ${p.v})`}>
+          <g key={t.id} transform={`translate(${p.u} ${p.v})`} onClick={onTokenTap ? () => onTokenTap(t.id) : undefined}
+             style={onTokenTap ? { cursor: "pointer" } : undefined} role={onTokenTap ? "button" : undefined}
+             aria-label={onTokenTap ? `${t.side === "home" ? "Our" : "Their"} player ${t.label}: substitute` : undefined}>
+            {/* A bigger, invisible target than the token itself, for a finger. */}
+            {onTokenTap && <circle r={r + 0.35} fill="transparent" />}
             {t.selected && <circle r={r + 0.2} fill="var(--c-led, var(--c-focus))" opacity={0.25} />}
             {t.side === "home"
               ? <circle r={r} style={tint} stroke={ring} strokeWidth={0.1} />
