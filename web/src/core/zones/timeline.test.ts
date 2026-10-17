@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { criticallyDamped } from "../spatial/boardCamera";
 import { Joint, BodyMetrics, Posture, SkeletonModel, allJoints } from "../spatial/skeleton";
 import { expectClose, strideThrough } from "../spatial/testSupport";
-import { RallyPhase, TokenKey, ZoneInterpolation, ZoneKey } from "./sceneTimeline";
+import { RallyPhase, Timeline, TokenKey, ZoneInterpolation, ZoneKey } from "./sceneTimeline";
 import { SceneEditor, SceneToken, TacticalScene } from "./tacticalScene";
 import { Zone, ZoneGeometry, ZoneSDF } from "./zone";
 
@@ -38,15 +38,20 @@ describe("TimelineTests", () => {
     expect(mid.tokens[0].point.x).toBeLessThan(3);
   });
 
-  it("easing is critically damped and the path follows arc length", () => {
+  it("players ease in and out along the path, which follows arc length", () => {
     const [s] = scene();
     s.tokens[0].keys = [TokenKey.create("receive", { x: 3, z: 1 })];
-    // A straight move: the point stays on the segment and its progress equals the eased fraction.
+    // A straight move: the point stays on the segment and its progress follows the players' stride easing, which
+    // never runs faster than 1.5 times the average (the critically damped easing peaks at about 2.6).
     for (const f of strideThrough(0.1, 0.9, 0.2)) {
       const p = TacticalScene.frame(s, f).tokens[0].point;
       expectClose(p.x, 3, 1e-9);
-      expectClose((5 - p.z) / 4, criticallyDamped(f), 2e-3);
+      expectClose((5 - p.z) / 4, Timeline.stride(f), 2e-3);
     }
+    let peak = 0;
+    for (let f = 0; f < 1; f += 0.01) peak = Math.max(peak, (Timeline.stride(f + 0.01) - Timeline.stride(f)) / 0.01);
+    expect(peak).toBeLessThanOrEqual(1.5 + 1e-9);
+    expect(Timeline.locate(0.5, [0, 1])[1]).toBeCloseTo(criticallyDamped(0.5), 12);
     // Through three keys the path is a smooth centripetal Catmull-Rom: no overshoot beyond the hull here.
     s.tokens[0].keys = [TokenKey.create("receive", { x: 1, z: 3 }), TokenKey.create("set", { x: 3, z: 1 })];
     for (const f of strideThrough(0.0, 2.0, 0.05)) {

@@ -3,7 +3,7 @@ import { create } from "zustand";
 /** Where the coach is in the app. Screens take their own ids as parameters. */
 export type Route =
   | { name: "home" }
-  | { name: "settings" }
+  | { name: "settings"; /** The section to open (default: the first). */ section?: string }
   | { name: "players" }
   | { name: "setup"; /** A match from the linked schedule. */ scheduled?: string }
   | { name: "live"; matchId: string }

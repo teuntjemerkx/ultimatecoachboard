@@ -7,14 +7,61 @@ export interface Theme {
   colors: Record<string, string>;
 }
 
-/** The default: an American locker room. White and navy, a blue LED accent, condensed athletic type for names and
- *  numbers; the court and the team colours stay those of the research (blue against orange). */
+/**
+ * The default: Prizm, after the trading cards. Near-black ink with a violet glow, cards in deep indigo, violet for the
+ * one big action, gold for the small lettering, players as chrome, prism and gold cards. A lit court in a dark arena
+ * on the boards (FIVB: a light court, a free zone in another colour); home sky blue against orange (Okabe-Ito).
+ */
+const prizm: Theme = {
+  id: "prizm",
+  name: "Prizm",
+  summary: "Trading-card look: deep indigo, a violet glow, gold lettering and holographic player cards.",
+  dark: true,
+  colors: {
+    onHome: "#04121F", onOpponent: "#1A0F00", eyebrow: "#EACC88", strip: "transparent", seam: "transparent",
+    bg: "#0D0C18", wall: "#151326", surface: "#1E1E37", surface2: "#262545", hairline: "rgba(160,150,240,0.16)",
+    text: "#FFFFFF", text2: "#A3A2BC", accent: "#9C85FF", onAccent: "#0D0C18", primary: "#9C85FF", onPrimary: "#0D0C18",
+    plate: "#0D0C18", plateText: "#EACC88", fault: "#FF7A7A", home: "#56B4E9", opponent: "#E69F00",
+    tokenFill: "#FFFFFF", tokenLabel: "#0D0C18", hallFloor: "#0D0C18", freeZone: "#2B2652", court: "#F3EEE2",
+    courtLine: "#0D0C18", net: "#0D0C18", ink: "#5AEBF3", ball: "#FFE14D", skin: "#C9A68A", shorts: "#1E1E37",
+    pads: "#262545", shoes: "#FFFFFF", hair: "#2B2118", focus: "#9C85FF",
+    band: "#0D0C18", bandText: "#FFFFFF", bandSoft: "#A3A2BC", led: "#9C85FF", zoneA: "#56B4E9", zoneB: "#E69F00",
+  },
+};
+
+/**
+ * An American locker room on game day, lights on. Deep navy lockers with backlit white nameplates and a
+ * blue LED strip, championship gold for the one big action on each screen, a lit court in a dark arena (FIVB: a light
+ * court, a free zone in another colour). Home sky blue against orange (Okabe-Ito, safe for colour blindness).
+ */
+const gameday: Theme = {
+  id: "gameday",
+  name: "Game day",
+  summary: "Navy lockers, backlit nameplates, a blue LED light and gold for the big buttons. The lit court stands out.",
+  dark: true,
+  colors: {
+    eyebrow: "#A9B9D6", strip: "#3D8BFF", seam: "rgba(244,247,252,0.05)",
+    onHome: "#04121F", onOpponent: "#1A0F00",
+    bg: "#050D1A", wall: "#0A1A33", surface: "#0F2240", surface2: "#173158", hairline: "rgba(150,185,255,0.18)",
+    text: "#F4F7FC", text2: "#A9B9D6", accent: "#3D8BFF", onAccent: "#FFFFFF", primary: "#FFC72C", onPrimary: "#0A1630",
+    plate: "#F4F7FC", plateText: "#0A1A33", fault: "#FF7A57", home: "#56B4E9", opponent: "#E69F00",
+    tokenFill: "#FFFFFF", tokenLabel: "#0A1A33", hallFloor: "#0B1A31", freeZone: "#1D4E8C", court: "#F3EEE2",
+    courtLine: "#0A1A33", net: "#0A1A33", ink: "#C084FC", ball: "#FFE14D", skin: "#C9A68A", shorts: "#0A2A66",
+    pads: "#1E2C48", shoes: "#FFFFFF", hair: "#2B2118", focus: "#FFC72C",
+    band: "#071326", bandText: "#FFFFFF", bandSoft: "#8FB4F0", led: "#3D8BFF", zoneA: "#56B4E9", zoneB: "#E69F00",
+  },
+};
+
+/** An American locker room by day: white and navy, a blue LED accent; for a brightly lit hall. */
 const locker: Theme = {
   id: "locker",
   name: "Locker room",
-  summary: "White and navy with a blue light, athletic lettering. Home blue against orange stays.",
+  summary: "White and navy with a blue light, for a bright hall. Home blue against orange stays.",
   dark: false,
   colors: {
+    eyebrow: "#46557A", strip: "#2D7DFF", seam: "rgba(10,26,51,0.05)",
+    onHome: "#FFFFFF", onOpponent: "#FFFFFF",
+    wall: "#E3EAF5", surface2: "#F3F6FB", primary: "#0A2A66", onPrimary: "#FFFFFF", plate: "#0A2A66", plateText: "#FFFFFF",
     bg: "#EEF2F8", surface: "#FFFFFF", hairline: "rgba(10,37,84,0.14)", text: "#0A1A33", text2: "#46557A",
     accent: "#0A2A66", onAccent: "#FFFFFF", fault: "#C2410C", home: "#0067A5", opponent: "#D55E00",
     tokenFill: "#FFFFFF", tokenLabel: "#0A1A33", hallFloor: "#E8EDF5", freeZone: "#D6E1F0", court: "#F7F3EA",
@@ -30,6 +77,9 @@ const hall: Theme = {
   summary: "Light and high contrast for a lit hall. Blue against orange, readable with colour blindness.",
   dark: false,
   colors: {
+    eyebrow: "#4B5563", strip: "transparent", seam: "transparent",
+    onHome: "#FFFFFF", onOpponent: "#FFFFFF",
+    wall: "#E9EDF3", surface2: "#F7F8FA", primary: "#111827", onPrimary: "#FFFFFF", plate: "#111827", plateText: "#FFFFFF",
     bg: "#F4F6F9", surface: "#FFFFFF", hairline: "rgba(17,24,39,0.12)", text: "#111827", text2: "#4B5563",
     accent: "#111827", onAccent: "#FFFFFF", fault: "#C2410C", home: "#0067A5", opponent: "#D55E00",
     tokenFill: "#FFFFFF", tokenLabel: "#111827", hallFloor: "#EEF1F5", freeZone: "#D9E2EC", court: "#F7F3EA",
@@ -45,6 +95,9 @@ const night: Theme = {
   summary: "Dark and calm for dim rooms and video review, the same colour-blind-safe pairing.",
   dark: true,
   colors: {
+    eyebrow: "#9AA4B2", strip: "#4C9BFF", seam: "rgba(255,255,255,0.04)",
+    onHome: "#04121F", onOpponent: "#1A0F00",
+    wall: "#121722", surface2: "#222836", primary: "#E8EAED", onPrimary: "#0E1116", plate: "#E8EAED", plateText: "#0E1116",
     bg: "#0E1116", surface: "#181C24", hairline: "rgba(255,255,255,0.10)", text: "#E8EAED", text2: "#9AA4B2",
     accent: "#E8EAED", onAccent: "#0E1116", fault: "#FF7A45", home: "#56B4E9", opponent: "#E69F00",
     tokenFill: "rgba(14,17,22,0.85)", tokenLabel: "#FFFFFF", hallFloor: "#0B0E13", freeZone: "#121822", court: "#1A2230",
@@ -60,6 +113,9 @@ const broadcast: Theme = {
   summary: "Terracotta court, blue free zone, white lines and a big scoreboard, like on TV.",
   dark: true,
   colors: {
+    eyebrow: "#FFD23F", strip: "#FFD23F", seam: "rgba(255,255,255,0.05)",
+    onHome: "#0A1A33", onOpponent: "#0A1A33",
+    wall: "#0D2142", surface2: "#173563", primary: "#FFD23F", onPrimary: "#0A1A33", plate: "#FFD23F", plateText: "#0A1A33",
     bg: "#0A1A33", surface: "#10284D", hairline: "rgba(255,255,255,0.14)", text: "#FFFFFF", text2: "#B8C4D9",
     accent: "#FFD23F", onAccent: "#0A1A33", fault: "#FF5A36", home: "#FFD23F", opponent: "#FFFFFF",
     tokenFill: "rgba(10,26,51,0.92)", tokenLabel: "#FFFFFF", hallFloor: "#081428", freeZone: "#1E5AA8", court: "#B8501F",
@@ -69,10 +125,10 @@ const broadcast: Theme = {
   },
 };
 
-export const themes: Theme[] = [locker, hall, night, broadcast];
+export const themes: Theme[] = [prizm, gameday, locker, hall, night, broadcast];
 
 export function themeById(id: string): Theme {
-  return themes.find((t) => t.id === id) ?? locker;
+  return themes.find((t) => t.id === id) ?? prizm;
 }
 
 /** Writes a theme's colours as `--c-<name>` variables and the colour scheme on the document root. */
@@ -80,5 +136,6 @@ export function applyTheme(t: Theme) {
   const root = document.documentElement;
   for (const [k, v] of Object.entries(t.colors)) root.style.setProperty(`--c-${k}`, v);
   root.style.colorScheme = t.dark ? "dark" : "light";
+  root.dataset.theme = t.id;
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", t.colors.surface);
 }

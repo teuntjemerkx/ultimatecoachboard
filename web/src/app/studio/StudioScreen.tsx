@@ -3,7 +3,7 @@ import * as THREE from "three";
 import "./studio.css";
 import type { Side } from "../../core/match/court";
 import { TeamSystem } from "../../core/match/teamSystem";
-import { PlayerBodies, Posture, posedPlayers } from "../../core/spatial";
+import { PlayerBodies, Posture } from "../../core/spatial";
 import {
   AttackOption, ContactKind, SceneSetup, templateRotations, type RallyPhase, type ShapeKind, type ZonePattern, type ZoneTag,
 } from "../../core/zones";
@@ -16,7 +16,7 @@ import { useNav } from "../store/nav";
 import { netHeight, useSettings } from "../store/settings";
 import { Board2D } from "./Board2D";
 import { StudioBoard3D, sightLines, studioOrbit } from "./StudioBoard3D";
-import { deleteBoard, listBoards, useStudio, type BoardRecord, type StudioTool } from "./studio";
+import { deleteBoard, listBoards, studioBodies, useStudio, type BoardRecord, type StudioTool } from "./studio";
 
 /** Plain names on the timeline: the receive marker is the pass. */
 const phaseName: Record<RallyPhase, string> = {
@@ -137,7 +137,7 @@ export function Studio({ boardId }: { boardId?: string }) {
   const hint = st.tool === "pen" ? "Draw with one finger"
     : st.tool === "zone" ? "Draw a zone with one finger"
     : st.view3D ? "Drag a player to move them, or drag the floor to turn the court" : "Drag a player to move them, or play a rally below";
-  const posed = st.view3D && st.gaze ? posedPlayers(frame) : undefined;
+  const posed = st.view3D && st.gaze ? studioBodies(scene, st.time, frame) : undefined;
   const gaze = posed && st.gaze
     ? sightLines(posed, st.gaze, { id: st.pov, yaw: st.povYaw, pitch: st.povPitch }, st.ball(), box.w / Math.max(box.h, 1),
       st.gazeTargetList(posed))
@@ -172,7 +172,7 @@ export function Studio({ boardId }: { boardId?: string }) {
   return (
     <div className="screen studio">
       <header className="bar studio-bar">
-        <button className="btn quiet" onClick={() => go({ name: "home" })} aria-label="Home">
+        <button className="btn home-btn" onClick={() => go({ name: "home" })} aria-label="Home">
           <Icon name="back" /><span className="studio-wide">Home</span>
         </button>
         <button className="studio-title" onClick={nameBoard} aria-label={`Rename this board: ${scene.title}`}>

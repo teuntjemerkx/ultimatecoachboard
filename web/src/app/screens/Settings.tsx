@@ -2,14 +2,98 @@ import { useEffect, useRef, useState } from "react";
 import { Bar } from "../ui/Bar";
 import { Choice } from "../ui/Choice";
 import { Icon } from "../ui/Icon";
+import { useNav } from "../store/nav";
 import { useSettings } from "../store/settings";
 import { applyTheme, themes, themeById } from "../theme";
 import { makeBackup, restoreBackup, persist, type Backup } from "../store/db";
 import { ScheduleSettings } from "../schedule/ScheduleSettings";
 
-/** Coach level, players, template, and the backup that keeps a season safe. */
+const sections = [
+  { id: "team", title: "Team", icon: "shirt" },
+  { id: "schedule", title: "Schedule", icon: "calendar" },
+  { id: "look", title: "Look", icon: "palette" },
+  { id: "backup", title: "Backup", icon: "download" },
+  { id: "about", title: "About", icon: "info" },
+] as const;
+type Section = (typeof sections)[number]["id"];
+
+/** Settings: the sections as big buttons on the left, one section at a time on the right. Nothing to scroll. */
 export function Settings() {
+  const route = useNav((s) => s.route);
+  const asked = route.name === "settings" ? route.section : undefined;
+  const [section, setSection] = useState<Section>(sections.some((s) => s.id === asked) ? (asked as Section) : "team");
+  const current = sections.find((s) => s.id === section)!;
+
+  return (
+    <div className="screen">
+      <Bar title="Settings" />
+      <main className="fill settings-fill">
+        <nav className="rail" aria-label="Settings sections">
+          {sections.map((s) => (
+            <button key={s.id} className="rail-btn" aria-pressed={s.id === section} onClick={() => setSection(s.id)}>
+              <Icon name={s.icon} /> {s.title}
+            </button>
+          ))}
+        </nav>
+        <section className="locker-card settings-panel">
+          <div className="plate-head"><span className="plate"><Icon name={current.icon} size={20} /> {current.title}</span></div>
+          <div className="card-body">
+            {section === "team" && <TeamSection />}
+            {section === "schedule" && <ScheduleSettings />}
+            {section === "look" && <LookSection />}
+            {section === "backup" && <BackupSection />}
+            {section === "about" && <AboutSection />}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function TeamSection() {
   const s = useSettings();
+  return (
+    <>
+      <label className="field">
+        <span className="label">Team name</span>
+        <input id="team-name" value={s.teamName} placeholder="Your team" onChange={(e) => s.set({ teamName: e.target.value })} />
+      </label>
+      <div className="stack" style={{ gap: 10 }}>
+        <span className="label">Players</span>
+        <Choice label="Players" value={s.women} onChange={(v) => s.set({ women: v })}
+                options={[{ value: true, title: "Women" }, { value: false, title: "Men" }]} />
+        <p className="muted" style={{ margin: 0 }}>{s.women ? "Net 2.24 m; women's player heights in 3D." : "Net 2.43 m; men's player heights in 3D."}</p>
+      </div>
+      <div className="stack" style={{ gap: 10 }}>
+        <span className="label">Coach level</span>
+        <Choice label="Coach level" value={s.advanced} onChange={(v) => s.set({ advanced: v })}
+                options={[{ value: false, title: "Simple" }, { value: true, title: "Advanced" }]} />
+        <p className="muted" style={{ margin: 0 }}>{s.advanced ? "All tools and detailed stats." : "The essentials, in plain words."}</p>
+      </div>
+    </>
+  );
+}
+
+function LookSection() {
+  const s = useSettings();
+  return (
+    <div className="theme-grid">
+      {themes.map((t) => (
+        <button key={t.id} className="theme-card" aria-pressed={s.themeId === t.id}
+                onClick={() => { s.set({ themeId: t.id }); applyTheme(themeById(t.id)); }}>
+          <div className="swatches">
+            {[t.colors.bg, t.colors.surface, t.colors.primary, t.colors.home, t.colors.opponent].map((c, i) => <i key={i} style={{ background: c }} />)}
+          </div>
+          <strong>{t.name}</strong>
+          <span>{t.summary}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function BackupSection() {
+  const advanced = useSettings((s) => s.advanced);
   const [usage, setUsage] = useState<string>("");
   const [message, setMessage] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -52,65 +136,37 @@ export function Settings() {
   }
 
   return (
-    <div className="screen">
-      <Bar title="Settings" />
-      <div className="scroll">
-        <div className="page stack" style={{ gap: 28, maxWidth: 760 }}>
-          <section className="stack" style={{ gap: 10 }}>
-            <h2 className="group-title">Coach level</h2>
-            <Choice label="Coach level" value={s.advanced} onChange={(v) => s.set({ advanced: v })}
-                    options={[{ value: false, title: "Simple" }, { value: true, title: "Advanced" }]} />
-            <p className="muted" style={{ margin: 0 }}>{s.advanced ? "All tools and detailed stats." : "The essentials, in plain words."}</p>
-          </section>
-
-          <section className="stack" style={{ gap: 10 }}>
-            <h2 className="group-title">Players</h2>
-            <Choice label="Players" value={s.women} onChange={(v) => s.set({ women: v })}
-                    options={[{ value: true, title: "Women" }, { value: false, title: "Men" }]} />
-            <p className="muted" style={{ margin: 0 }}>{s.women ? "Net 2.24 m; player heights of women's teams in 3D." : "Net 2.43 m; player heights of men's teams in 3D."}</p>
-            <label className="field">
-              <span className="label">Team name</span>
-              <input id="team-name" value={s.teamName} placeholder="Your team" onChange={(e) => s.set({ teamName: e.target.value })} />
-            </label>
-          </section>
-
-          <ScheduleSettings />
-
-          <section className="stack" style={{ gap: 10 }}>
-            <h2 className="group-title">Look</h2>
-            <div className="grid-lockers">
-              {themes.map((t) => (
-                <button key={t.id} className="tile" style={{ minHeight: 0, outline: s.themeId === t.id ? "3px solid var(--c-focus)" : undefined }}
-                        onClick={() => { s.set({ themeId: t.id }); applyTheme(themeById(t.id)); }}>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {[t.colors.bg, t.colors.court, t.colors.home, t.colors.opponent].map((c, i) => (
-                      <span key={i} style={{ width: 22, height: 22, borderRadius: 6, background: c, border: "1px solid var(--c-hairline)" }} />
-                    ))}
-                  </div>
-                  <strong style={{ fontSize: 17 }}>{t.name}</strong>
-                  <span style={{ fontSize: 14 }}>{t.summary}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="stack" style={{ gap: 10 }}>
-            <h2 className="group-title">Backup</h2>
-            <p className="muted" style={{ margin: 0 }}>
-              Everything stays on this iPad. Make a backup now and then (after a match day, say) and keep it in Files or iCloud Drive.
-              {usage ? ` ${usage}.` : ""}
-            </p>
-            <div className="row">
-              <button className="btn secondary" onClick={() => backup(true)}><Icon name="download" /> Back up everything</button>
-              {s.advanced && <button className="btn secondary" onClick={() => backup(false)}>Back up without video clips</button>}
-              <button className="btn quiet" onClick={() => fileRef.current?.click()}><Icon name="upload" /> Restore a backup</button>
-              <input ref={fileRef} id="restore-file" type="file" accept="application/json,.json" hidden
-                     onChange={(e) => { const f = e.target.files?.[0]; if (f) restore(f); e.target.value = ""; }} />
-            </div>
-            {message && <p role="status" style={{ margin: 0 }}>{message}</p>}
-          </section>
-        </div>
+    <>
+      <p className="muted" style={{ margin: 0 }}>
+        Everything stays on this iPad. Make a backup now and then (after a match day, say) and keep it in Files or iCloud Drive.
+        {usage ? ` ${usage}.` : ""}
+      </p>
+      <div className="stack" style={{ gap: 12, maxWidth: 520 }}>
+        <button className="btn primary" onClick={() => backup(true)}><Icon name="download" /> Back up everything</button>
+        {advanced && <button className="btn big" onClick={() => backup(false)}>Back up without video clips</button>}
+        <button className="btn secondary big" onClick={() => fileRef.current?.click()}><Icon name="upload" /> Restore a backup</button>
+        <input ref={fileRef} id="restore-file" type="file" accept="application/json,.json" hidden
+               onChange={(e) => { const f = e.target.files?.[0]; if (f) restore(f); e.target.value = ""; }} />
       </div>
-    </div>
+      {message && <p role="status" style={{ margin: 0, fontWeight: 600 }}>{message}</p>}
+    </>
+  );
+}
+
+function AboutSection() {
+  return (
+    <>
+      <p style={{ margin: 0 }}>
+        Coach Board: match scoring, tactics in 2D and 3D, and rallies rebuilt from video, for volleyball coaches. Everything
+        works on this iPad, also without internet.
+      </p>
+      <p className="muted" style={{ margin: 0 }}>
+        The 3D players are made with <a href="http://www.makehumancommunity.org" target="_blank" rel="noreferrer">MakeHuman</a>:
+        bodies, skins, hair and shirts are CC0. Shorts: “Swimming trunks” by Mindfront (Sweden),{" "}
+        <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>. Shoes:
+        “Tennis shoes” by punkduck, <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>.
+        Both are fitted to the players and recoloured.
+      </p>
+    </>
   );
 }

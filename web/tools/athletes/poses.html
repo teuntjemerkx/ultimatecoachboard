@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Athlete poses</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #dfe6ef; font: 13px -apple-system, sans-serif; }
+    canvas { display: block; width: 100%; height: 100%; }
+    #info { position: fixed; left: 8px; top: 8px; background: #fffc; padding: 6px 8px; border-radius: 6px; white-space: pre; }
+  </style>
+</head>
+<body>
+  <div id="info">loading…</div>
+  <script type="module">
+    // Developer check (not part of the app): both athletes driven by the board's skeleton in a row of postures, with
+    // the skeleton's capsules as wireframes when ?capsules=1.
+    import * as THREE from "three";
+    import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+    import { BodyMetrics, PlayerBodies, PosedPlayer, SkeletonModel, playerCapsules } from "/src/core/spatial/index.ts";
+    import { SceneToken } from "/src/core/zones/tacticalScene.ts";
+    import { Athlete, loadAthletes } from "/src/app/three/athletes.ts";
+
+    const params = new URLSearchParams(location.search);
+    const postures = (params.get("postures") ?? "standing,ready,pass,set,attack,block,dig,cover").split(",");
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color("#dfe6ef");
+    scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environmentIntensity = 0.7;
+    const sun = new THREE.DirectionalLight(0xffffff, 1.8);
+    sun.position.set(4, 9, 6);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 6, bottom: -6 });
+    scene.add(sun, new THREE.HemisphereLight(0xffffff, 0x8899aa, 0.5));
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 20), new THREE.MeshStandardMaterial({ color: "#F7F3EA", roughness: 0.9 }));
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+    const camera = new THREE.PerspectiveCamera(28, 1, 0.05, 80);
+    const yaw = Number(params.get("yaw") ?? 0.35);
+    const width = postures.length * 1.6;
+    const focus = params.get("focus");
+    if (focus !== null) {
+      // Close up on one posture: ?focus=<index>&row=<0 woman, 1 man>&dist=<m>&yaw=<rad>&y=<look height>
+      const k = Number(focus), row = Number(params.get("row") ?? 1), d = Number(params.get("dist") ?? 2.2), ly = Number(params.get("y") ?? 1.3);
+      const fx = (k - (postures.length - 1) / 2) * 1.6, fz = row * 3;
+      camera.position.set(fx + Math.sin(yaw) * d, ly + 0.15, fz + Math.cos(yaw) * d);
+      camera.lookAt(fx, ly, fz);
+    } else {
+      camera.position.set(Math.sin(yaw) * width * 1.15, 2.6, 3.0 + Math.cos(yaw) * width * 1.15);
+      camera.lookAt(0, 0.9, 1.5);
+    }
+    const resize = () => {
+      renderer.setSize(innerWidth, innerHeight, false);
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+    };
+    addEventListener("resize", resize);
+    resize();
+    const { female, male } = await loadAthletes();
+    const lines = [];
+    postures.forEach((posture, k) => {
+      for (const [row, template, stature] of [[0, female, 1.8], [1, male, 1.95]]) {
+        const x = (k - (postures.length - 1) / 2) * 1.6, z = row * 3;
+        const token = SceneToken.create({ side: "home", label: "7", role: "OH1", point: { x, z }, posture });
+        const s = new SkeletonModel(new BodyMetrics(stature));
+        const posed = new PosedPlayer(token, s, s.pose(posture, token.point, 0, 0, "OH1"));
+        const a = new Athlete(template);
+        a.setColors({ jersey: row ? "#0067A5" : "#D55E00", shorts: "#1F2937" });
+        a.pose(posed);
+        scene.add(a.root);
+        if (params.get("capsules")) {
+          PlayerBodies.women = row === 0;
+          for (const c of playerCapsules(posed)) {
+            const len = Math.hypot(c.b.x - c.a.x, c.b.y - c.a.y, c.b.z - c.a.z);
+            const g = new THREE.CapsuleGeometry(c.r, len, 4, 10);
+            const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: "#2D7DFF", wireframe: true, transparent: true, opacity: 0.25 }));
+            m.position.set((c.a.x + c.b.x) / 2, (c.a.y + c.b.y) / 2, (c.a.z + c.b.z) / 2);
+            if (len > 1e-6) m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(c.b.x - c.a.x, c.b.y - c.a.y, c.b.z - c.a.z).normalize());
+            scene.add(m);
+          }
+        }
+        if (row === 0) lines.push(posture);
+      }
+    });
+    document.getElementById("info").textContent = lines.join("  ");
+    renderer.setAnimationLoop(() => renderer.render(scene, camera));
+  </script>
+</body>
+</html>

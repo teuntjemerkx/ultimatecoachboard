@@ -44,7 +44,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,png,svg,json,wasm,task,tflite,woff2}"],
+        globPatterns: ["**/*.{js,css,html,png,svg,json,wasm,task,tflite,woff2,glb}"],
         globIgnores: ["**/vision_wasm_nosimd_internal.*", "tools/**"],
         maximumFileSizeToCacheInBytes: 40 * 1024 * 1024,
         navigateFallbackDenylist: [/^\/api\//],

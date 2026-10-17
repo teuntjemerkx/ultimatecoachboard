@@ -5,9 +5,11 @@ import type { CourtPosition, FloorPoint, LocalPoint, Side } from "../match/court
 import { CourtFrame } from "../match/court";
 import type { V3 } from "../spatial/math3d";
 import type { Posture } from "../spatial/skeleton";
+import { postureReach } from "../spatial/bodySeparation";
 import { deepClone, minBy } from "../spatial/swiftCompat";
 import type { BallContact, BallPlan } from "./ballPlan";
-import { RallyPhase, sceneFrame, sceneTimeline, TokenKey, type SceneFrame } from "./sceneTimeline";
+import { automaticPosture, RallyPhase, sceneFrame, sceneTimeline, TokenKey, type SceneFrame } from "./sceneTimeline";
+import { sceneMotion } from "./sceneMotion";
 import { SceneToken, TacticalScene } from "./tacticalScene";
 import {
   allPositions, courtPosition, distance, formationOf, genericAnchors, isFrontRow, loadTemplate, localPoint, positionLabel,
@@ -187,8 +189,11 @@ const slotKeys: Record<CourtPosition, string> = { 4: "LF", 3: "MF", 2: "RF", 5: 
 export function baseSpot(t: Template, role: string, position: CourtPosition, rotation: number): LocalPoint {
   const serve = formationOf(t, rotation, "serve");
   const partners = new Set(t.libero?.replaces ?? []);
+  // The libero takes over the back-row partner on its own court position, never the partner at the net.
   const match = serve?.players.find((p) => p.role === role)
-    ?? serve?.players.find((p) => (role === "L" ? partners.has(p.role) : partners.has(role) && p.role === "L"));
+    ?? (role === "L"
+      ? serve?.players.find((p) => partners.has(p.role) && courtPosition(p.position) === position)
+      : serve?.players.find((p) => partners.has(role) && p.role === "L"));
   const s = match?.switchTo;
   if (s != null && s.length === 2) return localPoint(s);
   const slots = t.baseSlots ?? defaultBaseSlots;
@@ -270,7 +275,7 @@ function mix(a: LocalPoint, b: LocalPoint, t: number): LocalPoint {
 }
 
 function clampSide(p: FloorPoint, side: Side): FloorPoint {
-  return { x: Math.min(6, Math.max(-6, p.x)), z: side === "home" ? Math.min(11, Math.max(0.2, p.z)) : Math.max(-11, Math.min(-0.2, p.z)) };
+  return { x: Math.min(6, Math.max(-6, p.x)), z: side === "home" ? Math.min(11, Math.max(0.3, p.z)) : Math.max(-11, Math.min(-0.3, p.z)) };
 }
 
 /** A cover spot about 1.8 m behind the hitter, on the side the coverer comes from. */
@@ -437,33 +442,63 @@ export function playOutScene(scene0: TacticalScene, attack?: AttackOption): Tact
   return s;
 }
 
-/** Keeps teammates at least 0.6 m apart at every marker; whoever plays the ball there stays put. */
+/**
+ * Keeps teammates apart at every marker the autopilot wrote: far enough that their bodies cannot touch in the postures
+ * they hold there (the sum of how far each reaches out; 0.8 to 1.6 m: blockers side by side stand close, covering
+ * players in a wide stance far apart). Spots taken from the template formations (the receiving team's pass formation)
+ * and whoever plays the ball there stay put; the rest are pushed apart within their own half and off the net.
+ */
 function separateKeys(s: TacticalScene): void {
-  const gap = 0.6;
   const tokens = s.tokens;
+  const receiving: Side = s.setup?.homeServes ? "opponent" : "home";
   for (const phase of sceneTimeline(s).slice(1)) {
     const player = s.contacts?.find((c) => c.phase === phase)?.player;
     for (const side of sides) {
       const idx = tokens.map((_, i) => i).filter((i) => tokens[i].side === side && tokens[i].keys?.some((k) => k.phase === phase) === true);
-      for (let pass = 0; pass < 4; pass++) {
-        for (let n = 0; n < idx.length; n++) {
-          const a = idx[n];
-          for (const b of idx.slice(n + 1)) {
-            const ka = tokens[a].keys!.findIndex((k) => k.phase === phase);
-            const kb = tokens[b].keys!.findIndex((k) => k.phase === phase);
-            if (ka < 0 || kb < 0) continue;
-            const pa = tokens[a].keys![ka].point, pb = tokens[b].keys![kb].point;
-            const dx = pb.x - pa.x, dz = pb.z - pa.z, d = Math.hypot(dx, dz);
-            if (!(d < gap)) continue;
-            const [ux, uz] = d > 1e-6 ? [dx / d, dz / d] : [1.0, 0.0];
-            const push = gap - d;
-            const wa = tokens[a].id === player ? 0.0 : tokens[b].id === player ? 1.0 : 0.5;
-            tokens[a].keys![ka].point = clampSide({ x: pa.x - ux * push * wa, z: pa.z - uz * push * wa }, side);
-            tokens[b].keys![kb].point = clampSide({ x: pb.x + ux * push * (1 - wa), z: pb.z + uz * push * (1 - wa) }, side);
-          }
-        }
+      const key = (i: number) => tokens[i].keys!.find((k) => k.phase === phase)!;
+      const fixed = (i: number) => tokens[i].id === player
+        || (phase === "receive" && side === receiving && Math.hypot(key(i).point.x - tokens[i].point.x, key(i).point.z - tokens[i].point.z) < 1e-9);
+      spreadApart(idx.map((i) => keySpot(key(i), fixed(i))), side);
+    }
+  }
+}
+
+interface Spot {
+  point: FloorPoint;
+  readonly posture?: Posture;
+  readonly fixed: boolean;
+}
+
+/** A token's or a key's spot, written back when it moves. */
+function keySpot(k: { point: FloorPoint; posture?: Posture }, fixed: boolean): Spot {
+  return { get point() { return k.point; }, set point(p: FloorPoint) { k.point = p; }, posture: k.posture, fixed };
+}
+
+/**
+ * Pushes one team's spots at a marker apart, far enough that their bodies cannot touch in the postures they hold there
+ * (the sum of how far each reaches out, 0.8 to 1.6 m); fixed spots stay, the rest stay within their own half and off
+ * the net. Exactly on top of each other: apart along the net.
+ */
+function spreadApart(spots: Spot[], side: Side): void {
+  for (let pass = 0; pass < 40; pass++) {
+    let moved = false;
+    for (let n = 0; n < spots.length; n++) {
+      const a = spots[n];
+      for (const b of spots.slice(n + 1)) {
+        const gap = Math.min(1.6, Math.max(0.8, postureReach(a.posture ?? automaticPosture(a.point))
+          + postureReach(b.posture ?? automaticPosture(b.point))));
+        const pa = a.point, pb = b.point;
+        const dx = pb.x - pa.x, dz = pb.z - pa.z, d = Math.hypot(dx, dz);
+        if (!(d < gap - 1e-6) || (a.fixed && b.fixed)) continue;
+        moved = true;
+        const [ux, uz] = d > 1e-6 ? [dx / d, dz / d] : [1.0, 0.0];
+        const push = gap - d;
+        const wa = a.fixed ? 0.0 : b.fixed ? 1.0 : 0.5;
+        a.point = clampSide({ x: pa.x - ux * push * wa, z: pa.z - uz * push * wa }, side);
+        b.point = clampSide({ x: pb.x + ux * push * (1 - wa), z: pb.z + uz * push * (1 - wa) }, side);
       }
     }
+    if (!moved) break;
   }
 }
 
@@ -504,14 +539,25 @@ function facingToward(t: SceneToken, ball: V3, plan: BallPlan | undefined, time:
 /**
  * The frame as shown: players without an explicit facing turn toward the ball; a player about to play it faces where
  * it goes next. Without a ball the receiving team faces the server, everyone else the net.
- * Swift `TacticalScene.liveFrame(at:plan:)`.
+ * Swift `TacticalScene.liveFrame(at:plan:)`. Web additions: until the serve is received, the server's teammates watch
+ * where it goes (the receivers across the net) instead of turning round to the server behind them; and the frame
+ * carries each player's motion, so players moving between markers take steps.
  */
 export function sceneLiveFrame(scene: TacticalScene, time: number, plan?: BallPlan): SceneFrame {
   const f = sceneFrame(scene, time);
+  // Web addition: players moving between markers take steps (zones/sceneMotion.ts).
+  f.motion = sceneMotion(scene, time);
   const ball = plan?.position(time);
   const server = f.tokens.find((t) => Math.abs(t.point.z) > 9);
+  const serve = plan?.segments[0];
+  const serving = serve?.contact.phase === "serve" && time < serve.endTime
+    ? f.tokens.find((t) => t.id === serve.contact.player) : undefined;
+  const serveGoes = serving && serve ? (serve.trajectory?.end ?? serve.to).floor : undefined;
   f.tokens = f.tokens.map((t) => {
     if (t.yaw !== undefined) return t;
+    if (serving && serveGoes && t.side === serving.side && t.id !== serving.id) {
+      return { ...t, yaw: yawBetween(t.point, serveGoes) ?? SceneToken.facing(t) };
+    }
     if (ball) return { ...t, yaw: facingToward(t, ball, plan, time) };
     if (server && server.side !== t.side) return { ...t, yaw: yawBetween(t.point, server.point) ?? SceneToken.facing(t) };
     return t;

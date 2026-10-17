@@ -20,8 +20,8 @@ export function Live({ matchId }: { matchId: string }) {
     MatchSession.open(matchId).then((s) => (s ? open(s) : setMissing(true)));
   }, [matchId, session?.id, open]);
 
-  if (missing) return <div className="screen"><div className="empty">This match could not be opened.<button className="btn secondary" onClick={() => go({ name: "home" })}>Home</button></div></div>;
-  if (!session || session.id !== matchId) return <div className="screen"><div className="empty">Opening the match…</div></div>;
+  if (missing) return <div className="screen"><div className="empty" style={{ flex: 1 }}>This match could not be opened.<button className="btn big" onClick={() => go({ name: "home" })}>Home</button></div></div>;
+  if (!session || session.id !== matchId) return <div className="screen"><div className="empty" style={{ flex: 1 }}>Opening the match…</div></div>;
 
   const st = session.state;
   const m = st.match;
@@ -39,53 +39,54 @@ export function Live({ matchId }: { matchId: string }) {
 
   return (
     <div className="screen" data-version={version}>
-      <header className="bar" style={{ gap: 16 }}>
-        <button className="btn quiet" onClick={() => go({ name: "home" })} aria-label="Home"><Icon name="back" /></button>
-        <span className="athletic" style={{ fontSize: 18, color: "var(--c-bandSoft)" }}>Set {set.number}</span>
-        <div className="row" style={{ gap: 12, flex: 1, justifyContent: "center", flexWrap: "nowrap", minWidth: 0 }}>
-          <span className="athletic" style={{ fontSize: 22, color: "var(--c-bandText)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{home}</span>
-          <span className="mono" style={{ font: "800 40px/1 var(--font-athletic)", fontVariantNumeric: "tabular-nums" }}>
-            {set.score.home}<span style={{ opacity: 0.5, margin: "0 6px" }}>:</span>{set.score.opponent}
+      <header className="bar scoreboard">
+        <button className="btn home-btn" onClick={() => go({ name: "home" })} aria-label="Home"><Icon name="back" /></button>
+        <span className="nameplate" style={{ fontSize: 17 }}>Set {set.number}</span>
+        <div className="row" style={{ gap: 16, flex: 1, justifyContent: "center", flexWrap: "nowrap", minWidth: 0 }}>
+          <span className="team" style={{ color: "var(--c-bandText)" }}>{home}</span>
+          <span className="digits" aria-label={`${home} ${set.score.home}, ${away} ${set.score.opponent}`}>
+            {set.score.home}<span style={{ opacity: 0.45, margin: "0 8px" }}>:</span>{set.score.opponent}
           </span>
-          <span className="athletic" style={{ fontSize: 22, color: "var(--c-bandText)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{away}</span>
+          <span className="team" style={{ color: "var(--c-bandText)" }}>{away}</span>
         </div>
-        <span style={{ color: "var(--c-bandSoft)", whiteSpace: "nowrap" }}>{serveText}</span>
-        <span className="nameplate" style={{ fontSize: 15, padding: "5px 10px" }}>Rotation {m.rotationNumber("home")}</span>
+        <div className="stack" style={{ gap: 4, alignItems: "flex-end" }}>
+          <span className="athletic" style={{ color: "var(--c-bandText)", fontSize: 18, whiteSpace: "nowrap" }}>{serveText}</span>
+          <span className="athletic" style={{ color: "var(--c-bandSoft)", fontSize: 16, whiteSpace: "nowrap" }}>Rotation {m.rotationNumber("home")}</span>
+        </div>
       </header>
 
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: portrait ? "column" : "row" }}>
         <div style={{ flex: 1, minWidth: 0, minHeight: 0, position: "relative" }}>
           <Court2D tokens={tokens} vertical={portrait} flipped={flipped} />
           {status && (
-            <div className="hint-pill" style={{ position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", color: "var(--c-text)", fontWeight: 700 }}>
+            <div className="hint-pill" style={{ position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)", color: "var(--c-text)", fontWeight: 800, fontSize: 20 }}>
               {status.p === "matchPoint" ? "Match point" : "Set point"} for {status.s === "home" ? home : away}
             </div>
           )}
         </div>
         <aside style={{
-          display: "flex", flexDirection: portrait ? "row" : "column", gap: 12, padding: 16, width: portrait ? "auto" : 300,
-          background: "var(--c-surface)", borderLeft: portrait ? 0 : "1px solid var(--c-hairline)", borderTop: portrait ? "1px solid var(--c-hairline)" : 0,
-          paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))`,
+          display: "flex", flexDirection: portrait ? "row" : "column", gap: 14, padding: 18, width: portrait ? "auto" : 330,
+          background: "linear-gradient(180deg, var(--c-surface), color-mix(in srgb, var(--c-surface) 80%, var(--c-bg)))",
+          borderLeft: portrait ? 0 : "1px solid var(--c-hairline)", borderTop: portrait ? "1px solid var(--c-hairline)" : 0,
+          paddingBottom: `calc(18px + env(safe-area-inset-bottom, 0px))`,
         }}>
-          <button className="btn" disabled={setOver} onClick={() => dispatch(LiveEvent.pointSwipe("home"))}
-                  style={{ flex: 1, minHeight: 120, background: "var(--c-home)", color: "#fff", font: "800 30px/1 var(--font-athletic)", textTransform: "uppercase", letterSpacing: "0.05em", flexDirection: "column", gap: 6 }}>
+          <button className="point-btn" disabled={setOver} onClick={() => dispatch(LiveEvent.pointSwipe("home"))} style={{ background: "var(--c-home)", color: "var(--c-onHome)" }}>
             Point
-            <span style={{ fontSize: 20, opacity: 0.9 }}>{home}</span>
+            <small>{home}</small>
           </button>
-          <button className="btn" disabled={setOver} onClick={() => dispatch(LiveEvent.pointSwipe("opponent"))}
-                  style={{ flex: 1, minHeight: 120, background: "var(--c-opponent)", color: "#fff", font: "800 30px/1 var(--font-athletic)", textTransform: "uppercase", letterSpacing: "0.05em", flexDirection: "column", gap: 6 }}>
+          <button className="point-btn" disabled={setOver} onClick={() => dispatch(LiveEvent.pointSwipe("opponent"))} style={{ background: "var(--c-opponent)", color: "var(--c-onOpponent)" }}>
             Point
-            <span style={{ fontSize: 20, opacity: 0.9 }}>{away}</span>
+            <small>{away}</small>
           </button>
-          <div style={{ display: "flex", flexDirection: portrait ? "column" : "row", gap: 8 }}>
-            <button className="btn secondary" style={{ flex: 1 }} onClick={() => dispatch(LiveEvent.undo)} disabled={st.log.length === 0}>
+          <div style={{ display: "flex", flexDirection: portrait ? "column" : "row", gap: 10 }}>
+            <button className="btn big" style={{ flex: 1 }} onClick={() => dispatch(LiveEvent.undo)} disabled={st.log.length === 0}>
               <Icon name="undo" /> Undo
             </button>
-            <button className="btn secondary" style={{ flex: 1 }} onClick={() => setFlipped((f) => !f)}>
-              <Icon name="swap" /> Swap sides
+            <button className="btn big" style={{ flex: 1 }} onClick={() => setFlipped((f) => !f)}>
+              <Icon name="swap" /> Swap
             </button>
           </div>
-          <button className="btn quiet" onClick={() => go({ name: "log", matchId })}>Match log</button>
+          <button className="btn big secondary" onClick={() => go({ name: "log", matchId })}><Icon name="film" /> Match log</button>
         </aside>
       </div>
 
@@ -106,8 +107,8 @@ function SetBreak({ session, onDone, onLog }: { session: MatchSession; onDone: (
   const decidingSet = set.number + 1 === Scoring.decidingSetNumber(m.scoring);
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "color-mix(in srgb, var(--c-bg) 82%, transparent)", display: "grid", placeItems: "center", padding: 16, zIndex: 20 }}>
-      <div className="card stack" style={{ width: "min(720px, 100%)", gap: 18, maxHeight: "100%", overflowY: "auto" }}>
+    <div className="sheet">
+      <div className="card stack" style={{ gap: 20 }}>
         <div>
           <div className="label">{m.isOver ? "Match over" : `Set ${set.number} done`}</div>
           <h2 className="title" style={{ fontSize: 40 }}>
@@ -124,7 +125,7 @@ function SetBreak({ session, onDone, onLog }: { session: MatchSession; onDone: (
               return (
                 <div key={r} className="stack" style={{ gap: 6, alignItems: "center", height: "100%", justifyContent: "flex-end" }}>
                   <span className="mono" style={{ fontSize: 14 }}>{rec ? `${rec.receiveWon}/${RotationRecord.receiveTotal(rec)}` : "–"}</span>
-                  <div style={{ width: "100%", height: `${Math.max(4, (rate ?? 0) * 100)}%`, background: "var(--c-home)", borderRadius: 4, opacity: rate === undefined ? 0.2 : 1 }} />
+                  <div className="bar-fill" style={{ height: `${Math.max(4, (rate ?? 0) * 100)}%`, opacity: rate === undefined ? 0.25 : 1 }} />
                   <span className="athletic" style={{ fontSize: 18 }}>{r}</span>
                 </div>
               );
@@ -135,7 +136,7 @@ function SetBreak({ session, onDone, onLog }: { session: MatchSession; onDone: (
         {m.isOver ? (
           <div className="row">
             <button className="btn primary" onClick={onDone}>Done</button>
-            <button className="btn secondary" onClick={onLog}>Match log</button>
+            <button className="btn big secondary" onClick={onLog}>Match log</button>
           </div>
         ) : (
           <>
@@ -143,7 +144,7 @@ function SetBreak({ session, onDone, onLog }: { session: MatchSession; onDone: (
               <span className="label">Start the next set in rotation</span>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6 }}>
                 {[1, 2, 3, 4, 5, 6].map((r) => (
-                  <button key={r} className={`btn ${start === r ? "on" : "secondary"}`} onClick={() => setStart(r)}>{r}</button>
+                  <button key={r} className={`btn big ${start === r ? "on" : ""}`} style={{ font: "800 26px/1 var(--font-athletic)" }} onClick={() => setStart(r)}>{r}</button>
                 ))}
               </div>
               {suggested && <span className="muted">Suggested: rotation {suggested.rotation} (best side-out so far).</span>}
@@ -157,7 +158,7 @@ function SetBreak({ session, onDone, onLog }: { session: MatchSession; onDone: (
               <button className="btn primary" onClick={() => dispatch(LiveEvent.startNextSet(firstServer, start))}>
                 <Icon name="play" /> Start set {set.number + 1}
               </button>
-              <button className="btn quiet" onClick={() => dispatch(LiveEvent.undo)}><Icon name="undo" /> Undo last point</button>
+              <button className="btn big secondary" onClick={() => dispatch(LiveEvent.undo)}><Icon name="undo" /> Undo last point</button>
             </div>
           </>
         )}

@@ -1,7 +1,7 @@
 // Port of Video/VideoScene.swift: a scene reconstructed from a rally video and the video-to-3D pipeline
 // (Section 4.6). Swift's `VideoScene` is a class here; `encode`/`decode` give its Codable JSON shape.
 import { CourtFrame, CourtPosition, Side, type FloorPoint, type LocalPoint } from "../match/court";
-import { Stride, strideParams } from "../spatial/gait";
+import { Stride, strideEnvelope, strideParams } from "../spatial/gait";
 import { V3 } from "../spatial/math3d";
 import { PoseParams } from "../spatial/postureLibrary";
 import { PosedPlayer } from "../spatial/povAnalysis";
@@ -9,12 +9,12 @@ import { BodyMetrics, Joint, Posture, SkeletonModel } from "../spatial/skeleton"
 import { newUUID, referenceDateNow, swiftRound } from "../spatial/swiftCompat";
 import { automaticPosture, SceneFrame, type PostureBlend } from "../zones/sceneTimeline";
 import { SceneToken } from "../zones/tacticalScene";
-import { BallAnchor, BallReconstruction, BallSegment, type BallObservation, type BallSegmentJSON } from "./ballReconstruction";
+import { BallAnchor, BallReconstruction, BallSegment, defaultBallSettings, type BallObservation, type BallSegmentJSON } from "./ballReconstruction";
 import { VideoCamera, type VideoCameraJSON } from "./courtCalibration";
 import { HallEnvironment, type HallEnvironmentJSON } from "./environment";
 import { PlayerTracker, type VideoFrameObservation } from "./playerTracking";
 import { PoseFitter } from "./poseFitting";
-import { Hungarian, wrappedAngle, type ImagePoint } from "./videoMath";
+import { Hungarian, ImagePoint, wrappedAngle } from "./videoMath";
 import { motionAt, type PlayerMotion } from "./videoMotion";
 
 /** One reconstructed instant of a player. */
@@ -128,9 +128,11 @@ export class VideoFrame {
       if (j !== undefined && (params.airborne || j > 0.02)) params.jump = Math.max(0, j);
       const yaw = this.yaw.get(t.id) ?? SceneToken.facing(t);
       const motion = this.motion.get(t.id);
-      if (motion && !inAir && options.stride !== false) params = strideParams(params, s, Stride.motion(motion.velocity, yaw, motion.phase));
+      const stride = motion && !inAir && options.stride !== false ? Stride.motion(motion.velocity, yaw, motion.phase) : undefined;
+      const envelope = stride ? strideEnvelope(params, s, stride).map((e) => s.pose(e, t.point, yaw, 0)) : [];
+      if (stride) params = strideParams(params, s, stride);
       const joints = s.pose(params, t.point, yaw, 0);
-      return new PosedPlayer(t, s, joints);
+      return new PosedPlayer(t, s, joints, envelope);
     });
   }
 }
@@ -285,6 +287,26 @@ export class VideoScene {
 /** The stages `VideoReconstructor.reconstruct` reports. */
 export type ReconstructionStage = "Tracking players" | "Reading body positions" | "Tracking the ball" | "Done";
 
+/** Web addition: a player's hand nearest the ball's viewing ray near a flight's start or end (`contactAnchor`). */
+interface HandOnRay {
+  /** Distance of the hand from the ray, metres. */
+  d: number;
+  /** When (seconds). */
+  t: number;
+  /** The point of the ray nearest the hand, and how far along the ray it is (metres from the camera). */
+  point: V3;
+  depth: number;
+  posture?: Posture;
+}
+
+/**
+ * Web addition: a hand this close to the ball's ray could have played it (a fitted pose puts a hand to about half a
+ * metre, more when the posture is read wrong), and players whose hands are that close and further apart than
+ * `depthSpread` along the ray make the contact ambiguous (metres).
+ */
+const rivalDistance = 1.0;
+const depthSpread = 1.0;
+
 /**
  * The video-to-3D pipeline the app calls after running the detector on sampled frames (Section 4): player tracking,
  * pose fitting with temporal smoothing, jump correction, ball segmentation and reconstruction, then labels and roles.
@@ -366,9 +388,9 @@ export const VideoReconstructor = {
     const flights = BallReconstruction.split(ballObs, camera);
     const anchors: BallAnchor[] = [];
     for (const flight of flights) {
-      const start = VideoReconstructor.contactAnchor(flight, scene, true);
+      const start = VideoReconstructor.contactAnchor(flight, scene, true, undefined, ballObs);
       if (start) anchors.push(start);
-      const end = VideoReconstructor.contactAnchor(flight, scene, false);
+      const end = VideoReconstructor.contactAnchor(flight, scene, false, undefined, ballObs);
       if (end) {
         anchors.push(end);
       } else {
@@ -386,15 +408,27 @@ export const VideoReconstructor = {
    * A contact at a flight's start (or end): the ball's image track, extrapolated by up to 1.5 frames (the contact
    * happens between frames), passes within `maxDistance` of a hand or forearm of a posed player. The anchor is the
    * point of the ball's viewing ray nearest that hand, at that moment, with the spin the player's posture gives.
+   *
+   * Web additions, for a far camera whose viewing ray crosses half the court at hand height (a broadcast telephoto
+   * behind an end line): the image does not tell how far along the ray the ball is, so a hand near the ray is often
+   * that of a player metres in front of or behind the ball. So there is no contact where one believable flight also
+   * runs through the ball points just past the edge (`track`, the whole ball track; a contact changes the velocity),
+   * nor where no believable flight through that hand (bounded as in `BallReconstruction.reconstruct`) reprojects
+   * within `rmsThreshold`. And when another player's hand comes within `rivalDistance` of the ray more than
+   * `depthSpread` nearer or farther along it, the image must fit the flight through the nearest hand clearly better
+   * than through theirs: by nine times the per-coordinate pixel variance of that fit (three standard deviations).
    */
-  contactAnchor(flight: readonly BallObservation[], scene: VideoScene, atStart: boolean, maxDistance = 0.6): BallAnchor | undefined {
+  contactAnchor(flight: readonly BallObservation[], scene: VideoScene, atStart: boolean, maxDistance = 0.6,
+    track: readonly BallObservation[] = []): BallAnchor | undefined {
     if (flight.length < 4) return undefined;
     const first = flight[0], last = flight[flight.length - 1];
     const free = BallReconstruction.fit(flight, scene.camera, [], false);
     if (!free) return undefined;
+    if (VideoReconstructor.fliesOn(flight, track, scene.camera, atStart)) return undefined;
     const frameTime = (last.time - first.time) / (flight.length - 1);
     const edge = atStart ? first.time : last.time;
-    let best: { d: number; t: number; point: V3; posture?: Posture } | undefined;
+    // Each player's hand nearest the ray, with its depth along the ray (metres from the camera).
+    const nearest = new Map<string, HandOnRay>();
     for (let k = 0; k <= 6; k++) {
       const t = edge + (atStart ? -1 : 1) * 1.5 * frameTime * (k / 6);
       const px = scene.camera.project(free.unclamped(t));
@@ -411,13 +445,50 @@ export const VideoReconstructor = {
           if (!(along > 0)) continue;
           const onRay = ray.origin.add(ray.direction.mul(along));
           const d = q.sub(onRay).length;
-          if (!best || d < best.d) best = { d, t, point: onRay, posture: player.token.posture };
+          const mine = nearest.get(player.token.id);
+          if (!mine || d < mine.d) nearest.set(player.token.id, { d, t, point: onRay, depth: along, posture: player.token.posture });
         }
       }
     }
+    let best: HandOnRay | undefined;
+    for (const c of nearest.values()) if (!best || c.d < best.d) best = c;
     if (!best || !(best.d <= maxDistance)) return undefined;
-    const aero = atStart && best.posture ? BallReconstruction.expectedAero(best.posture) : undefined;
-    return BallAnchor.hand(best.t, best.point, 0.3, aero);
+    const settings = defaultBallSettings;
+    const anchorAt = (c: HandOnRay) =>
+      BallAnchor.hand(c.t, c.point, 0.3, atStart && c.posture ? BallReconstruction.expectedAero(c.posture) : undefined);
+    const fitThrough = (c: HandOnRay) => BallReconstruction.bestFit(flight, scene.camera, [anchorAt(c)], settings.drag, settings);
+    const chosen = best, through = fitThrough(best);
+    if (!through || !(Math.sqrt(through.pixelCost / through.count) <= settings.rmsThreshold)) return undefined;
+    const variance = Math.max(1, through.pixelCost / (2 * through.count));
+    for (const c of nearest.values()) {
+      if (c === chosen || !(c.d <= rivalDistance) || !(Math.abs(c.depth - chosen.depth) > depthSpread)) continue;
+      const theirs = fitThrough(c);
+      if (theirs && theirs.cost - through.cost < 9 * variance) return undefined;
+    }
+    return anchorAt(chosen);
+  },
+
+  /**
+   * Web addition: whether one believable flight (`BallReconstruction.plausible`, within `rmsThreshold` and each new
+   * point within `pointThreshold`, as `split` grows a flight) runs through the flight and the two or three ball points
+   * of `track` nearest past its start (or end), within half a second: then the ball flew on there, and an outlier or a
+   * gap in the track split the flight, not a contact.
+   */
+  fliesOn(flight: readonly BallObservation[], track: readonly BallObservation[], camera: VideoCamera, atStart: boolean): boolean {
+    const s = defaultBallSettings;
+    const edge = atStart ? flight[0].time : flight[flight.length - 1].time;
+    const past = track.filter((o) => (atStart ? o.time < edge - 1e-6 && o.time >= edge - 0.5 : o.time > edge + 1e-6 && o.time <= edge + 0.5))
+      .sort((a, b) => Math.abs(a.time - edge) - Math.abs(b.time - edge)).slice(0, 3);
+    if (past.length < 2) return false;
+    const all = [...flight, ...past].sort((a, b) => a.time - b.time);
+    const fit = BallReconstruction.bestFit(all, camera, [], false, s);
+    if (!fit || !(Math.sqrt(fit.pixelCost / fit.count) <= s.rmsThreshold)) return false;
+    const seg = new BallSegment(all[0].time, all[all.length - 1].time, fit.p0, fit.v0, fit.aero);
+    if (!BallReconstruction.plausible(seg, s)) return false;
+    return past.every((o) => {
+      const q = camera.project(seg.unclamped(o.time));
+      return q !== undefined && ImagePoint.distance(q, o.image) <= s.pointThreshold;
+    });
   },
 
   /** Nominal spot of each rotational position in the team's own frame (l from its left sideline, d from the net). */

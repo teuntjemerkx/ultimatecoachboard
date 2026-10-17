@@ -22,3 +22,4 @@ export {
   routeTarget, setterSpot, defaultBaseSlots, defaultRouteTargets, placeScene, rotateScene, placedScene, playOutScene,
   sceneLiveFrame, type PlacedPlayer,
 } from "./sceneAutopilot";
+export { sceneClock, sceneMotion, secondsPerPhase, type SceneClock, type SceneMotion } from "./sceneMotion";

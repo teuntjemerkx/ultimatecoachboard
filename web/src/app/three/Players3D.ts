@@ -1,8 +1,9 @@
 import * as THREE from "three";
 import type { FloorPoint } from "../../core/match/court";
 import type { InkStroke } from "../../core/match/liveTypes";
-import { AvatarMaterial, AvatarMesh, BallFlight, BodyMetrics, Joint, SkeletonModel, V3, type PosedPlayer } from "../../core/spatial";
+import { AvatarMaterial, AvatarMesh, BallFlight, BodyMetrics, Joint, PlayerBodies, SkeletonModel, V3, type PosedPlayer } from "../../core/spatial";
 import { Zone, type SnapTarget } from "../../core/zones";
+import { Athlete, loadAthletes, type AthleteTemplate } from "./athletes";
 import type { Board3D, BoardColors } from "./Board3D";
 
 /** What the Studio shows on the 3D board for one moment of the scene. */
@@ -83,6 +84,8 @@ function skin(rest: RestBuffers, dq: Float64Array, pos: Float32Array, nrm: Float
 
 interface Avatar {
   stature: number;
+  /** The real athlete, once the models are loaded; until then (or if they cannot load) the drawn mannequin. */
+  athlete?: Athlete;
   mesh: THREE.Mesh;
   geometry: THREE.BufferGeometry;
   colorKey: string;
@@ -124,6 +127,17 @@ function labelTexture(text: string, color: string, fill: string): THREE.CanvasTe
   t.colorSpace = THREE.SRGBColorSpace;
   labelTextures.set(key, t);
   return t;
+}
+
+/** Skin tones and hair colours the athletes get (multiplying their textures), picked per player so a team varies. */
+const skinTones = ["#FFFFFF", "#F1D6C2", "#D9B08C", "#B98563", "#8A5A3C", "#5E3B27"];
+const hairColours = ["#FFFFFF", "#7A5233", "#3B2618", "#1E1410", "#C8A06A", "#5A3A22"];
+
+/** A stable small number from a player's id. */
+function hashOf(id: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  return h >>> 0;
 }
 
 const numberTextures = new Map<string, THREE.CanvasTexture>();
@@ -222,8 +236,19 @@ export class Players3D {
   private posed: PosedPlayer[] = [];
   /** The eye-view player: their avatar and label are hidden once the camera is in their head. */
   private hidden?: string;
+  private athletes?: { female: AthleteTemplate; male: AthleteTemplate };
+  private last?: Players3DInput;
+  private disposed = false;
 
   constructor(private board: Board3D) {
+    loadAthletes().then((t) => {
+      if (this.disposed) return;
+      this.athletes = t;
+      if (this.last) this.update(this.last);
+    }).catch(() => {
+      // Offline before the models were cached: the mannequins stay, and bodies are kept apart as mannequins.
+      PlayerBodies.athletes = false;
+    });
     this.ball = new THREE.Mesh(new THREE.SphereGeometry(BallFlight.radius, 24, 16), new THREE.MeshLambertMaterial({ color: "#F2B705" }));
     this.ballShadow = new THREE.Mesh(new THREE.CircleGeometry(0.12, 24),
       new THREE.MeshBasicMaterial({ color: "#000000", transparent: true, opacity: 0.22, depthWrite: false }));
@@ -233,6 +258,7 @@ export class Players3D {
   }
 
   dispose() {
+    this.disposed = true;
     for (const a of this.avatars.values()) this.removeAvatar(a);
     this.avatars.clear();
     this.clearOverlay();
@@ -240,6 +266,7 @@ export class Players3D {
   }
 
   update(input: Players3DInput) {
+    this.last = input;
     this.posed = input.players;
     const seen = new Set<string>();
     const jersey = { home: input.colors.home, opponent: input.colors.opponent };
@@ -258,16 +285,33 @@ export class Players3D {
         a = undefined;
       }
       if (!a) a = this.addAvatar(p.id, stature);
-      if (a.colorKey !== colorKey) this.paint(a, team, input.colors, colorKey);
-      // Skin into the mesh.
-      const dqs = p.skeleton.skin(p.joints);
-      const dq = new Float64Array(dqs.length * 8);
-      dqs.forEach((d, j) => dq.set([d.real.x, d.real.y, d.real.z, d.real.w, d.dual.x, d.dual.y, d.dual.z, d.dual.w], j * 8));
-      const pos = a.geometry.getAttribute("position") as THREE.BufferAttribute;
-      const nrm = a.geometry.getAttribute("normal") as THREE.BufferAttribute;
-      skin(restBuffers(stature), dq, pos.array as Float32Array, nrm.array as Float32Array);
-      pos.needsUpdate = nrm.needsUpdate = true;
-      a.geometry.computeBoundingSphere();
+      const template = this.athletes ? (PlayerBodies.women ? this.athletes.female : this.athletes.male) : undefined;
+      if (a.athlete && a.athlete.template !== template) {
+        a.athlete.dispose();
+        a.athlete = undefined;
+      }
+      if (template && !a.athlete) {
+        a.athlete = new Athlete(template);
+        this.board.dynamic.add(a.athlete.root);
+        a.mesh.visible = false;
+      }
+      if (a.athlete) {
+        const h = hashOf(p.id);
+        a.athlete.setColors({ jersey: team, shorts: input.colors.shorts, skin: skinTones[h % skinTones.length],
+          hair: hairColours[(h >>> 8) % hairColours.length] });
+        a.athlete.pose(p);
+      } else {
+        if (a.colorKey !== colorKey) this.paint(a, team, input.colors, colorKey);
+        // Skin into the mesh.
+        const dqs = p.skeleton.skin(p.joints);
+        const dq = new Float64Array(dqs.length * 8);
+        dqs.forEach((d, j) => dq.set([d.real.x, d.real.y, d.real.z, d.real.w, d.dual.x, d.dual.y, d.dual.z, d.dual.w], j * 8));
+        const pos = a.geometry.getAttribute("position") as THREE.BufferAttribute;
+        const nrm = a.geometry.getAttribute("normal") as THREE.BufferAttribute;
+        skin(restBuffers(stature), dq, pos.array as Float32Array, nrm.array as Float32Array);
+        pos.needsUpdate = nrm.needsUpdate = true;
+        a.geometry.computeBoundingSphere();
+      }
       // Label over the head, ring on the floor under the pelvis.
       const selected = input.selected === p.id;
       if (a.labelText !== `${p.token.label}|${selected}|${labelInk}|${labelFill}|${led}`) {
@@ -369,12 +413,19 @@ export class Players3D {
     const aspect = img.width / img.height;
     for (const front of [true, false]) {
       const m = front ? a.numbers!.front : a.numbers!.back;
+      const height = (front ? 0.075 : 0.11) * h;
+      m.scale.set(height * aspect, height, 1);
+      const spot = a.athlete?.numberSpot(front);
+      if (spot) {
+        // On the athlete's shirt.
+        m.position.copy(spot.position);
+        m.quaternion.copy(spot.quaternion);
+        continue;
+      }
       const at = chest.apply(front ? new V3(0, -0.012 * h, 0.076 * h) : new V3(0, -0.03 * h, -0.075 * h));
       m.position.set(at.x, at.y, at.z);
       m.quaternion.copy(q);
       if (!front) m.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
-      const height = (front ? 0.075 : 0.11) * h;
-      m.scale.set(height * aspect, height, 1);
     }
   }
 
@@ -442,6 +493,7 @@ export class Players3D {
     geometry.setIndex(new THREE.BufferAttribute(rest.indices, 1));
     const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ vertexColors: true }));
     mesh.frustumCulled = false;
+    mesh.castShadow = true;
     const label = new THREE.Sprite(new THREE.SpriteMaterial({ depthTest: false, depthWrite: false, sizeAttenuation: false, transparent: true }));
     label.renderOrder = 10;
     label.center.set(0.5, 0);
@@ -455,6 +507,7 @@ export class Players3D {
   }
 
   private removeAvatar(a: Avatar) {
+    a.athlete?.dispose();
     this.board.dynamic.remove(a.mesh, a.label, a.ring);
     if (a.numbers) for (const m of [a.numbers.front, a.numbers.back]) { this.board.dynamic.remove(m); m.geometry.dispose(); (m.material as THREE.Material).dispose(); }
     a.geometry.dispose();
@@ -488,7 +541,9 @@ export class Players3D {
   private applyHidden() {
     for (const [id, a] of this.avatars) {
       const shown = id !== this.hidden;
-      a.mesh.visible = a.label.visible = shown;
+      a.mesh.visible = shown && !a.athlete;
+      if (a.athlete) a.athlete.visible = shown;
+      a.label.visible = shown;
       if (a.numbers) a.numbers.front.visible = a.numbers.back.visible = shown;
     }
   }

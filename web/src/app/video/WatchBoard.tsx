@@ -2,6 +2,7 @@ import { useEffect, useRef, type MutableRefObject } from "react";
 import * as THREE from "three";
 import type { PosedPlayer } from "../../core/spatial";
 import type { VideoCamera, VideoScene } from "../../core/video";
+import { videoBodies } from "../../core/video/videoBodies";
 import type { Board3D, BoardColors, Orbit } from "../three/Board3D";
 import { Court3DView, boardColors } from "../three/Court3DView";
 import { Players3D, cssColor } from "../three/Players3D";
@@ -123,7 +124,7 @@ export function WatchBoard({ scene, plateURL, view, themeKey, onTap, onLook }: {
       if (v.time !== shown.time || v.selected !== shown.selected || colors !== shown.theme) {
         shown = { time: v.time, selected: v.selected, theme: colors };
         const frame = scene.frame(v.time);
-        const posed = frame.posedPlayers();
+        const posed = videoBodies(scene, v.time);
         posedRef.current = posed;
         players.update({ players: posed, colors, selected: v.selected, ball: frame.ball, zones: [], ink: [] });
       }

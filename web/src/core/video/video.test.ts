@@ -8,7 +8,7 @@ import { BodyMetrics, Joint, Posture, SkeletonModel } from "../spatial/skeleton"
 import { maxBy, minBy, referenceDateOffset } from "../spatial/swiftCompat";
 import { expectClose, strideThrough } from "../spatial/testSupport";
 import { SceneToken } from "../zones/tacticalScene";
-import { BallAnchor, BallReconstruction, BallSegment, type BallObservation } from "./ballReconstruction";
+import { BallAnchor, BallReconstruction, BallSegment, defaultBallSettings, type BallObservation } from "./ballReconstruction";
 import { CourtCalibration, CourtLandmark, VideoCamera } from "./courtCalibration";
 import { CleanPlate, HallEnvironment } from "./environment";
 import { PersonDetection, PlayerTracker, type TrackedPlayer, type VideoFrameObservation } from "./playerTracking";
@@ -611,6 +611,155 @@ describe("BallVideoTests", () => {
       // Both flights are reconstructed; the ball is continuous at the contact.
       expect(segments[0].position(segments[0].t1).sub(segments[1].position(segments[1].t0)).length).toBeLessThan(0.3);
       expect(segments[0].position(0.5).sub(set.position(0.5)).length).toBeLessThan(0.25);
+    }
+  }, 60_000);
+
+  /**
+   * Web addition: a far broadcast camera (a telephoto behind the home end, as on the Tokyo clip) sees a short falling
+   * ball almost along its viewing ray, and the free fit often starts it at the camera or behind the far end. Such a
+   * flight is dropped without an anchor; with a hand anchor it is refitted inside the hall at a believable speed.
+   */
+  it("drops or pins a flight a far camera cannot place", () => {
+    const cam = VideoCamera.lookingAt(new V3(0, 9.4, 38.9), new V3(0, 0, -4.8), 1743, 600, 338);
+    const flights: [string, SyntheticFlight][] = [
+      ["set coming down", new SyntheticFlight(new V3(-3, 3.6, -1), new V3(0.6, -0.5, -0.3), Aero.soft, 0.25)],
+      ["ball dropping at the far end", new SyntheticFlight(new V3(-1.5, 4, -4), new V3(0.5, 0, 1), Aero.soft, 0.3)],
+    ];
+    let unplaced = 0, pinned = 0;
+    for (const [name, flight] of flights) {
+      for (let seed = 1; seed <= 12; seed++) {
+        const rng = new SplitMix64(500 + seed);
+        const obs = observe(flight.position, 0, flight.duration, 30, unit(rng), cam, rng);
+        const label = `${name}, seed ${seed}`;
+        expect(obs.length, label).toBeGreaterThan(6);
+        // Unanchored: only believable flights come out.
+        const free = BallReconstruction.fit(obs, cam)!;
+        const alone = BallReconstruction.reconstruct([obs], cam);
+        if (!BallReconstruction.plausible(free)) {
+          unplaced += 1;
+          expect(alone.length, `${label}: dropped`).toBe(0);
+        }
+        for (const s of alone) expect(BallReconstruction.plausible(s), label).toBe(true);
+        // A hand at the end (to +-0.2 m) pins one point; the refit keeps the slowest flight that fits.
+        const end = obs[obs.length - 1].time, p = flight.position(end);
+        const hand = BallAnchor.hand(end, new V3(p.x + uniform(rng, -0.2, 0.2), p.y + uniform(rng, -0.2, 0.2), p.z + uniform(rng, -0.2, 0.2)));
+        const anchored = BallReconstruction.fit(obs, cam, [hand])!;
+        const segments = BallReconstruction.reconstruct([obs], cam, [hand]);
+        expect(segments.length, label).toBe(1);
+        const seg = segments[0];
+        expect(BallReconstruction.plausible(seg), label).toBe(true);
+        if (BallReconstruction.plausible(anchored)) continue;
+        pinned += 1;
+        expect(seg.rmsError, `${label}: reprojects`).toBeLessThan(2);
+        let worst = 0;
+        for (const o of obs) worst = Math.max(worst, seg.position(o.time).sub(flight.position(o.time)).length);
+        expect(worst, `${label}: pinned near the flight`).toBeLessThan(0.5);
+      }
+    }
+    // The failure this guards against happens on most seeds.
+    expect(unplaced).toBeGreaterThan(8);
+    expect(pinned).toBeGreaterThan(4);
+  }, 60_000);
+
+  /**
+   * Web addition: a low camera 14 m behind the home end line (as on a club's tripod) places a hard serve going away
+   * from it well, but its free fit can still come out over the top speed: it is capped, not dropped. A ball that stays
+   * on the floor (how a ball held or bounced by the server reads from there) is no flight and is dropped.
+   */
+  it("caps a serve from a low camera and drops a ball on the floor", () => {
+    const cam = VideoCamera.lookingAt(new V3(-1.9, 2.6, 23.1), new V3(0.97, 2.16, 0), 360 / Math.tan(deg(10)), 1280, 720);
+    const from = new V3(-2.8, 3, 10);
+    const serve = new SyntheticFlight(from, SyntheticFlight.aim(from, new V3(-1, 2.4, -4), 34, 0.03), Aero.float, 0.57);
+    let capped = 0;
+    for (let seed = 1; seed <= 12; seed++) {
+      const rng = new SplitMix64(700 + seed);
+      const obs = observe(serve.position, 0, serve.duration, 25, unit(rng), cam, rng);
+      const label = `serve, seed ${seed}`;
+      const free = BallReconstruction.fit(obs, cam)!;
+      const segments = BallReconstruction.reconstruct([obs], cam);
+      expect(segments.length, label).toBe(1);
+      const seg = segments[0];
+      expect(BallReconstruction.plausible(seg), label).toBe(true);
+      expect(seg.rmsError, `${label}: reprojects`).toBeLessThan(2);
+      // A believable free fit is kept as it is; one over the top speed is refitted below it, and is the better for it.
+      if (!(free.v0.length > defaultBallSettings.maxSpeed)) continue;
+      capped += 1;
+      let worst = 0, freeWorst = 0;
+      for (const o of obs) {
+        worst = Math.max(worst, seg.position(o.time).sub(serve.position(o.time)).length);
+        freeWorst = Math.max(freeWorst, free.position(o.time).sub(serve.position(o.time)).length);
+      }
+      expect(seg.v0.length, label).toBeLessThanOrEqual(defaultBallSettings.maxSpeed);
+      expect(worst, `${label}: near the serve`).toBeLessThan(Math.min(0.75, freeWorst));
+    }
+    expect(capped, "free fits over the top speed").toBeGreaterThan(2);
+
+    for (let seed = 1; seed <= 6; seed++) {
+      const rng = new SplitMix64(800 + seed);
+      const rolling = (t: number) => new V3(-0.8 + 0.6 * t, BallFlight.radius, 6.8 - 2.5 * t);
+      const obs = observe(rolling, 0, 0.25, 30, unit(rng), cam, rng);
+      expect(BallReconstruction.reconstruct([obs], cam).length, `rolling ball, seed ${seed}`).toBe(0);
+    }
+  }, 60_000);
+
+  /**
+   * Web addition: the far broadcast camera of the Tokyo clip sees an opponent pass the ball at the far side along a
+   * viewing ray that also runs through the raised hands of a home player more than 5 m nearer the camera. That hand is
+   * nearer the ray than the passer's forearms, and the nearest hand was the contact; now the contact is the passer's
+   * or there is none.
+   */
+  it("a far camera's contact is the player at the ball, or none", () => {
+    const cam = VideoCamera.lookingAt(new V3(0, 9.4, 38.9), new V3(0, 0, -4.8), 1743, 600, 338);
+    const t0 = 1;
+    const track = (side: Side, label: string, at: FloorPoint, yaw: number, posture: Posture) => VideoPlayerTrack.create({ side, label,
+      stature: 1.9, samples: [VideoPlayerSample.create(0, at.x, at.z, yaw, posture), VideoPlayerSample.create(3, at.x, at.z, yaw, posture)] });
+    const sceneOf = (players: VideoPlayerTrack[]) => new VideoScene({ title: "Far contact", duration: 3, camera: cam, players });
+    // Distance of a player's nearest hand point (as `contactAnchor` takes them) from a ray.
+    const handDistance = (scene: VideoScene, ray: { origin: V3; direction: V3 }) => {
+      const j = scene.frame(t0).posedPlayers()[0].joints, s = new SkeletonModel(new BodyMetrics(1.9));
+      const wrists = [j[Joint.lWrist].translation, j[Joint.rWrist].translation];
+      const elbows = [j[Joint.lElbow].translation, j[Joint.rElbow].translation];
+      const hands = [s.fingertip(j, true), s.fingertip(j, false), ...wrists, ...elbows.map((e, i) => e.add(wrists[i]).mul(0.5))];
+      return Math.min(...hands.map((q) => {
+        const w = q.sub(ray.origin);
+        return w.sub(ray.direction.mul(w.dot(ray.direction))).length;
+      }));
+    };
+    for (let seed = 1; seed <= 8; seed++) {
+      const rng = new SplitMix64(700 + seed);
+      const label = `seed ${seed}`;
+      // The passer, facing the net: the ball leaves a little above the forearms, rising toward the net.
+      const passerAt = { x: uniform(rng, -2.5, 2.5), z: uniform(rng, -7, -5) };
+      const passer = track("opponent", "A", passerAt, 0, "pass");
+      const pj = sceneOf([passer]).frame(t0).posedPlayers()[0].joints;
+      const forearms = pj[Joint.lWrist].translation.add(pj[Joint.rWrist].translation).add(pj[Joint.lElbow].translation)
+        .add(pj[Joint.rElbow].translation).mul(0.25);
+      const contact = forearms.add(new V3(0, 0.22, 0));
+      const flight = new SyntheticFlight(contact, new V3(uniform(rng, -1, 1), uniform(rng, 6, 7.5), uniform(rng, 2, 3.5)), Aero.soft, 0.7);
+      const obs = observe((t) => flight.position(t - t0), t0, t0 + flight.duration, 30, unit(rng), cam, rng);
+      expect(obs.length, label).toBeGreaterThan(15);
+      // Where the track only breaks (a lost point, a gap) the ball flies on, and that is no contact.
+      expect(VideoReconstructor.fliesOn(obs.slice(0, 8), obs, cam, false), `${label}: flies on`).toBe(true);
+      expect(VideoReconstructor.fliesOn(obs.slice(9), obs, cam, true), `${label}: flies on`).toBe(true);
+      expect(VideoReconstructor.fliesOn(obs, obs, cam, true), `${label}: nothing before the pass`).toBe(false);
+      // A home player with the hands up, placed so that a fingertip is on the ray through the ball at the contact.
+      const ray = cam.ray(cam.project(contact)!);
+      const probe = sceneOf([track("home", "3", { x: 0, z: 0 }, Math.PI, "block")]).frame(t0).posedPlayers()[0];
+      const tip = maxBy([probe.skeleton.fingertip(probe.joints, true), probe.skeleton.fingertip(probe.joints, false)], (p) => p.y)!;
+      const onRay = ray.origin.add(ray.direction.mul((tip.y - ray.origin.y) / ray.direction.y));
+      const rival = track("home", "3", { x: onRay.x - tip.x, z: onRay.z - tip.z }, Math.PI, "block");
+      expect(onRay.z - tip.z, `${label}: the rival stands on the home side`).toBeGreaterThan(0);
+      expect(onRay.sub(contact).length, `${label}: metres apart along the ray`).toBeGreaterThan(5);
+      const dRival = handDistance(sceneOf([rival]), ray), dPasser = handDistance(sceneOf([passer]), ray);
+      expect(dRival, label).toBeLessThan(0.05);
+      expect(dPasser, `${label}: the rival's hand is the nearer`).toBeGreaterThan(dRival + 0.1);
+      // Alone, the passer is the contact.
+      const alone = VideoReconstructor.contactAnchor(obs, sceneOf([passer]), true, undefined, obs);
+      expect(alone, `${label}: the passer alone`).toBeDefined();
+      expect(alone!.position.sub(contact).length, `${label}: at the passer`).toBeLessThan(0.5);
+      // With the rival on the ray: the passer or none.
+      const both = VideoReconstructor.contactAnchor(obs, sceneOf([passer, rival]), true, undefined, obs);
+      if (both) expect(both.position.sub(contact).length, `${label}: at the passer, not the rival`).toBeLessThan(0.5);
     }
   }, 60_000);
 

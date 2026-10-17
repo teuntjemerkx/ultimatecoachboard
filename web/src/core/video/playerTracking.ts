@@ -189,12 +189,18 @@ export interface PlayerTrackerSettings {
    */
   appearanceWeight: number;
   appearanceMergeLimit: number;
+  /**
+   * Web addition: two tracks whose detections stay closer than this most of the time they are both seen follow one
+   * person (two people cannot stand that close), metres.
+   */
+  sameBodyDistance: number;
 }
 
 export const defaultTrackerSettings: Readonly<PlayerTrackerSettings> = {
   courtMargin: 2, netTolerance: 0.5, maxFootHeight: 1.2, maxSpeed: 8, gateSlack: 0.6, maxPlayersPerSide: 6, maxCoast: 1.0,
   mergeGap: 2.5, minDetections: 4, minConfidence: 0.1, measurementNoise: 0.1, accelerationNoise: 8, duplicateRadius: 0.4,
   tentativePenalty: 3, missGate: 64, keypointWeight: 30, appearanceWeight: 40, appearanceMergeLimit: 0.03,
+  sameBodyDistance: 0.45,
 };
 
 /** A one-axis constant-velocity Kalman state. */
@@ -398,6 +404,7 @@ export class PlayerTracker {
     });
     let tracks = all.filter((w) => w.detections.length >= settings.minDetections);
     tracks = this.merge(tracks, times);
+    tracks = this.joinDuplicates(tracks);
     // At most six per side: the most persistent.
     const kept: Work[] = [];
     for (const side of Side.allCases) {
@@ -406,6 +413,46 @@ export class PlayerTracker {
       kept.push(...mine.slice(0, settings.maxPlayersPerSide));
     }
     return kept.map((w) => this.smooth(w, times));
+  }
+
+  /**
+   * Web addition: joins tracks that follow one person at the same time (a person detected twice, or two tracks taking
+   * turns on one player), which would show as two bodies inside each other: same side, at least three frames in which
+   * both were detected, and in at least 70% of them their detections closer than `sameBodyDistance`. The track with
+   * more detections keeps its own and takes the other's in the frames it missed. Closest pairs first.
+   */
+  private joinDuplicates(input: Work[]): Work[] {
+    const limit = this.settings.sameBodyDistance;
+    const tracks = [...input];
+    for (;;) {
+      let best: [number, number, number] | undefined;
+      tracks.forEach((a, i) => {
+        tracks.forEach((b, j) => {
+          if (j <= i || a.side !== b.side || a.lastFrame < b.firstFrame || b.lastFrame < a.firstFrame) return;
+          const theirs = new Map(b.detections.map((d) => [d.frame, d.det.floor]));
+          let both = 0, close = 0, sum = 0;
+          for (const d of a.detections) {
+            const q = theirs.get(d.frame);
+            if (!q) continue;
+            const gap = Math.hypot(d.det.floor.x - q.x, d.det.floor.z - q.z);
+            both++;
+            sum += gap;
+            if (gap < limit) close++;
+          }
+          if (both < 3 || close < 0.7 * both) return;
+          const mean = sum / both;
+          if (!best || mean < best[0]) best = [mean, i, j];
+        });
+      });
+      if (!best) return tracks;
+      const [, i, j] = best;
+      const [keep, drop] = tracks[i].detections.length >= tracks[j].detections.length ? [tracks[i], tracks[j]] : [tracks[j], tracks[i]];
+      const mine = new Set(keep.detections.map((d) => d.frame));
+      keep.detections.push(...drop.detections.filter((d) => !mine.has(d.frame)));
+      keep.detections.sort((x, y) => x.frame - y.frame);
+      keep.lastTime = Math.max(keep.lastTime, drop.lastTime);
+      tracks.splice(tracks.indexOf(drop), 1);
+    }
   }
 
   /**

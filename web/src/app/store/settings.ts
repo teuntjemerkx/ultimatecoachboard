@@ -11,12 +11,22 @@ export interface Settings {
 }
 
 const KEY = "coachboard.settings";
-const defaults: Settings = { themeId: "locker", advanced: false, women: true, teamName: "" };
+const defaults: Settings = { themeId: "prizm", advanced: false, women: true, teamName: "" };
 
 function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;
+    const stored = raw ? { ...defaults, ...JSON.parse(raw) } : defaults;
+    // Once, with the Prizm look: the earlier defaults (Locker room, Game day) move to Prizm; a look picked since stays.
+    if (localStorage.getItem("coachboard.prizm") === null) {
+      localStorage.setItem("coachboard.prizm", "1");
+      if (stored.themeId === "locker" || stored.themeId === "gameday") {
+        const moved = { ...stored, themeId: "prizm" };
+        localStorage.setItem(KEY, JSON.stringify(moved));
+        return moved;
+      }
+    }
+    return stored;
   } catch {
     return defaults;
   }

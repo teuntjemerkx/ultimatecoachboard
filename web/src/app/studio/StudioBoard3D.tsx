@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import type { FloorPoint } from "../../core/match/court";
-import { Gaze, PlayerBodies, V3, posedPlayers, type GazeAim, type GazeReadout, type PosedPlayer } from "../../core/spatial";
+import { Gaze, PlayerBodies, V3, type GazeAim, type GazeReadout, type PosedPlayer } from "../../core/spatial";
 import { Zone, sceneTimeline, type SceneFrame } from "../../core/zones";
 import { benchOrbit, type Board3D, type Orbit } from "../three/Board3D";
 import { Court3DView, boardColors } from "../three/Court3DView";
 import { Players3D } from "../three/Players3D";
-import { ballPlanOf, useStudio } from "./studio";
+import { ballPlanOf, studioBodies, useStudio } from "./studio";
 
 /** Upright views stand the court upright, as the 2D board does. */
 export const uprightAspect = (aspect: number) => aspect < 1 / 1.1;
@@ -131,7 +131,7 @@ export function StudioBoard3D({ themeKey, netHeight, onBoard, inset = 0, size }:
     const players = playersRef.current;
     if (!ready || !players || !st.editor) return;
     const frame = withDrag(st.frame(), drag);
-    const posed = posedPlayers(frame);
+    const posed = studioBodies(st.scene(), st.time, frame, drag?.kind === "token" && drag.moved ? drag.id : undefined);
     posedRef.current = posed;
     const ball = st.ball();
     const gaze = st.gaze ? sightLines(posed, st.gaze, { id: st.pov, yaw: st.povYaw, pitch: st.povPitch }, ball,

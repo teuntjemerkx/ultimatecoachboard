@@ -1,10 +1,12 @@
 import { create } from "zustand";
 import type { FloorPoint, Side } from "../../core/match/court";
 import { InkStroke } from "../../core/match/liveTypes";
-import { Gaze, PlayerBodies, posedPlayers, type GazeAim, type PosedPlayer, type Posture } from "../../core/spatial";
+import {
+  Gaze, PlayerBodies, SeparationTrack, posedPlayers, separateBodies, type GazeAim, type PosedPlayer, type Posture,
+} from "../../core/spatial";
 import {
   ContactKind, PlacementAssist, SceneEditor, SceneSetup, SmartGeometry, TacticalScene, Zone, ZoneBuilder, ZoneSnapping, ZoneStyle,
-  ZoneTag, sceneTimeline, templateRotations,
+  ZoneTag, sceneClock, sceneFrame, sceneMotion, sceneTimeline, templateRotations,
   type AttackOption, type BallContact, type BallPlan, type RallyPhase, type SceneFrame, type ShapeKind, type SnapTarget,
   type ZonePattern, type ZoneTint,
 } from "../../core/zones";
@@ -24,8 +26,6 @@ export type StudioTool = "move" | "pen" | "zone";
 /** The markers "Animate by phase" adds, serve to defence. */
 const RallyPhaseOrder: readonly RallyPhase[] = ["serve", "receive", "set", "attack", "cover", "defence"];
 
-/** Seconds per phase interval during playback (as on the iPad). */
-const secondsPerPhase = 1.1;
 
 let planCache: { scene: TacticalScene; net: number; plan: BallPlan } | undefined;
 
@@ -36,6 +36,45 @@ export function ballPlanOf(scene: TacticalScene): BallPlan {
   const plan = TacticalScene.ballPlan(scene, net);
   planCache = { scene, net, plan };
   return plan;
+}
+
+let bodyCache: { scene: TacticalScene; women: boolean; athletes: boolean; track: SeparationTrack } | undefined;
+
+/** Floor velocities (m/s) of a scene's players at a timeline position, as the scene plays (sceneMotion). */
+function velocities(scene: TacticalScene, time: number): Map<string, FloorPoint> {
+  return new Map([...sceneMotion(scene, time)].map(([id, m]) => [id, m.velocity]));
+}
+
+/**
+ * The players of a moment of the scene as bodies that never stand in each other or reach through the net (web
+ * addition): posed, slid aside along the rally (one SeparationTrack per scene, so they step around each other rather
+ * than jump), and any touch left in this exact frame (a drag included) resolved. The dragged player stands firm.
+ * Players taking steps are kept apart by their whole step cycle (PosedPlayer.strideEnvelope).
+ */
+export function studioBodies(scene: TacticalScene, time: number, frame: SceneFrame, dragged?: string): PosedPlayer[] {
+  const posed = posedPlayers(frame);
+  const line = sceneTimeline(scene);
+  if (line.length === 0) return separateBodies(posed, { weight: (p) => (p.id === dragged ? 0 : 1) });
+  const women = PlayerBodies.women, athletes = PlayerBodies.athletes;
+  if (!bodyCache || bodyCache.scene !== scene || bodyCache.women !== women || bodyCache.athletes !== athletes) {
+    const plan = ballPlanOf(scene);
+    const clock = sceneClock(scene);
+    const track = new SeparationTrack((seconds) => {
+      const t = clock.time(seconds);
+      const f = TacticalScene.liveFrame(scene, t, plan);
+      const velocity = velocities(scene, t);
+      return { players: posedPlayers(f), velocity, weight: (p) => 0.3 + Math.hypot(velocity.get(p.id)!.x, velocity.get(p.id)!.z) };
+    }, 0, clock.total, {
+      floor: (seconds) => new Map(sceneFrame(scene, clock.time(seconds)).tokens.map((t) => [t.id, t.point])),
+    });
+    bodyCache?.track.stop();
+    track.prepare();
+    bodyCache = { scene, women, athletes, track };
+  }
+  const velocity = velocities(scene, time);
+  const speed = (id: string) => Math.hypot(velocity.get(id)?.x ?? 0, velocity.get(id)?.z ?? 0);
+  return separateBodies(posed, { weight: (p) => (p.id === dragged ? 0 : 0.3 + speed(p.id)), velocity: (p) => velocity.get(p.id) },
+    bodyCache.track.offsets(sceneClock(scene).seconds(time)));
 }
 
 interface StudioState {
@@ -176,13 +215,14 @@ export const useStudio = create<StudioState>((set, getState) => {
     await put("boards", record);
   };
 
-  const tweenTo = (target: number, duration: number, playback = false) => {
+  /** Moves the time to `target` over `duration` seconds; `at` maps the fraction done to the time (default: evenly). */
+  const tweenTo = (target: number, duration: number, playback = false, at?: (f: number) => number) => {
     stopTween();
     const start = getState().time;
     const begin = performance.now();
     const step = (now: number) => {
       const f = duration > 0 ? Math.min(1, (now - begin) / (duration * 1000)) : 1;
-      set({ time: start + (target - start) * f });
+      set({ time: f >= 1 ? target : at ? at(f) : start + (target - start) * f });
       if (f < 1) tween = requestAnimationFrame(step);
       else {
         tween = undefined;
@@ -344,7 +384,10 @@ export const useStudio = create<StudioState>((set, getState) => {
       const end = Math.max(sceneTimeline(s.editor!.scene).length - 1, 0);
       if (s.time >= end - 1e-6) set({ time: 0 });
       set({ playing: true });
-      tweenTo(end, (end - getState().time) * secondsPerPhase, true);
+      // In real time: a phase with a long run plays longer (sceneClock).
+      const clock = sceneClock(s.editor!.scene);
+      const from = clock.seconds(getState().time), left = clock.total - from;
+      tweenTo(end, left, true, (f) => clock.time(from + f * left));
     },
 
     goTo(phase) {

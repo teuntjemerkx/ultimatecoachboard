@@ -82,3 +82,15 @@ export function strideParams(base: PoseParams, skeleton: SkeletonModel, motion: 
   turn(Joint.spine, Math.max(-0.08, Math.min(0.22, 0.05 * motion.forward)));
   return w >= 0.999 ? params : PoseParams.blend(base, params, w);
 }
+
+/**
+ * Web addition: the step cycle's turning points for `motion` (each foot forward and back, each foot lifted, the arms at
+ * both ends of their swing), as `strideParams` poses them; empty when no steps show. Every pose of the cycle lies
+ * within these, so the body separation keeps them apart instead of the pose of the moment: the arms and legs then
+ * never swing into anyone, and nobody is pushed about at every step.
+ */
+export function strideEnvelope(base: PoseParams, skeleton: SkeletonModel, motion: StrideMotion, weight = 1): PoseParams[] {
+  const speed = Math.min(Stride.maxSpeed, Math.hypot(motion.forward, motion.left));
+  if (base.airborne || Math.max(0, Math.min(1, weight)) * Stride.weight(speed) < 0.01) return [];
+  return [0, 1, 2, 3].map((k) => strideParams(base, skeleton, { ...motion, phase: (k * Math.PI) / 2 }, weight));
+}

@@ -8,8 +8,9 @@ import { BallFlight } from "./ballFlight";
 import type { CameraPose } from "./cameraPose";
 import { LineOfSight, OccluderModel, VisualField, type Visibility, type VisualBand } from "./lineOfSight";
 import { V3, type Rigid } from "./math3d";
-import { PostureLibrary } from "./postureLibrary";
-import { BodyMetrics, Joint, SkeletonModel } from "./skeleton";
+import { Stride, strideEnvelope, strideParams } from "./gait";
+import { PoseParams, PostureLibrary } from "./postureLibrary";
+import { BodyMetrics, Joint, Posture, SkeletonModel } from "./skeleton";
 import { swiftRound } from "./swiftCompat";
 
 /**
@@ -18,6 +19,11 @@ import { swiftRound } from "./swiftCompat";
  */
 export const PlayerBodies = {
   women: false,
+  /**
+   * Web: the 3D players are drawn as the MakeHuman athletes (athleteBody.ts), so bodies are kept apart by their
+   * capsules; false while the app can only draw the mannequin (AvatarMesh).
+   */
+  athletes: true,
 
   get group(): string {
     return PlayerBodies.women ? "elite_women" : "elite_men";
@@ -63,6 +69,11 @@ export class PosedPlayer {
     readonly token: SceneToken,
     readonly skeleton: SkeletonModel,
     readonly joints: Rigid[],
+    /**
+     * Web addition: for a player taking steps, the joints at the step cycle's turning points (gait.ts,
+     * `strideEnvelope`); the body separation keeps all of them apart instead of the pose of the moment.
+     */
+    readonly strideEnvelope: readonly Rigid[][] = [],
   ) {}
 
   get id(): string {
@@ -84,15 +95,25 @@ export class PosedPlayer {
   }
 }
 
-/** Every player of a frame posed (posture blends applied). Swift `SceneFrame.posedPlayers()`. */
-export function posedPlayers(frame: SceneFrame): PosedPlayer[] {
+/**
+ * Every player of a frame posed (posture blends applied). Swift `SceneFrame.posedPlayers()`. Web addition: a player
+ * the frame has moving (`frame.motion`) takes steps (spatial/gait.ts) instead of sliding in one stance; `stride: false`
+ * leaves the steps out (the bodies as they stand, e.g. for keeping players apart without the swinging arms and legs).
+ */
+export function posedPlayers(frame: SceneFrame, options: { stride?: boolean } = {}): PosedPlayer[] {
   return frame.tokens.map((t) => {
     const s = new SkeletonModel(new BodyMetrics(effectiveStature(t)));
     const posture = t.posture ?? automaticPosture(t.point);
     const facing = t.yaw ?? (t.side === "home" ? Math.PI : 0);
     const blend = frame.postureBlends.get(t.id);
-    const joints = s.pose(blend ?? posture, t.point, facing, 0, t.role);
-    return new PosedPlayer(t, s, joints);
+    const motion = options.stride === false ? undefined : frame.motion.get(t.id);
+    if (!motion) return new PosedPlayer(t, s, s.pose(blend ?? posture, t.point, facing, 0, t.role));
+    const params = blend
+      ? PoseParams.blend(Posture.params(blend.from, s, t.role), Posture.params(blend.to, s, t.role), blend.t)
+      : Posture.params(posture, s, t.role);
+    const m = Stride.motion(motion.velocity, facing, motion.phase);
+    const joints = s.pose(strideParams(params, s, m), t.point, facing, 0);
+    return new PosedPlayer(t, s, joints, strideEnvelope(params, s, m).map((e) => s.pose(e, t.point, facing, 0)));
   });
 }
 

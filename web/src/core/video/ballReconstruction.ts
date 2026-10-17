@@ -200,9 +200,28 @@ export interface BallSettings {
   drag: boolean;
   /** Join consecutive flights at their contact (each pulls the other by its own uncertainty). */
   chain: boolean;
+  // Web additions: what a believable flight is (`BallReconstruction.plausible`). When the ball moves nearly along the
+  // viewing ray of a far telephoto camera the image does not fix its depth, and the best fit can start at the camera
+  // at a hundred metres a second or more.
+  /** Half width (x) and half length (z) of the box the ball stays in: the default `HallEnvironment` plus 2 m. */
+  hallHalfWidth: number;
+  hallHalfLength: number;
+  /** Highest believable ball, metres. */
+  maxHeight: number;
+  /** Fastest believable ball, metres a second (a jump serve or a spike reaches about 30). */
+  maxSpeed: number;
+  /** Lowest top of a believable flight, metres: a ball that never leaves the floor is held, bounced or rolling. */
+  minTop: number;
+  /**
+   * Without an anchor an unbelievable flight is refitted only when the image places it: the position's standard
+   * deviation at the middle of the flight (one-pixel covariance times the fit's RMS) at most this, metres. A serve
+   * going away from a low end-line camera is about 1 to 1.5 m, a ball along the ray of a far telephoto 3.5 m or more.
+   */
+  placedSigma: number;
 }
 
-export const defaultBallSettings: Readonly<BallSettings> = { rmsThreshold: 3, pointThreshold: 7, minPoints: 5, maxGap: 0.35, drag: true, chain: true };
+export const defaultBallSettings: Readonly<BallSettings> = { rmsThreshold: 3, pointThreshold: 7, minPoints: 5, maxGap: 0.35, drag: true, chain: true,
+  hallHalfWidth: 13.5, hallHalfLength: 19, maxHeight: 15, maxSpeed: 35, minTop: 0.5, placedSigma: 2.5 };
 
 /** The flight model's free parameters: launch position and velocity, and the lift coefficient when it is free. */
 interface Fit {
@@ -232,8 +251,24 @@ const hintedLiftScale = 0.04;
 
 const clampLift = (x: number) => Math.min(liftRange[1], Math.max(liftRange[0], x));
 
+/**
+ * Web addition: residual weights of the believable flight (`BallSettings`) in a bounded fit: pixels per metre outside
+ * the hall (as below the floor) and per metre a second above the top speed, and the time step of the speeds. The
+ * penalties start 5% inside the limits, so a fit the image pulls against them still passes `plausible`. With an
+ * anchor fixing the depth, a weak prior (metres a second) pulls the speed toward rest: along the viewing ray of a far
+ * camera the image hardly sees the speed, and of the flights that fit it equally the slowest is the believable one.
+ * Without an anchor it would pull the whole flight toward the camera (nearer is slower), so there is none.
+ */
+const boundsWeight = floorWeight;
+const speedWeight = 10.0;
+const speedStep = 0.01;
+const boundsInside = 0.95;
+const speedPrior = 5.0;
+
 class Problem {
   liftPrior: { centre: number; scale: number } = { centre: 0, scale: liftScale };
+  /** Web addition: keeps the ball in the hall and below the top speed (the bounded refit of `reconstruct`). */
+  bounds?: Readonly<BallSettings>;
 
   constructor(
     readonly obs: readonly BallObservation[],
@@ -257,7 +292,10 @@ class Problem {
    * behind the camera.
    */
   residuals(x: readonly number[]): { all: number[]; pixelCost: number } | undefined {
-    const ps = this.positions(x, [...this.obs.map((o) => o.time), ...this.anchors.map((a) => a.time)]);
+    const b = this.bounds;
+    const first = this.obs[0].time, last = this.obs[this.obs.length - 1].time;
+    const speedTimes = b ? [first - speedStep, first + speedStep, last - speedStep, last + speedStep] : [];
+    const ps = this.positions(x, [...this.obs.map((o) => o.time), ...this.anchors.map((a) => a.time), ...speedTimes]);
     const r: number[] = [];
     let pixelCost = 0;
     for (let i = 0; i < this.obs.length; i++) {
@@ -277,6 +315,20 @@ class Problem {
       }
       if (a.verticalSigma !== undefined) r.push((p.y - a.position.y) / a.verticalSigma);
     });
+    if (b) {
+      // Web addition: the ball inside the hall at every observation, and below the top speed at both ends.
+      const w = b.hallHalfWidth * boundsInside, l = b.hallHalfLength * boundsInside, h = b.maxHeight * boundsInside;
+      for (let i = 0; i < this.obs.length; i++) {
+        const p = ps[i];
+        r.push(Math.max(0, Math.abs(p.x) - w) * boundsWeight, Math.max(0, Math.abs(p.z) - l) * boundsWeight, Math.max(0, p.y - h) * boundsWeight);
+      }
+      const k = this.obs.length + this.anchors.length;
+      for (const j of [k, k + 2]) {
+        const speed = ps[j + 1].sub(ps[j]).length / (2 * speedStep);
+        r.push(Math.max(0, speed - b.maxSpeed * boundsInside) * speedWeight);
+        if (this.anchors.length > 0) r.push(speed / speedPrior);
+      }
+    }
     if (this.fitsLift) r.push((x[6] - this.liftPrior.centre) / this.liftPrior.scale);
     return { all: r, pixelCost };
   }
@@ -403,12 +455,15 @@ export const BallReconstruction = {
 
   /**
    * The best drag-free flight (t0 = the first observation): LM from the linear start and from depths of 3 to 40 m
-   * along the first ray, or from `warm`.
+   * along the first ray, or from `warm`. Web addition: with `bounds` the fit keeps the ball in the hall and below the
+   * top speed, and the depths span the part of the ray inside the hall.
    */
-  ballistic(obs: readonly BallObservation[], camera: VideoCamera, anchors: readonly BallAnchor[] = [], warm?: Fit): Fit | undefined {
+  ballistic(obs: readonly BallObservation[], camera: VideoCamera, anchors: readonly BallAnchor[] = [], warm?: Fit,
+    bounds?: Readonly<BallSettings>): Fit | undefined {
     if (obs.length < 3) return undefined;
     const t0 = obs[0].time;
     const problem = new Problem(obs, t0, camera, anchors, BallSegment.vacuum, false);
+    problem.bounds = bounds;
     if (warm) {
       const f = problem.refine(fitParams(warm).slice(0, 6), 20);
       if (f) return f;
@@ -417,9 +472,14 @@ export const BallReconstruction = {
     const s0 = BallReconstruction.linearStart(obs, t0, camera);
     if (s0) starts.push(s0);
     const ray = camera.ray(obs[0].image);
-    for (const depth of [3, 5, 8, 12, 18, 26, 40]) {
+    const inside = bounds ? BallReconstruction.hallSpan(ray, bounds) : undefined;
+    const depths = inside ? [0, 1, 2, 3, 4, 5, 6].map((k) => inside[0] + ((inside[1] - inside[0]) * (k + 0.5)) / 7) : [3, 5, 8, 12, 18, 26, 40];
+    for (const depth of depths) {
       const s = BallReconstruction.linearStart(obs, t0, camera, ray.origin.add(ray.direction.mul(depth)));
-      if (s) starts.push(s);
+      if (!s) continue;
+      // A bounded fit starts below the top speed.
+      if (bounds && s[1].length > bounds.maxSpeed) s[1] = s[1].mul(bounds.maxSpeed / s[1].length);
+      starts.push(s);
     }
     let best: Fit | undefined;
     for (const s of starts) {
@@ -432,23 +492,27 @@ export const BallReconstruction = {
 
   /**
    * Drag-free first, then the BallFlight model with drag: without anchors as a float (no spin, which the image cannot
-   * measure), kept if it fits at least as well; with anchors the lift coefficient is fitted too.
+   * measure), kept if it fits at least as well; with anchors the lift coefficient is fitted too. Web addition: `bounds`
+   * as in `ballistic`.
    */
-  bestFit(obs: readonly BallObservation[], camera: VideoCamera, anchors: readonly BallAnchor[], drag: boolean): Fit | undefined {
+  bestFit(obs: readonly BallObservation[], camera: VideoCamera, anchors: readonly BallAnchor[], drag: boolean,
+    bounds?: Readonly<BallSettings>): Fit | undefined {
     if (obs.length === 0) return undefined;
     const t0 = obs[0].time;
-    const free = BallReconstruction.ballistic(obs, camera, anchors);
+    const free = BallReconstruction.ballistic(obs, camera, anchors, undefined, bounds);
     if (!free) return undefined;
     if (!drag) return free;
     const base = fitParams(free).slice(0, 6);
     if (anchors.length === 0) {
       const problem = new Problem(obs, t0, camera, [], Aero.float, false);
+      problem.bounds = bounds;
       const f = problem.refine(base, 40);
       if (!f) return free;
       return f.cost <= free.cost ? f : free;
     }
     const problem = new Problem(obs, t0, camera, anchors, Aero.float, true);
     problem.liftPrior = BallReconstruction.liftPrior(anchors, t0);
+    problem.bounds = bounds;
     let best = free;
     for (const lift of [...new Set([problem.liftPrior.centre, 0, 0.15])].sort((a, b) => a - b)) {
       const f = problem.refine([...base, lift], 40);
@@ -474,6 +538,41 @@ export const BallReconstruction = {
     const best = BallReconstruction.bestFit(obs, camera, anchors, drag);
     if (!best) return undefined;
     return new BallSegment(obs[0].time, obs[obs.length - 1].time, best.p0, best.v0, best.aero, fitRMS(best));
+  },
+
+  /**
+   * Web addition: whether a flight is believable, from t0 to t1: inside the hall (`hallHalfWidth`, `hallHalfLength`,
+   * from half a metre under the floor up to `maxHeight`), off the floor (its top at least `minTop`) and no faster
+   * than `maxSpeed` at either end (the fastest point of a flight with or without drag).
+   */
+  plausible(segment: BallSegment, settings: Partial<BallSettings> = {}): boolean {
+    const s = { ...defaultBallSettings, ...settings };
+    let top = -Infinity;
+    for (let k = 0; k <= 8; k++) {
+      const p = segment.unclamped(segment.t0 + ((segment.t1 - segment.t0) * k) / 8);
+      if (!(Math.abs(p.x) <= s.hallHalfWidth && Math.abs(p.z) <= s.hallHalfLength && p.y >= -0.5 && p.y <= s.maxHeight)) return false;
+      top = Math.max(top, p.y);
+    }
+    if (!(top >= s.minTop)) return false;
+    return segment.velocity(segment.t0).length <= s.maxSpeed && segment.velocity(segment.t1).length <= s.maxSpeed;
+  },
+
+  /** Web addition: the depths (along the ray) between which a viewing ray is inside the hall of `plausible`. */
+  hallSpan(ray: { origin: V3; direction: V3 }, settings: Readonly<BallSettings>): [number, number] | undefined {
+    let lo = 0, hi = Infinity;
+    const slab = (o: number, d: number, min: number, max: number) => {
+      if (Math.abs(d) < 1e-12) {
+        if (o < min || o > max) hi = -Infinity;
+        return;
+      }
+      const a = (min - o) / d, b = (max - o) / d;
+      lo = Math.max(lo, Math.min(a, b));
+      hi = Math.min(hi, Math.max(a, b));
+    };
+    slab(ray.origin.x, ray.direction.x, -settings.hallHalfWidth, settings.hallHalfWidth);
+    slab(ray.origin.y, ray.direction.y, 0, settings.maxHeight);
+    slab(ray.origin.z, ray.direction.z, -settings.hallHalfLength, settings.hallHalfLength);
+    return lo < hi && Number.isFinite(hi) ? [lo, hi] : undefined;
   },
 
   /**
@@ -546,15 +645,34 @@ export const BallReconstruction = {
     const own = (g: readonly BallObservation[]) =>
       anchors.filter((a) => a.time >= g[0].time - 0.15 && a.time <= g[g.length - 1].time + 0.15);
     const extra: BallAnchor[][] = groups.map(() => []);
-    const fits = groups.map((g) => BallReconstruction.bestFit(g, camera, own(g), s.drag));
-    // Contact times where consecutive flights pass closest.
-    const contacts: (number | undefined)[] = groups.map(() => undefined);
+    const fits: (Fit | undefined)[] = groups.map((g) => BallReconstruction.bestFit(g, camera, own(g), s.drag));
     const segment = (i: number): BallSegment | undefined => {
       const f = fits[i];
       if (!f) return undefined;
       const g = groups[i];
       return new BallSegment(g[0].time, g[g.length - 1].time, f.p0, f.v0, f.aero, fitRMS(f));
     };
+    // Web addition: a flight that is not believable (`plausible`) is refitted inside the hall below the top speed, and
+    // kept if that still fits the image (within a quarter more than `split` allows: capping a real serve's speed costs
+    // a little, a flight the image puts at the camera ten times that); otherwise it is dropped. The refit needs
+    // something to place the flight: an anchor (a hand, the floor), or an image that fixes it to `placedSigma` (a fast
+    // serve going away from a low camera, a little over the top speed); a ball moving along the ray of a far camera
+    // has neither.
+    const bounded = groups.map(() => false);
+    groups.forEach((g, i) => {
+      const seg = segment(i), f = fits[i];
+      if (!seg || !f || BallReconstruction.plausible(seg, s)) return;
+      const middle = (g[0].time + g[g.length - 1].time) / 2;
+      const placed = own(g).length > 0
+        || BallReconstruction.problemFor(f, g, camera, []).positionSigma(f, middle) * Math.max(1, fitRMS(f)) <= s.placedSigma;
+      const refit = placed ? BallReconstruction.bestFit(g, camera, own(g), s.drag, s) : undefined;
+      fits[i] = refit;
+      const kept = segment(i);
+      if (!refit || !kept || !(fitRMS(refit) <= s.rmsThreshold * 1.25) || !BallReconstruction.plausible(kept, s)) fits[i] = undefined;
+      bounded[i] = fits[i] !== undefined;
+    });
+    // Contact times where consecutive flights pass closest.
+    const contacts: (number | undefined)[] = groups.map(() => undefined);
     for (let i = 0; i < groups.length - 1; i++) {
       const a = segment(i), b = segment(i + 1);
       if (!a || !b || !(b.t0 - a.t1 <= s.maxGap + 1e-9)) continue;
@@ -572,6 +690,8 @@ export const BallReconstruction = {
         if (tc === undefined || !fa || !fb) continue;
         const pa = BallReconstruction.problemFor(fa, groups[i], camera, own(groups[i]));
         const pb = BallReconstruction.problemFor(fb, groups[i + 1], camera, own(groups[i + 1]));
+        if (bounded[i]) pa.bounds = s;
+        if (bounded[i + 1]) pb.bounds = s;
         const sa = pa.positionSigma(fa, tc), sb = pb.positionSigma(fb, tc);
         if (!Number.isFinite(sa) && !Number.isFinite(sb)) continue;
         const xa = pa.positions(fitParams(fa), [tc])[0], xb = pb.positions(fitParams(fb), [tc])[0];
@@ -587,6 +707,7 @@ export const BallReconstruction = {
         if (extra[i].length === 0 || !f) return;
         const p = new Problem(g, g[0].time, camera, [...own(g), ...extra[i]], f.aero, s.drag);
         p.liftPrior = BallReconstruction.liftPrior(own(g), g[0].time);
+        if (bounded[i]) p.bounds = s;
         const x0 = [...fitParams(f).slice(0, 6), ...(s.drag ? [f.fitsLift ? f.aero.lift : 0] : [])];
         const refit = p.refine(x0, 40);
         if (refit) fits[i] = refit;
@@ -603,6 +724,8 @@ export const BallReconstruction = {
       }
       const after = contacts[i];
       if (after !== undefined) seg.t1 = after;
+      // Web addition: chaining can pull a flight out of the hall again.
+      if (!BallReconstruction.plausible(seg, s)) continue;
       segments.push(seg);
     }
     return segments;

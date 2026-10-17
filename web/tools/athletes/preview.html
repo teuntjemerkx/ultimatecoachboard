@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Athlete preview</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #dfe6ef; font: 13px -apple-system, sans-serif; }
+    canvas { display: block; width: 100%; height: 100%; }
+    #info { position: fixed; left: 8px; top: 8px; background: #fffc; padding: 6px 8px; border-radius: 6px; white-space: pre; }
+  </style>
+</head>
+<body>
+  <div id="info">loading…</div>
+  <script type="module">
+    // Developer preview of an exported athlete (not part of the app): the model in its bind pose under the app's light.
+    import * as THREE from "three";
+    import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+    import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+
+    const params = new URLSearchParams(location.search);
+    const file = params.get("model") ?? "female";
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color("#dfe6ef");
+    scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+    const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+    sun.position.set(3, 6, 4);
+    sun.castShadow = true;
+    scene.add(sun, new THREE.HemisphereLight(0xffffff, 0x8899aa, 0.6));
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.MeshStandardMaterial({ color: "#F7F3EA", roughness: 0.9 }));
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+    const camera = new THREE.PerspectiveCamera(30, 1, 0.05, 50);
+    const yaw = Number(params.get("yaw") ?? 0.5);
+    const dist = Number(params.get("dist") ?? 4.2), height = Number(params.get("y") ?? 1.0);
+    camera.position.set(Math.sin(yaw) * dist, height + 0.2, Math.cos(yaw) * dist);
+    camera.lookAt(0, height, 0);
+    const resize = () => {
+      renderer.setSize(innerWidth, innerHeight, false);
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+    };
+    addEventListener("resize", resize);
+    resize();
+    const gltf = await new GLTFLoader().loadAsync(`/athletes/${file}.glb`);
+    const lines = [];
+    let tris = 0;
+    gltf.scene.traverse((o) => {
+      if (o.isMesh) {
+        o.castShadow = true;
+        const n = o.geometry.index ? o.geometry.index.count / 3 : o.geometry.attributes.position.count / 3;
+        tris += n;
+        const m = Array.isArray(o.material) ? o.material : [o.material];
+        lines.push(`${o.name}: ${n} tris, ${m.map((x) => `${x.name} ${x.type} map:${x.map ? x.map.image?.width : "-"} alpha:${x.transparent ? "blend" : x.alphaTest ? "mask" : "opaque"}`).join("; ")}`);
+      }
+    });
+    const box = new THREE.Box3().setFromObject(gltf.scene);
+    lines.unshift(`${file}: ${tris} triangles, height ${(box.max.y - box.min.y).toFixed(3)} m`);
+    document.getElementById("info").textContent = lines.join("\n");
+    window.athlete = gltf;
+    scene.add(gltf.scene);
+    renderer.setAnimationLoop(() => renderer.render(scene, camera));
+  </script>
+</body>
+</html>

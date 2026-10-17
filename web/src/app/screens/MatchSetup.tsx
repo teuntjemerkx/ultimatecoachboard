@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bar } from "../ui/Bar";
 import { Choice } from "../ui/Choice";
 import { Icon } from "../ui/Icon";
@@ -7,7 +7,9 @@ import { useNav } from "../store/nav";
 import { netHeight, useSettings } from "../store/settings";
 import { TeamSystem, type Side } from "../../core/match";
 import { MatchSession, useMatch, type PlayerRef } from "../match/session";
-import type { Player } from "./Players";
+import { roleChip, seasonOf, type Player } from "./Players";
+import { PrizmCard } from "../ui/PrizmCard";
+import { useFitColumns } from "../hooks/useViewport";
 import { useSchedule } from "../schedule/useSchedule";
 import { fixture, ourTeam, upcoming, when, type ScheduledMatch } from "../schedule/schedule";
 
@@ -51,14 +53,20 @@ export function MatchSetup() {
   const hasSetter = TeamSystem.hasSetter(system);
 
   function place(p: PlayerRef) {
+    let following: number | null = null;
     if (picking === "libero") setLibero(p);
     else if (typeof picking === "number") {
       const next = slots.map((s) => (s?.number === p.number ? null : s));
       next[picking - 1] = p;
       setSlots(next);
       if (libero?.number === p.number) setLibero(undefined);
+      // Straight on to the next empty position (1 to 6, after this one), so six taps fill the lineup.
+      for (let k = 1; k < 6 && following === null; k++) {
+        const pos = ((picking - 1 + k) % 6) + 1;
+        if (!next[pos - 1]) following = pos;
+      }
     }
-    setPicking(null);
+    setPicking(following);
     setTyped("");
   }
 
@@ -80,68 +88,65 @@ export function MatchSetup() {
     }
   }
 
+  const line = `${settings.teamName || "Your team"} · ${seasonOf()}`;
+  const systemLabel = (sys: TeamSystem): [string, string] => {
+    const [main, ...rest] = TeamSystem.displayName(sys).split(" · ");
+    return [main, rest.join(" ").replace(" setter", "")];
+  };
+
   return (
     <div className="screen">
       <Bar title="New match" />
-      <div className="scroll">
-        <div className="page" style={{ display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", alignItems: "start" }}>
-          <section className="stack">
-            <h2 className="group-title">Our lineup</h2>
-            <div className="card stack" style={{ gap: 10 }}>
-              <div className="label" style={{ textAlign: "center" }}>Net</div>
-              <div style={{ height: 4, background: "var(--c-net)", borderRadius: 2 }} />
+      <main className="fill setup-fill">
+        <section className="locker-card">
+          <div className="plate-head">
+            <span className="plate"><Icon name="court" size={20} /> Our lineup</span>
+            <span className="aside">{slots.filter(Boolean).length} of 6</span>
+          </div>
+          <div className="card-body">
+            <div className="lineup">
+              <div className="stack" style={{ gap: 6 }}>
+                <span className="label" style={{ textAlign: "center" }}>Net</span>
+                <div className="net" />
+              </div>
               {layout.map((row, r) => (
-                <div key={r} style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                <div key={r} className="lineup-row">
                   {row.map((pos) => {
                     const p = slots[pos - 1];
                     return (
-                      <button key={pos} className="btn" onClick={() => setPicking(pos)}
-                              style={{ minHeight: 92, flexDirection: "column", gap: 2, border: "1.5px solid var(--c-hairline)", background: picking === pos ? "color-mix(in srgb, var(--c-led) 14%, var(--c-surface))" : "var(--c-surface)" }}>
-                        <span className="label">Position {pos}</span>
-                        <span style={{ font: "800 34px/1 var(--font-athletic)" }}>{p ? p.number : "+"}</span>
-                        {hasSetter && p && setter === pos && <span className="label" style={{ color: "var(--c-home)" }}>Setter</span>}
+                      <button key={pos} className={`slot${p ? " filled" : ""}${picking === pos ? " picking" : ""}`} onClick={() => setPicking(pos)}
+                              style={p ? { ["--foil" as string]: `${(p.number * 37) % 100}%`, ["--turn" as string]: `${210 + ((p.number * 47) % 360)}deg` } : undefined}
+                              aria-label={p ? `Position ${pos}: number ${p.number}` : `Position ${pos}: choose a player`}>
+                        <span className="pos">Position {pos}</span>
+                        <span className="no">{p ? p.number : <Icon name="plus" size={40} />}</span>
+                        {hasSetter && p && setter === pos && <span className="tag">Setter</span>}
                       </button>
                     );
                   })}
                 </div>
               ))}
-              <div className="row">
-                <button className="btn secondary" onClick={() => setPicking("libero")}>Libero {libero ? libero.number : "+"}</button>
-                {hasSetter && (
-                  <label className="row" style={{ gap: 8 }}>
-                    <span className="muted">Setter in position</span>
-                    <select id="setter-position" value={setter} onChange={(e) => setSetter(Number(e.target.value))}
-                            style={{ minHeight: 44, borderRadius: 6, padding: "0 10px", border: "1px solid var(--c-hairline)", background: "var(--c-bg)" }}>
-                      {[1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>{n}</option>)}
-                    </select>
-                  </label>
-                )}
-              </div>
             </div>
-            {picking !== null && (
-              <div className="card stack" style={{ gap: 12 }}>
-                <strong>{picking === "libero" ? "Who is the libero?" : `Who plays position ${picking}?`}</strong>
-                {roster.length > 0 && (
-                  <div className="row" style={{ gap: 8 }}>
-                    {roster.map((r) => (
-                      <button key={r.id} className={`btn small ${used.has(r.number) ? "" : "secondary"}`} style={{ minWidth: 56, minHeight: 48, fontSize: 20, fontWeight: 800 }}
-                              onClick={() => place({ id: r.id.toUpperCase(), number: r.number, name: r.name || undefined })}>
-                        {r.number}
-                      </button>
+            <div style={{ display: "grid", gridTemplateColumns: hasSetter ? "auto 1fr" : "1fr", gap: 14, alignItems: "end" }}>
+              <button className={`btn big ${libero ? "on" : "secondary"}`} onClick={() => setPicking("libero")} style={{ minWidth: 150 }}>
+                Libero {libero ? `#${libero.number}` : <Icon name="plus" />}
+              </button>
+              {hasSetter && (
+                <div className="stack" style={{ gap: 6 }}>
+                  <span className="label">Setter in position</span>
+                  <div className="seg6" role="group" aria-label="Setter in position">
+                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                      <button key={n} className={`btn ${setter === n ? "on" : ""}`} aria-pressed={setter === n} onClick={() => setSetter(n)}>{n}</button>
                     ))}
                   </div>
-                )}
-                <form className="row" onSubmit={(e) => { e.preventDefault(); const n = Number(typed); if (Number.isInteger(n) && n >= 0 && n <= 99) place({ id: crypto.randomUUID().toUpperCase(), number: n }); }}>
-                  <input id="type-number" inputMode="numeric" placeholder="Number" value={typed} onChange={(e) => setTyped(e.target.value)}
-                         style={{ width: 120, minHeight: 44, borderRadius: 6, border: "1px solid var(--c-hairline)", padding: "0 12px", background: "var(--c-bg)" }} />
-                  <button className="btn secondary" type="submit">Use this number</button>
-                  <button className="btn quiet" type="button" onClick={() => setPicking(null)}>Cancel</button>
-                </form>
-              </div>
-            )}
-          </section>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
 
-          <section className="stack" style={{ gap: 20 }}>
+        <section className="locker-card">
+          <div className="plate-head"><span className="plate"><Icon name="whistle" size={20} /> The match</span></div>
+          <div className="card-body">
             <label className="field">
               <span className="label">Opponent</span>
               <input id="opponent-name" value={opponent} placeholder="Dynamo" onChange={(e) => setOpponent(e.target.value)} />
@@ -149,15 +154,14 @@ export function MatchSetup() {
             {coming.length > 0 && (
               <div className="stack" style={{ gap: 8 }}>
                 <span className="label">From the schedule</span>
-                <div className="row" style={{ gap: 8 }}>
+                <div className="chip-grid">
                   {coming.map((m) => {
                     const name = opponentOf(m);
                     return (
-                      <button key={m.id} type="button" className={`btn small ${opponent === name ? "on" : "secondary"}`}
-                              style={{ flexDirection: "column", alignItems: "flex-start", gap: 0, minHeight: 52, padding: "6px 12px" }}
+                      <button key={m.id} type="button" className={`btn ${opponent === name ? "on" : ""}`}
                               aria-pressed={opponent === name} onClick={() => setOpponent(name)}>
                         <span>{name}</span>
-                        <span style={{ fontSize: 13, fontWeight: 500, opacity: 0.8 }}>{when(m)}{fixture(m, team).home === undefined ? "" : fixture(m, team).home ? " · home" : " · away"}</span>
+                        <small>{when(m)}{fixture(m, team).home === undefined ? "" : fixture(m, team).home ? " · home" : " · away"}</small>
                       </button>
                     );
                   })}
@@ -166,22 +170,82 @@ export function MatchSetup() {
             )}
             <div className="stack" style={{ gap: 8 }}>
               <span className="label">Team system</span>
-              <select id="team-system" value={system} onChange={(e) => setSystem(e.target.value as TeamSystem)}
-                      style={{ minHeight: 48, borderRadius: 6, padding: "0 12px", border: "1px solid var(--c-hairline)", background: "var(--c-bg)", fontSize: 17 }}>
-                {TeamSystem.allCases.map((s) => <option key={s} value={s}>{TeamSystem.displayName(s)}</option>)}
-              </select>
+              <div style={{ display: "grid", gridTemplateColumns: `repeat(${TeamSystem.allCases.length}, 1fr)`, gap: 8 }} role="group" aria-label="Team system">
+                {TeamSystem.allCases.map((sys) => {
+                  const [main, sub] = systemLabel(sys);
+                  return (
+                    <button key={sys} type="button" className={`btn ${system === sys ? "on" : ""}`} aria-pressed={system === sys}
+                            onClick={() => setSystem(sys)} title={TeamSystem.displayName(sys)}
+                            style={{ minHeight: 64, flexDirection: "column", gap: 2, padding: "4px 6px", whiteSpace: "normal", borderRadius: 18 }}>
+                      <span style={{ font: `400 ${main.length > 4 ? 24 : 28}px/1 var(--font-display-big)`, whiteSpace: "nowrap" }}>{main}</span>
+                      {sub && <small style={{ fontSize: 12, fontWeight: 600, opacity: 0.85, lineHeight: 1.1 }}>{sub}</small>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="stack" style={{ gap: 8 }}>
               <span className="label">Who serves first?</span>
               <Choice label="Who serves first" value={firstServer} onChange={setFirstServer}
                       options={[{ value: "home", title: "Us" }, { value: "opponent", title: "Them" }]} />
             </div>
-            <p className="muted" style={{ margin: 0 }}>Net {netHeight(settings.women).toFixed(2)} m ({settings.women ? "women" : "men"}; change in Settings).</p>
-            {error && <p role="alert" style={{ margin: 0, color: "var(--c-fault)" }}>{error}</p>}
-            <button className="btn primary" disabled={!ready} onClick={start}><Icon name="play" /> Start match</button>
-            {!ready && <p className="muted" style={{ margin: 0 }}>Put 6 players on court ({slots.filter(Boolean).length} of 6).</p>}
-          </section>
+            <div className="stack" style={{ gap: 8, marginTop: "auto" }}>
+              {error && <p role="alert" style={{ margin: 0, color: "var(--c-fault)", fontWeight: 600 }}>{error}</p>}
+              <button className="btn primary wide" disabled={!ready} onClick={start}><Icon name="play" /> Start match</button>
+              <p className="muted" style={{ margin: 0, textAlign: "center" }}>
+                {ready ? `Net ${netHeight(settings.women).toFixed(2)} m (${settings.women ? "women" : "men"}; change in Settings).` : `Put 6 players on court (${slots.filter(Boolean).length} of 6).`}
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {picking !== null && (
+        <PickSheet title={picking === "libero" ? "Who is the libero?" : `Who plays position ${picking}?`} roster={roster}
+                   onCourt={(n) => slots.some((s) => s?.number === n)} libero={libero?.number} line={line}
+                   typed={typed} setTyped={setTyped} onPick={place} onClose={() => setPicking(null)} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Picking a player: the team as cards, filling the sheet (no scrolling); a player already on court shows chrome, the
+ * libero gold. A number typed in works for a player not in the team.
+ */
+function PickSheet({ title, roster, onCourt, libero, line, typed, setTyped, onPick, onClose }: {
+  title: string; roster: Player[]; onCourt: (n: number) => boolean; libero?: number; line: string;
+  typed: string; setTyped: (t: string) => void; onPick: (p: PlayerRef) => void; onClose: () => void;
+}) {
+  const rack = useRef<HTMLDivElement>(null);
+  const fit = useFitColumns(rack, roster.length);
+  return (
+    <div className="sheet" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="card stack pick-sheet" style={{ gap: 16 }}>
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <h2 className="group-title" style={{ margin: 0, fontSize: 40 }}>{title}</h2>
+          <button className="btn big secondary" type="button" onClick={onClose}><Icon name="close" /> Cancel</button>
         </div>
+        {roster.length > 0 && (
+          <div className="card-rack" ref={rack}
+               style={{ flex: 1, gridTemplateColumns: fit.width ? `repeat(${fit.cols}, ${fit.width}px)` : undefined, justifyContent: "center", overflow: fit.width ? "hidden" : "auto" }}>
+            {roster.map((r) => {
+              const court = onCourt(r.number), isLibero = libero === r.number;
+              return (
+                <PrizmCard key={r.id} number={r.number} name={r.name} role={roleChip(r.role)} line={line}
+                           tier={isLibero ? "gold" : court ? "chrome" : "prizm"} tag={isLibero ? "Libero" : court ? "On court" : undefined}
+                           label={`#${r.number}${r.name ? ` ${r.name}` : ""}${court ? " (on court)" : isLibero ? " (libero)" : ""}`}
+                           onSelect={() => onPick({ id: r.id.toUpperCase(), number: r.number, name: r.name || undefined })} />
+              );
+            })}
+          </div>
+        )}
+        <form className="row" onSubmit={(e) => { e.preventDefault(); const n = Number(typed); if (typed.trim() !== "" && Number.isInteger(n) && n >= 0 && n <= 99) onPick({ id: crypto.randomUUID().toUpperCase(), number: n }); }}>
+          <span className="label">{roster.length ? "Not in the team?" : "Shirt number"}</span>
+          <input id="type-number" className="input" inputMode="numeric" placeholder="#" value={typed} onChange={(e) => setTyped(e.target.value)}
+                 style={{ width: 120, font: "400 34px/1 var(--font-display-big)", textAlign: "center" }} />
+          <button className="btn big" type="submit">Use this number</button>
+        </form>
       </div>
     </div>
   );

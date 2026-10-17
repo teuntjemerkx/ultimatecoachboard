@@ -17,3 +17,11 @@ export {
 export {
   PlayerBodies, defaultStature, effectiveStature, PosedPlayer, posedPlayers, GazeReadout, Gaze, type GazeAim,
 } from "./povAnalysis";
+export {
+  bodyCapsules, playerCapsules, separateBodies, separationOffsets, offsetBodies, SeparationTrack, deepestOverlap, deepestNetCrossing,
+  type BodyCapsule, type SeparationOptions, type SeparationMoment, type SeparationTrackOptions,
+} from "./bodySeparation";
+export {
+  poseAthlete, athleteCapsules, type AthleteRig, type AthleteBone, type AthleteCapsule, type AthletePose, type BoneMode,
+} from "./athleteBody";
+export { AthleteRigs, athleteRig } from "./athleteRigs";

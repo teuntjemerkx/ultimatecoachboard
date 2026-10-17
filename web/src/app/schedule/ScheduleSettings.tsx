@@ -34,8 +34,7 @@ export function ScheduleSettings() {
   }
 
   return (
-    <section className="stack" style={{ gap: 10 }}>
-      <h2 className="group-title">Match schedule</h2>
+    <section className="stack" style={{ gap: 16 }}>
       <p className="muted" style={{ margin: 0 }}>
         Paste the link to your team's programme: the iCal link (.ics) of the Nevobo export, or any calendar's iCal or RSS link.
         Your next matches then show on the start screen and fill in the opponent of a new match.
@@ -49,17 +48,17 @@ export function ScheduleSettings() {
         </label>
         <div className="row">
           {(changed || !schedule) && (
-            <button className="btn secondary" type="submit" disabled={loading || typed === ""}>
+            <button className="btn primary" type="submit" disabled={loading || typed === ""}>
               {loading ? "Fetching the schedule…" : schedule ? "Use this link" : "Link schedule"}
             </button>
           )}
           {schedule && !changed && (
-            <button className="btn secondary" type="button" disabled={loading} onClick={() => { setDone(""); void refresh(true); }}>
+            <button className="btn big" type="button" disabled={loading} onClick={() => { setDone(""); void refresh(true); }}>
               {loading ? "Updating…" : "Update now"}
             </button>
           )}
           {schedule && (
-            <button className="btn quiet danger" type="button" onClick={() => { unlink(); setUrl(""); setDone(""); }}>Remove</button>
+            <button className="btn big secondary danger" type="button" onClick={() => { unlink(); setUrl(""); setDone(""); }}>Remove</button>
           )}
         </div>
       </form>

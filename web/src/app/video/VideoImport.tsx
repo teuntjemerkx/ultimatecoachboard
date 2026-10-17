@@ -290,26 +290,34 @@ function ChooseStep({ loading, onFile }: { loading: boolean; onFile: (f: File) =
   };
 
   return (
-    <div className="scroll">
-      <div className="page stack video-choose">
-        <div className="hero video-hero">
-          <Icon name="video" size={44} className="video-hero-icon" />
+    <main className="fill video-fill">
+      <section className="locker-card">
+        <div className="plate-head"><span className="plate"><Icon name="video" size={20} /> New rally</span></div>
+        <div className="card-body video-hero">
+          <Icon name="video" size={72} className="locker-icon" />
           <h2 className="title">Turn a rally video into 3D</h2>
           <p className="subtitle">Then watch it from any player's eyes, in the hall from your video.</p>
-          <div className="row">
-            <button className="btn primary" disabled={loading} onClick={() => input.current?.click()}>
-              <Icon name="upload" /> {loading ? "Opening the video…" : "Choose a video"}
-            </button>
+          <div className="video-tips">
+            <span><Icon name="upload" /> Best filmed from high up, behind an end line.</span>
+            <span><Icon name="timeout" /> 4 to 10 seconds: one rally.</span>
+            <span><Icon name="video" /> Hold the camera still, or use a tripod.</span>
           </div>
+          <button className="btn primary wide" style={{ marginTop: "auto" }} disabled={loading} onClick={() => input.current?.click()}>
+            <Icon name="upload" /> {loading ? "Opening the video…" : "Choose a video"}
+          </button>
           <input ref={input} type="file" accept="video/*" hidden onChange={(e) => {
             const f = e.target.files?.[0];
             e.target.value = "";
             if (f) onFile(f);
           }} />
         </div>
-        {saved.length > 0 && (
-          <section>
-            <h3 className="group-title">Your videos</h3>
+      </section>
+      <section className="locker-card">
+        <div className="plate-head"><span className="plate"><Icon name="film" size={20} /> Your videos</span><span className="aside">{saved.length}</span></div>
+        <div className="card-body">
+          {saved.length === 0 ? (
+            <div className="empty" style={{ flex: 1 }}>Your rebuilt rallies appear here, ready to watch again.</div>
+          ) : (
             <div className="video-saved">
               {saved.map((v) => (
                 <div key={v.id} className="video-saved-item">
@@ -321,22 +329,17 @@ function ChooseStep({ loading, onFile }: { loading: boolean; onFile: (f: File) =
                     </span>
                     <Icon name="chevronRight" />
                   </button>
-                  <button className={`btn quiet small${confirm === v.id ? " danger" : ""}`} onClick={() => void remove(v.id)}
+                  <button className={`btn quiet${confirm === v.id ? " danger" : ""}`} onClick={() => void remove(v.id)}
                           aria-label={confirm === v.id ? "Tap again to delete" : `Delete ${v.title}`}>
                     <Icon name="trash" />{confirm === v.id ? "Delete?" : ""}
                   </button>
                 </div>
               ))}
             </div>
-          </section>
-        )}
-        <div className="card video-tips">
-          <span><Icon name="upload" /> Best filmed from high up, behind an end line.</span>
-          <span><Icon name="timeout" /> 4 to 10 seconds: one rally.</span>
-          <span><Icon name="video" /> Hold the camera still, or use a tripod.</span>
+          )}
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 

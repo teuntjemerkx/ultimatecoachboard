@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "@fontsource/barlow-condensed/600.css";
 import "@fontsource/barlow-condensed/700.css";
 import "@fontsource/barlow-condensed/800.css";
+import "@fontsource/bebas-neue/400.css";
 import { App } from "./app/App";
 
 createRoot(document.getElementById("root")!).render(

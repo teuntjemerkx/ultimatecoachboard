@@ -68,6 +68,11 @@ export class SceneFrame {
   /** Tokens with `point` and `posture` evaluated (posture is the blend's start while a blend runs). */
   tokens: SceneToken[] = [];
   postureBlends = new Map<string, PostureBlend>();
+  /**
+   * Web addition: each moving player's velocity on the floor (m/s) and step phase, for the step cycle
+   * (spatial/gait.ts); set on the frame as shown (`TacticalScene.liveFrame`).
+   */
+  motion = new Map<string, { velocity: FloorPoint; phase: number }>();
   /** Zones with `geometry` evaluated and the style opacity scaled by the intensity. */
   zones: Zone[] = [];
   intensities = new Map<string, number>();
@@ -126,7 +131,7 @@ export function sceneFrame(scene: TacticalScene, time: number): SceneFrame {
       keys.push([i, k.point, posture]);
     }
     const t: SceneToken = { ...token };
-    const [i, u] = Timeline.locate(time, keys.map((k) => k[0]));
+    const [i, u] = Timeline.locate(time, keys.map((k) => k[0]), Timeline.stride);
     if (u === 0 || i + 1 >= keys.length) {
       t.point = keys[i][1];
       t.posture = keys[i][2];
@@ -172,7 +177,7 @@ export const Timeline = {
    * The interval of `time` among increasing key times: [index of the interval's first key, eased fraction]. Before
    * the first key or after the last, the fraction is 0 at the nearest key.
    */
-  locate(time: number, keyTimes: readonly number[]): [number, number] {
+  locate(time: number, keyTimes: readonly number[], ease: (t: number) => number = criticallyDamped): [number, number] {
     if (keyTimes.length <= 1) return [0, 0];
     const first = keyTimes[0], last = keyTimes[keyTimes.length - 1];
     if (time <= first) return [0, 0];
@@ -180,7 +185,17 @@ export const Timeline = {
     let i = 0;
     while (i + 1 < keyTimes.length && keyTimes[i + 1] <= time) i += 1;
     const a = keyTimes[i], b = keyTimes[i + 1];
-    return [i, criticallyDamped((time - a) / (b - a))];
+    return [i, ease((time - a) / (b - a))];
+  },
+
+  /**
+   * How players move between markers: they speed up and slow down smoothly, at most 1.5 times their average speed
+   * (smoothstep). Web change: the critically damped easing of zones and cameras front-loads the move (2.6 times the
+   * average speed at its peak), which runs players through each other at sprint speeds above 10 m/s.
+   */
+  stride(t: number): number {
+    const x = Math.max(0, Math.min(1, t));
+    return x * x * (3 - 2 * x);
   },
 
   /**

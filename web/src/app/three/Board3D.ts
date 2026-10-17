@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
 /**
  * The 3D board (Section 3.2) on the web: the hall floor with the court and its lines, the net with tape, posts and
@@ -67,8 +68,21 @@ export class Board3D {
     this.orbit = benchOrbit(1.4);
     this.scene.background = new THREE.Color(colors.hallFloor);
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.4));
+    // A hall's soft reflections on skin and fabric (the players are physically based), and one light high over the
+    // court that casts soft shadows of the players on the floor.
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    this.scene.environmentIntensity = 0.55;
+    pmrem.dispose();
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     const sun = new THREE.DirectionalLight(0xffffff, 1.6);
     sun.position.set(6, 18, 9);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(sun.shadow.camera, { left: -13, right: 13, top: 16, bottom: -16, near: 1, far: 45 });
+    sun.shadow.bias = -0.0005;
+    sun.shadow.normalBias = 0.02;
     this.scene.add(sun);
     this.buildFloor();
     this.buildNet(netHeight);
@@ -87,6 +101,7 @@ export class Board3D {
   dispose() {
     this.disposed = true;
     cancelAnimationFrame(this.frame);
+    this.scene.environment?.dispose();
     this.renderer.dispose();
   }
 
@@ -147,6 +162,7 @@ export class Board3D {
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(W, L), new THREE.MeshLambertMaterial({ map: tex }));
     mesh.rotation.x = -Math.PI / 2;
     mesh.name = "floor";
+    mesh.receiveShadow = true;
     this.floorMesh = mesh;
     this.scene.add(mesh);
   }
