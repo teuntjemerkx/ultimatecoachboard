@@ -943,6 +943,81 @@ describe("BallVideoTests", () => {
   }, 60_000);
 
   /**
+   * Web addition: the OK Hoče float serve, from the build of the clip's clean 25 fps copy: the detector's points to
+   * 6.16 s (with their box sizes), the far ball `followBall` finds from 6.20 s, and two points after the reception
+   * (at about 6.72 s, the receiver at their end line). It slows more than the model's C_D of 0.25 lets it: grown
+   * drag-free it is cut in two at 6.28 s, fitted drag-free as one it flies on 9 m past the receiver. Grown and fitted
+   * with its drag coefficient free it is one flight up to the reception, at about 26 m/s off the hand (the frames say
+   * about 24), and reaches the receiver within 2 m.
+   */
+  it("a float serve that slows more than the model's drag is one flight", () => {
+    const cam = CourtCalibration.solveNearHalf([{ x: 13, y: 695 }, { x: 1272, y: 692 }], [{ x: 943, y: 550 }, { x: 164, y: 550 }],
+      "home", 1280, 720)!.camera;
+    // Times on the clean copy's frame grid, pixels and box sizes (0: a followed point, which has none).
+    const serve = [[5.517, 232.8, 275.5, 30], [5.557, 263, 263, 28], [5.597, 290.5, 253.5, 28], [5.637, 315, 245.8, 28.5],
+      [5.677, 336, 239.3, 25.5], [5.757, 372, 233.8, 26.5], [5.797, 386.3, 233.3, 25.5], [5.837, 401.3, 236.3, 20.5],
+      [5.877, 410.3, 238.3, 22.5], [5.917, 421, 242.5, 20], [5.957, 429, 246.3, 18], [5.997, 437.8, 251.8, 18.5],
+      [6.037, 444, 258.5, 16], [6.077, 449.8, 264.3, 18.5], [6.117, 455.8, 270.8, 19.5], [6.157, 461.5, 281.8, 17.5],
+      [6.197, 467.5, 288.5, 0], [6.237, 470.6, 301.6, 0], [6.277, 475, 308.4, 0], [6.437, 493.4, 354.1, 0], [6.477, 496.8, 365.4, 0],
+      [6.517, 504.4, 379.2, 0], [6.557, 506.6, 395.5, 0], [6.597, 509.8, 407.6, 0], [6.677, 516.8, 434.9, 0], [6.717, 521.1, 444.4, 0],
+      [6.757, 521.5, 452, 0], [6.797, 525.9, 465.3, 0]];
+    const obs: BallObservation[] = serve.map(([time, x, y, size]) => (size > 0 ? { time, image: { x, y }, size } : { time, image: { x, y } }));
+    const reception = { time: 6.717, at: new V3(0.1, 0.7, -9.5) };
+    const dragFree = BallReconstruction.split(obs, cam, { drag: false });
+    expect(dragFree.length, "grown drag-free").toBe(2);
+    expect(dragFree[0][dragFree[0].length - 1].time).toBeCloseTo(6.277, 3);
+    const groups = BallReconstruction.split(obs, cam);
+    expect(groups.length).toBe(1);
+    expect([groups[0][0].time, groups[0][groups[0].length - 1].time], "up to the reception").toEqual([5.517, reception.time]);
+    const flights = BallReconstruction.reconstruct(groups, cam);
+    expect(flights.length).toBe(1);
+    const serveFlight = flights[0];
+    expect(serveFlight.aero.drag).toBeGreaterThan(0.4);
+    expect(serveFlight.velocity(serveFlight.t0).length, "off the hand").toBeGreaterThan(22);
+    expect(serveFlight.velocity(serveFlight.t0).length, "off the hand").toBeLessThan(28);
+    expect(serveFlight.velocity(serveFlight.t1).length, "at the reception").toBeLessThan(15);
+    expect(serveFlight.position(reception.time).sub(reception.at).length, "at the receiver").toBeLessThan(2);
+    const plain = BallReconstruction.reconstruct(groups, cam, [], { drag: false });
+    expect(plain.length).toBe(1);
+    expect(plain[0].position(reception.time).sub(reception.at).length, "drag-free, past the receiver").toBeGreaterThan(5);
+  }, 60_000);
+
+  /**
+   * Web addition: a float serve whose C_D is 0.5 (a ball below its drag crisis), seen at 25 frames a second with about
+   * a pixel of noise by a low camera behind our end line. Where the image shows the drag (`dragSeen`: half the seeds)
+   * it is fitted and the flight placed to a metre; elsewhere the model's 0.25 fits the pixels nearly as well with the
+   * ball about 2 m off along the view, and drag-free it is 6 m off. A serve with the model's 0.25 keeps it (`unanchored
+   * float flight`).
+   */
+  it("fits a float serve's drag where the image shows it", () => {
+    const cam = VideoCamera.lookingAt(new V3(-1.9, 2.6, 23.1), new V3(0.97, 2.16, 0), 360 / Math.tan(deg(10)), 1280, 720);
+    const aero: Aero = { drag: 0.5, lift: 0 };
+    const from = new V3(-3, 2.9, 9.3);
+    // 24 m/s at 10 degrees up, toward a receiver at (0, 0.7, -9.5).
+    const heading = new V3(3, 0, -18.8).normalized, up = deg(10);
+    const serve = new SyntheticFlight(from, heading.mul(24 * Math.cos(up)).add(V3.up.mul(24 * Math.sin(up))), aero, 1.19);
+    expect(serve.position(serve.duration).sub(new V3(0, 0.7, -9.5)).length).toBeLessThan(0.3);
+    let seen = 0;
+    for (let seed = 1; seed <= 8; seed++) {
+      const rng = new SplitMix64(1100 + seed);
+      const obs = observe(serve.position, 0, serve.duration, 25, unit(rng), cam, rng);
+      const label = `seed ${seed}`;
+      const segments = BallReconstruction.segment(obs, cam);
+      expect(segments.length, label).toBe(1);
+      const worst = (s: BallSegment) => Math.max(...obs.map((o) => s.position(o.time).sub(serve.position(o.time)).length));
+      if (segments[0].aero.drag !== Aero.float.drag) {
+        seen += 1;
+        expect(segments[0].aero.drag, label).toBeGreaterThan(0.35);
+        expect(worst(segments[0]), `${label}: placed`).toBeLessThan(1);
+      } else {
+        expect(worst(segments[0]), `${label}: the model's drag`).toBeLessThan(2.5);
+      }
+      expect(worst(BallReconstruction.reconstruct([obs], cam, [], { drag: false })[0]), `${label}: drag-free`).toBeGreaterThan(5);
+    }
+    expect(seen, "drag seen").toBeGreaterThanOrEqual(3);
+  }, 60_000);
+
+  /**
    * Web addition: the far broadcast camera of the Tokyo clip sees an opponent pass the ball at the far side along a
    * viewing ray that also runs through the raised hands of a home player more than 5 m nearer the camera. That hand is
    * nearer the ray than the passer's forearms, and the nearest hand was the contact; now the contact is the passer's

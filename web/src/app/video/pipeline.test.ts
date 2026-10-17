@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { V3 } from "../../core/spatial";
 import { CourtCalibration, VideoCamera } from "../../core/video";
 import { oneBallEach } from "./detect";
-import { farCourtBand, frameGrid, onFrameGrid, pickBalls, samplePlan, sameFrame, withoutFixtures } from "./pipeline";
+import {
+  farCourtBand, followBall, frameGrid, onFrameGrid, pickBalls, samplePlan, sameFrame, withoutFixtures, type TileObject,
+} from "./pipeline";
 
 /** A ball thrown across a 600 px frame at 30 frames a second, with an antenna top the detector likes better. */
 function flight(seconds: number) {
@@ -157,5 +159,75 @@ describe("Video to 3D: the far court read again, zoomed", () => {
     // Looking away from their half.
     const away = VideoCamera.lookingAt(new V3(0, 2, 14), new V3(0, 1, 30), 1000, 1280, 720);
     expect(farCourtBand(away)).toBeUndefined();
+  });
+});
+
+describe("Video to 3D: following the ball where the detector loses it", () => {
+  /** A camera like the OK Hoče clip's (a 16 px ball is 26 m away), and one like the Orion clip's (9 m). */
+  const far = VideoCamera.lookingAt(new V3(-2, 2.6, 23), new V3(0, 1, -5), 2000, 1280, 720);
+  const near = VideoCamera.lookingAt(new V3(0, 2.2, 14), new V3(0, 1, 0), 670, 1280, 720);
+  /** A far ball dropping in the picture, as the OK Hoče serve over their court (its image speeds up). */
+  const ball = (t: number) => ({ x: 300 + 120 * t, y: 200 + 20 * t + 150 * t * t });
+  /** 30 frames a second over 1.2 s; the detector sees the ball as a sports ball until `seen`, 16 px across. */
+  const frames = (seen: number, at = ball) => Array.from({ length: 37 }, (_, k) => {
+    const t = k / 30;
+    return { time: t, balls: t <= seen + 1e-9 ? [{ ...at(t), score: 0.3, size: 16 }] : [] };
+  });
+  const box = (p: { x: number; y: number }, w: number, h: number): TileObject => ({ box: { x: p.x - w / 2, y: p.y - h / 2, w, h }, score: 0.03 });
+  /**
+   * The objects a zoomed tile boxes: the ball (when `ballThere`) as a box a little larger than the ball, and what is
+   * around it: a head 40 px away, the wall band, a speck on the ball.
+   */
+  const tileObjects = (ballThere: (t: number) => boolean) => (fs: { time: number }[]) =>
+    async (k: number, tile: { x: number; y: number; side: number }) => {
+      const t = fs[k].time, p = ball(t);
+      const inside = (q: { x: number; y: number }) => q.x >= tile.x && q.x < tile.x + tile.side && q.y >= tile.y && q.y < tile.y + tile.side;
+      return [
+        ...(ballThere(t) && inside(p) ? [box({ x: p.x + 0.5, y: p.y - 0.5 }, 18, 16)] : []),
+        box({ x: p.x + 40, y: p.y }, 16, 17), box({ x: tile.x + tile.side / 2, y: tile.y + 30 }, tile.side, 40), box(p, 4, 4),
+      ].filter((o) => inside({ x: o.box.x + o.box.w / 2, y: o.box.y + o.box.h / 2 }));
+    };
+
+  it("follows a far ball the detector loses, in zoomed tiles, without its box's size", async () => {
+    const fs = frames(0.6);
+    const looks = await followBall(fs, far, tileObjects(() => true)(fs));
+    // Every frame after the detector's last point is read again once, and the ball found in each.
+    expect(looks.map((l) => l.frame)).toEqual(Array.from({ length: 18 }, (_, i) => 19 + i));
+    expect(looks.every((l) => l.found && l.tile.side >= 128 && l.tile.side <= 256)).toBe(true);
+    const picked = pickBalls(fs, 1280);
+    fs.forEach((f, k) => {
+      expect(Math.hypot(picked[k]!.x - ball(f.time).x, picked[k]!.y - ball(f.time).y), `frame ${k}`).toBeLessThan(1);
+      expect(picked[k]!.size).toBe(k <= 18 ? 16 : undefined);
+    });
+  });
+
+  it("stops after three looks without the ball, and a ball-sized object off the path is no ball", async () => {
+    // The ball is caught at 0.6 s: the tiles hold only the head, the band and the speck.
+    const fs = frames(0.6);
+    const looks = await followBall(fs, far, tileObjects(() => false)(fs));
+    expect(looks.map((l) => l.frame)).toEqual([19, 20, 21]);
+    expect(looks.some((l) => l.found)).toBe(false);
+    expect(pickBalls(fs, 1280).slice(19).every((p) => p === undefined)).toBe(true);
+    // Lost for two frames (behind a player), then followed on with a wider reach.
+    const hidden = frames(0.6);
+    const gaps = await followBall(hidden, far, tileObjects((t) => t < 0.75 || t > 0.81)(hidden));
+    expect(gaps.filter((l) => !l.found).map((l) => l.frame)).toEqual([23, 24]);
+    expect(gaps.filter((l) => l.found).length).toBe(16);
+    expect(gaps.find((l) => l.frame === 25)!.reach).toBeCloseTo(2 * gaps[0].reach, 9);
+  });
+
+  it("does not follow a near ball, a ball held still, a repeated frame or the start of a path", async () => {
+    // The same ball 9 m from the camera.
+    const close = frames(0.6);
+    expect(await followBall(close, near, tileObjects(() => true)(close))).toEqual([]);
+    // Held at one pixel (a ball the server bounces, a head) until the detector stops seeing it.
+    const held = frames(0.6, () => ({ x: 500, y: 300 }));
+    expect(await followBall(held, far, tileObjects(() => true)(held))).toEqual([]);
+    // A repeated frame is not read again.
+    const fs = frames(0.6).map((f, k) => ({ ...f, repeat: k === 20 }));
+    const looks = await followBall(fs, far, tileObjects(() => true)(fs));
+    expect(looks.some((l) => l.frame === 20)).toBe(false);
+    // A zoomed candidate alone starts no path.
+    expect(pickBalls([{ time: 0, balls: [{ x: 50, y: 50, score: 0, zoomed: true }] }], 600)).toEqual([undefined]);
   });
 });
