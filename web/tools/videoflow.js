@@ -9,7 +9,7 @@
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function importClip() {
-  [...document.querySelectorAll("button.locker")].find((b) => b.textContent.includes("Video to 3D")).click();
+  [...document.querySelectorAll("button.tab")].find((b) => b.textContent.includes("Video")).click();
   await wait(700);
   while (document.querySelector(".video-saved-item")) {
     const d = () => document.querySelector('.video-saved-item button[aria-label^="Delete"], .video-saved-item button[aria-label^="Tap again"]');
