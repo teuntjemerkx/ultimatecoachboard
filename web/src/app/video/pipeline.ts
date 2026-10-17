@@ -1,9 +1,9 @@
-import { V3 } from "../../core/spatial";
+import { BallFlight, V3 } from "../../core/spatial";
 import {
   PersonDetection, VideoScene, type ImagePoint, type Keypoints, type TrackLock, type VideoCamera, type VideoFrameObservation,
 } from "../../core/video";
 import { grabFrame, type Clip } from "./clip";
-import { Detector, zoomTiles, type FrameDetections, type ZoomBand } from "./detect";
+import { Detector, zoomTiles, type BallCandidate, type FrameDetections, type ZoomBand } from "./detect";
 import type { RebuildReply, RebuildRequest } from "./rebuild.worker";
 
 /** The MediaPipe models, loaded once per session (about 20 MB, cached for offline use). */
@@ -113,27 +113,30 @@ function ballObservation(b: BallPick): Pick<VideoFrameObservation, "ball" | "bal
  * in flight leaves its pixel within a few frames, even at the top of a set). The detector finds those in most frames,
  * often above the ball in flight. On the Orion clip a far player's head stood at one pixel for about a second (just
  * over on the read times, just under on the frame grid), and was then picked as the ball for 0.7 s instead of the
- * start of the attack off our block.
+ * start of the attack off our block. Candidates found by following the ball (`zoomed`) count only against each other:
+ * a far ball that hardly moves in the picture, seen in a few more frames that way, would read as a head standing still
+ * (on the OK Hoče clip 572 to 577 px over 0.2 s at 8.1 s), while a path followed onto something that stays put (a
+ * shoe at 3.1 s on the recording of that clip) is left out as before.
  */
 export function withoutFixtures(frames: readonly { time: number; balls: BallCandidates }[], width: number): BallCandidates[] {
   const r = Math.max(2, 0.006 * width);
-  const grid = new Map<string, { frame: number; time: number; x: number; y: number }[]>();
+  const grid = new Map<string, { frame: number; time: number; x: number; y: number; zoomed?: boolean }[]>();
   frames.forEach((f, frame) => {
     for (const b of f.balls) {
       const key = `${Math.floor(b.x / r)},${Math.floor(b.y / r)}`;
       const cell = grid.get(key) ?? [];
-      cell.push({ frame, time: f.time, x: b.x, y: b.y });
+      cell.push({ frame, time: f.time, x: b.x, y: b.y, zoomed: b.zoomed });
       grid.set(key, cell);
     }
   });
-  const fixed = (b: { x: number; y: number }, time: number) => {
+  const fixed = (b: BallCandidate, time: number) => {
     const cx = Math.floor(b.x / r), cy = Math.floor(b.y / r);
     const seen = new Map<number, number>();
     let t0 = Infinity, t1 = -Infinity;
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
         for (const a of grid.get(`${cx + dx},${cy + dy}`) ?? []) {
-          if (Math.hypot(a.x - b.x, a.y - b.y) > r) continue;
+          if (Math.hypot(a.x - b.x, a.y - b.y) > r || (a.zoomed && !b.zoomed)) continue;
           seen.set(a.frame, a.time);
           t0 = Math.min(t0, a.time);
           t1 = Math.max(t1, a.time);
@@ -154,33 +157,171 @@ export function withoutFixtures(frames: readonly { time: number; balls: BallCand
 /**
  * One ball pixel per frame (in time order) from the detector's candidates, best first. Candidates that stay put are
  * left out (`withoutFixtures`). While the ball was seen less than 0.5 s ago, the candidate nearest to where its path
- * leads is taken, also a weak one (down to the detector's threshold), so a stronger stray elsewhere (a second ball,
- * a light, a head) does not break the flight; otherwise the best candidate scoring 0.2 or more.
+ * leads is taken, also a weak one (down to the detector's threshold), so a stronger stray elsewhere (a second ball, a
+ * light, a head) does not break the flight; otherwise the best candidate scoring 0.2 or more. One found by following
+ * the path in a zoomed tile (`followBall`) is taken only where no candidate scores 0.2 or more: it can be any object
+ * of the ball's size (on the OK Hoče clip a knee where a spare ball's path ended took the first point of the serve's
+ * toss, and the toss was no flight).
  */
 export function pickBalls(frames: readonly { time: number; balls: BallCandidates }[], width: number): (BallPick | undefined)[] {
   const moving = withoutFixtures(frames, width);
-  const path: { t: number; p: ImagePoint }[] = [];
+  const path = new BallPath(width);
   return frames.map((f, i) => {
-    const candidates = moving[i];
-    let choice = candidates.find((b) => b.score >= 0.2);
-    const last = path[path.length - 1], before = path[path.length - 2];
+    const b = path.pick(f.time, moving[i]);
+    if (!b) return undefined;
+    return b.size !== undefined ? { x: b.x, y: b.y, size: b.size } : { x: b.x, y: b.y };
+  });
+}
+
+/** The ball's path through the frames as `pickBalls` follows it: its picks since the last pick off the path. */
+class BallPath {
+  readonly picks: { t: number; b: BallCandidate }[] = [];
+
+  constructor(private readonly width: number) {}
+
+  /**
+   * Where the path leads at t, and how far from there the ball may be, while it was seen less than 0.5 s ago: carried
+   * on at its last speed in the image (from two picks less than 0.3 s apart), else where it was.
+   */
+  lead(t: number): { at: ImagePoint; reach: number } | undefined {
+    const last = this.picks[this.picks.length - 1], before = this.picks[this.picks.length - 2];
+    if (!last || t - last.t >= 0.5) return undefined;
+    const k = before && last.t - before.t < 0.3 ? (t - last.t) / (last.t - before.t) : 0;
+    const at = before && k > 0 ? { x: last.b.x + k * (last.b.x - before.b.x), y: last.b.y + k * (last.b.y - before.b.y) } : last.b;
+    return { at, reach: this.width * (0.04 + 0.8 * (t - last.t)) };
+  }
+
+  /** The candidate taken in a frame at t (see `pickBalls`), added to the path. */
+  pick(t: number, candidates: BallCandidates): BallCandidate | undefined {
+    let choice = candidates.find((b) => b.score >= 0.2 && !b.zoomed);
+    const lead = this.lead(t);
     let onPath = false;
-    if (last && f.time - last.t < 0.5) {
-      // Carried on at its last speed in the image (from two picks less than 0.3 s apart), else where it was.
-      const k = before && last.t - before.t < 0.3 ? (f.time - last.t) / (last.t - before.t) : 0;
-      const at = before && k > 0 ? { x: last.p.x + k * (last.p.x - before.p.x), y: last.p.y + k * (last.p.y - before.p.y) } : last.p;
-      const dist = (b: { x: number; y: number }) => Math.hypot(b.x - at.x, b.y - at.y);
-      const reach = width * (0.04 + 0.8 * (f.time - last.t));
-      const near = candidates.filter((b) => dist(b) <= reach).sort((a, b) => dist(a) - dist(b))[0];
-      if (near) choice = near;
-      onPath = near !== undefined;
+    if (lead) {
+      const dist = (b: ImagePoint) => Math.hypot(b.x - lead.at.x, b.y - lead.at.y);
+      const near = candidates.filter((b) => dist(b) <= lead.reach).sort((a, b) => dist(a) - dist(b))[0];
+      // A zoomed candidate (an object of any class) gives way to a ball the detector sees elsewhere.
+      if (near && !(near.zoomed && choice)) {
+        choice = near;
+        onPath = true;
+      }
     }
     if (!choice) return undefined;
     // A pick off the path starts a new one: its speed is not the jump from the old path.
-    if (!onPath) path.length = 0;
-    path.push({ t: f.time, p: { x: choice.x, y: choice.y } });
-    return choice.size !== undefined ? { x: choice.x, y: choice.y, size: choice.size } : { x: choice.x, y: choice.y };
-  });
+    if (!onPath) this.picks.length = 0;
+    this.picks.push({ t, b: choice });
+    return choice;
+  }
+}
+
+/** An object of any class in a zoomed tile (`Detector.objectsIn`), frame pixels. */
+export interface TileObject { box: { x: number; y: number; w: number; h: number }; score: number }
+
+/** One look along the ball's path (`followBall`): the frame, where the path led, how far off the ball could be, the tile. */
+export interface BallLook {
+  frame: number; at: ImagePoint; reach: number; tile: { x: number; y: number; side: number };
+  /** The object taken as the ball, with its box's smaller side. */
+  found?: ImagePoint & { box: number };
+}
+
+/** Picks within 0.3 s on a path before it is followed into zoomed tiles. */
+const FOLLOW_PICKS = 4;
+/** How far from the camera (by its size in the picture) a ball must be to be followed, metres. */
+const FOLLOW_FAR = 15;
+/** Looks in a row without the ball after which a path is no longer followed. */
+const FOLLOW_MISSES = 3;
+/** How long a path is followed past its last pick by the detector itself (not a zoomed one), seconds. */
+const FOLLOW_SPAN = 1;
+
+/**
+ * The ball where the detector loses it far away. On the OK Hoče clip the serve over their court (11 px, against the
+ * wall band and the banners) is no sports ball to the detector even zoomed in (its ball score there is 0.003 to 0.06,
+ * no higher than elsewhere in the tile), but it still boxes it, as a person, a clock or a bird. So where a moving path
+ * (`FOLLOW_PICKS` picks in its last 0.3 s, a ball's width apart or more) of a ball at least `FOLLOW_FAR` from the
+ * camera (by the median of its last five widths) leads inside the frame and no candidate is within 0.8 ball widths of
+ * that point, `look` reads the frame again in a square tile around it (12 ball widths, 128 to 256 px). The object of
+ * any class nearest to the point, as wide as the ball (its smaller side 0.6 to 1.5 times the width, its longer side at
+ * most 1.8 times) and within that distance, joins the frame's candidates as `zoomed`: no score, so it carries the path
+ * on and never starts one, and no size (its box is about 1.4 times the ball). Where the path leads is a least-squares
+ * parabola in time through those picks (a line through fewer than five): the far ball's image speeds up as it drops.
+ * The distance allowed grows by half for each look in a row without the ball; following stops after `FOLLOW_MISSES`
+ * of those or `FOLLOW_SPAN` after the path's last pick by the detector itself. Repeated frames are skipped. Returns
+ * the looks.
+ *
+ * Only a far ball: it hardly moves in the picture between frames, and where its path leads is good to a few pixels
+ * (the Hoče serve is lost 24 m away). On the Orion clip the detector misses the attack off the block for three frames
+ * 7 m away, as it comes at the camera and speeds up in the picture; the path led up to 45 px behind it, ball-sized
+ * objects there were taken, and the flight came out at 6 m/s instead of 17.
+ */
+export async function followBall(frames: readonly { time: number; balls: BallCandidates; repeat?: boolean }[], camera: VideoCamera,
+  look: (frame: number, tile: { x: number; y: number; side: number }) => Promise<TileObject[]>): Promise<BallLook[]> {
+  const { width, height } = camera;
+  const moving = withoutFixtures(frames, width);
+  const path = new BallPath(width);
+  const boxes = new WeakMap<BallCandidate, number>();
+  const looks: BallLook[] = [];
+  let misses = 0;
+  const dist = (a: ImagePoint, b: ImagePoint) => Math.hypot(a.x - b.x, a.y - b.y);
+  for (let k = 0; k < frames.length; k++) {
+    const f = frames[k];
+    if (f.repeat) continue;
+    const picks = path.picks, last = picks[picks.length - 1];
+    const recent = last ? picks.filter((q) => last.t - q.t <= 0.3 + 1e-9) : [];
+    const own = [...picks].reverse().find((q) => !q.b.zoomed);
+    const sizes = picks.slice(-5).flatMap((q) => q.b.size ?? boxes.get(q.b) ?? []).sort((a, b) => a - b);
+    const size = sizes[Math.floor(sizes.length / 2)];
+    if (size !== undefined && (camera.focalLength * 2 * BallFlight.radius) / size >= FOLLOW_FAR
+      && recent.length >= FOLLOW_PICKS && dist(recent[0].b, last.b) >= size && own && f.time - own.t <= FOLLOW_SPAN
+      && misses < FOLLOW_MISSES) {
+      const at = curveAt(recent, f.time);
+      const reach = 0.8 * size * (1 + 0.5 * misses);
+      if (at.x >= 0 && at.x < width && at.y >= 0 && at.y < height && !moving[k].some((b) => dist(b, at) <= reach)) {
+        const side = Math.round(Math.min(width, height, 256, Math.max(128, 12 * size)));
+        const tile = { x: Math.round(Math.max(0, Math.min(width - side, at.x - side / 2))),
+          y: Math.round(Math.max(0, Math.min(height - side, at.y - side / 2))), side };
+        const best = (await look(k, tile))
+          .map(({ box }) => ({ x: box.x + box.w / 2, y: box.y + box.h / 2, small: Math.min(box.w, box.h), large: Math.max(box.w, box.h) }))
+          .filter((o) => dist(o, at) <= reach && o.small >= 0.6 * size && o.small <= 1.5 * size && o.large <= 1.8 * size)
+          .sort((a, b) => dist(a, at) - dist(b, at))[0];
+        looks.push({ frame: k, at, reach, tile, ...(best ? { found: { x: best.x, y: best.y, box: best.small } } : {}) });
+        if (best) {
+          const ball: BallCandidate = { x: best.x, y: best.y, score: 0, zoomed: true };
+          boxes.set(ball, best.small);
+          f.balls.push(ball);
+          moving[k].push(ball);
+        } else {
+          misses += 1;
+        }
+      }
+    }
+    if (path.pick(f.time, moving[k])) misses = 0;
+  }
+  return looks;
+}
+
+/** Where a least-squares curve in time through the picks (a parabola through five or more, else a line) is at t. */
+function curveAt(picks: readonly { t: number; b: ImagePoint }[], t: number): ImagePoint {
+  const t0 = picks[picks.length - 1].t, n = picks.length >= 5 ? 3 : 2;
+  const at = (value: (p: ImagePoint) => number) => {
+    // The normal equations of the polynomial in u = t - t0, solved by elimination.
+    const m = Array.from({ length: n }, () => new Array<number>(n + 1).fill(0));
+    for (const q of picks) {
+      const u = q.t - t0;
+      for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) m[i][j] += u ** (i + j);
+        m[i][n] += u ** i * value(q.b);
+      }
+    }
+    for (let i = 0; i < n; i++) {
+      for (let r = 0; r < n; r++) {
+        if (r === i) continue;
+        const f = m[r][i] / m[i][i];
+        for (let c = i; c <= n; c++) m[r][c] -= f * m[i][c];
+      }
+    }
+    const u = t - t0;
+    return m.reduce((sum, row, i) => sum + (row[n] / row[i]) * u ** i, 0);
+  };
+  return { x: at((p) => p.x), y: at((p) => p.y) };
 }
 
 /** Whether a person's box stands near the court: only they get the pose model (the stands and the benches keep their box). */
@@ -454,12 +595,6 @@ export async function buildRally(options: {
     await tick();
   }
 
-  onProgress(0.62, "Building the hall");
-  const plateReply = await runWorker({ kind: "plate", frames: plateFrames, masks: plateMasks, width: pw, height: ph },
-    [...plateFrames.map((f) => f.buffer), ...plateMasks.map((m) => m.buffer)], signal);
-  const plate = plateReply.kind === "plate" ? await plateBlob(plateReply.pixels, pw, ph) : undefined;
-  aborted(signal);
-
   // The ball at the time its frame came up in the clip (`frameGrid`), from the start of the rally: a 24 fps frame can be
   // read 33 ms after it came up, in which a spike moves a metre. The players stay at the read times (they move a few
   // centimetres in that time, and the tracker is sensitive to uneven spacing: on the Orion clip ±10 ms of jitter moves
@@ -469,9 +604,32 @@ export async function buildRally(options: {
   const ballTime = (t: number) => (grid ? onFrameGrid(t, grid) : t) - start;
   // The ball over all frames read, in time order (a repeated pose frame keeps its people but not the ball).
   const frames = [
-    ...sampled.map((f, k) => ({ time: ballTime(f.time), read: f.time - start, pose: k, balls: f.repeat ? [] : f.detections.balls })),
-    ...ballOnly.map((f) => ({ time: ballTime(f.time), read: f.time - start, pose: -1, balls: f.balls })),
+    ...sampled.map((f, k) => ({ time: ballTime(f.time), read: f.time - start, pose: k, repeat: f.repeat, balls: f.repeat ? [] : f.detections.balls })),
+    ...ballOnly.map((f) => ({ time: ballTime(f.time), read: f.time - start, pose: -1, repeat: false, balls: f.balls })),
   ].sort((a, b) => a.time - b.time);
+
+  // Where the detector loses the ball in flight, the frames read again along its path, zoomed.
+  onProgress(0.6, "Following the ball");
+  let looks: BallLook[];
+  try {
+    looks = await followBall(frames, camera, async (k, tile) => {
+      aborted(signal);
+      await grabFrame(clip, frames[k].read + start, work);
+      const objects = await det.objectsIn(work, tile);
+      await tick();
+      return objects;
+    });
+  } finally {
+    await det.courtObjects();
+  }
+  aborted(signal);
+
+  onProgress(0.62, "Building the hall");
+  const plateReply = await runWorker({ kind: "plate", frames: plateFrames, masks: plateMasks, width: pw, height: ph },
+    [...plateFrames.map((f) => f.buffer), ...plateMasks.map((m) => m.buffer)], signal);
+  const plate = plateReply.kind === "plate" ? await plateBlob(plateReply.pixels, pw, ph) : undefined;
+  aborted(signal);
+
   const balls = pickBalls(frames, clip.width);
   const ballAt = new Map<number, BallPick>();
   const observations: VideoFrameObservation[] = [];
@@ -485,13 +643,15 @@ export async function buildRally(options: {
   observations.sort((a, b) => a.time - b.time);
   if (import.meta.env.DEV) {
     (globalThis as { __videoDebug?: unknown }).__videoDebug = { observations, camera: camera.encode(), locks: options.locks, start, grid,
-      reads, ballFrames: frames.map((f) => ({ time: f.time, read: f.read, balls: f.balls })), width: clip.width };
+      reads, ballFrames: frames.map((f) => ({ time: f.time, read: f.read, balls: f.balls })), width: clip.width,
+      looks: looks.map((l) => ({ ...l, time: frames[l.frame].time, read: frames[l.frame].read })) };
   }
   const people = sampled.map((f) => f.detections.people.length), posed = sampled.map((f) =>
     f.detections.people.filter((p) => Object.keys(p.keypoints).length > 0).length);
   let report = `${count} frames and ${ballOnly.length} for the ball alone (${repeats} repeated frames skipped), `
     + `people per frame ${Math.min(...people)}-${Math.max(...people)} (with pose ${Math.min(...posed)}-${Math.max(...posed)}), `
-    + `detections ${observations.reduce((n, o) => n + o.detections.length, 0)}, ball points ${balls.filter(Boolean).length}; `
+    + `detections ${observations.reduce((n, o) => n + o.detections.length, 0)}, ball points ${balls.filter(Boolean).length} `
+    + `(followed in ${looks.length} zoomed tiles, the ball in ${looks.filter((l) => l.found).length}); `
     + `camera ${camera.center.y.toFixed(1)} m up, ${camera.center.z.toFixed(1)} m back, fovY ${((camera.fovY * 180) / Math.PI).toFixed(1)} deg`
     + (grid ? `; ball on a ${grid.fps} fps frame grid` : "");
 

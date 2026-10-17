@@ -25,7 +25,16 @@ export interface FrameDetections {
    * Ball candidates, best first: the centre of the box and, when the box is whole (not cut by the frame or a tile edge),
    * its smaller side (`size`, the ball's diameter; motion blur only stretches the box along the motion).
    */
-  balls: { x: number; y: number; score: number; size?: number }[];
+  balls: BallCandidate[];
+}
+
+export interface BallCandidate {
+  x: number; y: number; score: number; size?: number;
+  /**
+   * Found by following the ball's path in a zoomed tile, not as a "sports ball" (`followBall` in `pipeline.ts`): it
+   * carries that path on, it never starts one. Score 0 and no size (the box is not a ball's box).
+   */
+  zoomed?: boolean;
 }
 
 /**
@@ -66,6 +75,11 @@ const LANDMARKS: [BodyKeypoint, number][] = [
 export class Detector {
   private constructor(private readonly people: ObjectDetector, private readonly pose: PoseLandmarker) {}
 
+  /** The detector's input for a zoomed tile, reused. */
+  private tile?: HTMLCanvasElement;
+  /** Whether the object detector reports every class (`objectsIn`) instead of people and balls. */
+  private everything = false;
+
   /** Loads the models shipped with the app (they work offline once the app is on the Home Screen). */
   static async load(base = "/"): Promise<Detector> {
     const vision = await FilesetResolver.forVisionTasks(`${base}mediapipe`);
@@ -74,8 +88,7 @@ export class Detector {
       try { return await f(delegate); } catch { return await f("CPU"); }
     };
     const people = await make((d) => ObjectDetector.createFromOptions(vision, {
-      baseOptions: { modelAssetPath: `${base}models/efficientdet_lite2.tflite`, delegate: d },
-      runningMode: "IMAGE", scoreThreshold: 0.12, categoryAllowlist: ["person", "sports ball"], maxResults: 60,
+      baseOptions: { modelAssetPath: `${base}models/efficientdet_lite2.tflite`, delegate: d }, runningMode: "IMAGE", ...COURT_OBJECTS,
     }));
     const pose = await make((d) => PoseLandmarker.createFromOptions(vision, {
       baseOptions: { modelAssetPath: `${base}models/pose_landmarker_full.task`, delegate: d },
@@ -122,8 +135,46 @@ export class Detector {
     return this.objects(frame, width, height, band?.balls ? band : undefined).balls;
   }
 
+  /**
+   * Every object the detector boxes in one square tile of a frame (frame pixels), of any class and down to a score of
+   * 0.01, best first: far away the ball is still boxed, but named a person, a clock or a bird. The first call switches
+   * the detector over (about 0.4 s); `courtObjects` switches it back for `detect` and `detectBalls`.
+   */
+  async objectsIn(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, tile: { x: number; y: number; side: number }):
+    Promise<{ box: DetectedPerson["box"]; score: number }[]> {
+    if (!this.everything) {
+      await this.people.setOptions(ALL_OBJECTS);
+      this.everything = true;
+    }
+    return this.inTile(frame, tile);
+  }
+
+  /** People and balls again after `objectsIn`. */
+  async courtObjects() {
+    if (!this.everything) return;
+    await this.people.setOptions(COURT_OBJECTS);
+    this.everything = false;
+  }
+
+  /** The object detector on one square tile of a frame, its boxes in frame pixels. */
+  private inTile(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, tile: { x: number; y: number; side: number }):
+    { box: DetectedPerson["box"]; score: number; ball: boolean }[] {
+    this.tile ??= canvas(MODEL_INPUT, MODEL_INPUT);
+    const g = this.tile.getContext("2d")!;
+    g.imageSmoothingQuality = "high";
+    const { x: x0, y: y0, side } = tile, s = side / MODEL_INPUT;
+    g.clearRect(0, 0, MODEL_INPUT, MODEL_INPUT);
+    g.drawImage(frame, x0, y0, side, side, 0, 0, MODEL_INPUT, MODEL_INPUT);
+    return this.people.detect(this.tile).detections.map((d) => {
+      const b = d.boundingBox!, c = d.categories[0];
+      return { box: { x: x0 + b.originX * s, y: y0 + b.originY * s, w: b.width * s, h: b.height * s }, score: c.score,
+        ball: c.categoryName === "sports ball" };
+    });
+  }
+
   /** People (boxes only) and ball candidates from the object detector. */
   private objects(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number, band?: ZoomBand): FrameDetections {
+    if (this.everything) throw new Error("The detector reports every class: call courtObjects first.");
     // Two overlapping tiles (the detector's input is square-ish). It stretches each tile to its own 448 x 448 input,
     // so the upscale does not make anyone larger to it: the zoomed band does that.
     const S = width < 1400 ? 2 : 1;
@@ -159,23 +210,16 @@ export class Detector {
    */
   private zoomed(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number, band: ZoomBand,
     people: DetectedPerson[], balls: FrameDetections["balls"]) {
-    const tile = canvas(MODEL_INPUT, MODEL_INPUT);
-    const g = tile.getContext("2d")!;
-    g.imageSmoothingQuality = "high";
-    for (const { x: x0, y: y0, side } of zoomTiles(band, width, height)) {
-      const s = side / MODEL_INPUT, edge = 2 * s;
-      g.clearRect(0, 0, MODEL_INPUT, MODEL_INPUT);
-      g.drawImage(frame, x0, y0, side, side, 0, 0, MODEL_INPUT, MODEL_INPUT);
-      for (const d of this.people.detect(tile).detections) {
-        const b = d.boundingBox!, c = d.categories[0];
-        const box = { x: x0 + b.originX * s, y: y0 + b.originY * s, w: b.width * s, h: b.height * s };
-        if (c.categoryName === "sports ball") {
-          if (band.balls) balls.push(ballCandidate(box, c.score, { x: x0, y: y0, w: side, h: side }, width, height));
+    for (const tile of zoomTiles(band, width, height)) {
+      const { x: x0, y: y0, side } = tile, edge = (2 * side) / MODEL_INPUT;
+      for (const { box, score, ball } of this.inTile(frame, tile)) {
+        if (ball) {
+          if (band.balls) balls.push(ballCandidate(box, score, { x: x0, y: y0, w: side, h: side }, width, height));
           continue;
         }
         const cut = (x0 > 0 && box.x <= x0 + edge) || (x0 + side < width && box.x + box.w >= x0 + side - edge)
           || (y0 > 0 && box.y <= y0 + edge) || (y0 + side < height && box.y + box.h >= y0 + side - edge);
-        if (!cut && band.whole(box)) people.push({ box, score: c.score, keypoints: {} });
+        if (!cut && band.whole(box)) people.push({ box, score, keypoints: {} });
       }
     }
   }
@@ -186,7 +230,7 @@ export class Detector {
  * unless the frame's edge or the tile's cuts the box (within 2 px).
  */
 function ballCandidate(box: DetectedPerson["box"], score: number, tile: DetectedPerson["box"], width: number, height: number):
-  FrameDetections["balls"][number] {
+  BallCandidate {
   const at = { x: box.x + box.w / 2, y: box.y + box.h / 2, score };
   const edge = 2;
   const cut = box.x <= Math.max(0, tile.x) + edge || box.y <= Math.max(0, tile.y) + edge
@@ -199,7 +243,7 @@ function ballCandidate(box: DetectedPerson["box"], score: number, tile: Detected
  * tile sees it whole, so of two candidates closer than half a ball (at least 4 px) the better scoring stays, with the
  * centre and size of a whole box when it has none.
  */
-export function oneBallEach(balls: readonly FrameDetections["balls"][number][]): FrameDetections["balls"] {
+export function oneBallEach(balls: readonly BallCandidate[]): BallCandidate[] {
   const kept: FrameDetections["balls"] = [];
   for (const b of [...balls].sort((p, q) => q.score - p.score)) {
     const twin = kept.find((k) => Math.hypot(k.x - b.x, k.y - b.y) <= Math.max(4, 0.5 * (k.size ?? b.size ?? 0)));
@@ -211,6 +255,13 @@ export function oneBallEach(balls: readonly FrameDetections["balls"][number][]):
 
 /** The object detector's input (EfficientDet-Lite2: 448 x 448). */
 const MODEL_INPUT = 448;
+/** The object detector's options for people and the ball. */
+const COURT_OBJECTS = { scoreThreshold: 0.12, categoryAllowlist: ["person", "sports ball"], maxResults: 60 };
+/**
+ * Its options for `objectsIn`: every class, down to 0.01, all boxes (a tile around a far ball among the players holds
+ * up to about 240, and the ball's box ranked up to 136th on the OK Hoče clip).
+ */
+const ALL_OBJECTS = { scoreThreshold: 0.01, categoryAllowlist: [], maxResults: -1 };
 
 function canvas(w: number, h: number): HTMLCanvasElement {
   const c = document.createElement("canvas");
