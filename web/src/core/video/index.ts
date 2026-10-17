@@ -18,6 +18,7 @@ export {
 } from "./ballReconstruction";
 export { CleanPlate, HallEnvironment, type HallEnvironmentJSON } from "./environment";
 export { VideoGaze } from "./videoGaze";
+export { TrackCleanup, defaultTrackCleanup, type TrackCleanupSettings } from "./trackCleanup";
 export {
   VideoPlayerSample, VideoPlayerTrack, VideoFrame, VideoScene, VideoReconstructor,
   type VideoMarker, type VideoSceneJSON, type ReconstructionStage,

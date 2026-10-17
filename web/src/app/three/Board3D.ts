@@ -110,6 +110,8 @@ export class Board3D {
     this.buildNet(netHeight);
     this.scene.add(this.netGroup, this.dynamic);
     this.resize();
+    // The dev tools find the board through its canvas (see renderNow).
+    if (import.meta.env.DEV) (canvas as HTMLCanvasElement & { board?: Board3D }).board = this;
   }
 
   /** Draws a new frame soon: something on the board changed (`shadows`: the players moved). */
@@ -140,6 +142,18 @@ export class Board3D {
     // A frame drawn keeps the board awake one more frame (playback invalidates every frame); then it sleeps.
     if (draw || poll || this.flight) this.wake();
   };
+
+  /**
+   * Draws one frame now, whatever the browser's frame clock does (it stops in a page that is not on screen): the
+   * dev tools record a film frame by frame with it (tools/filmframes.js).
+   */
+  renderNow(t = performance.now()) {
+    if (this.disposed) return;
+    this.onFrame?.(t);
+    this.stepCamera(t);
+    this.renderer.shadowMap.needsUpdate = true;
+    this.renderer.render(this.scene, this.camera);
+  }
 
   dispose() {
     this.disposed = true;

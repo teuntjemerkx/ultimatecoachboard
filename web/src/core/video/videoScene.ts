@@ -1,5 +1,6 @@
 // Port of Video/VideoScene.swift: a scene reconstructed from a rally video and the video-to-3D pipeline
 // (Section 4.6). Swift's `VideoScene` is a class here; `encode`/`decode` give its Codable JSON shape.
+import { TrackCleanup, defaultTrackCleanup } from "./trackCleanup";
 import { CourtFrame, CourtPosition, Side, type FloorPoint, type LocalPoint } from "../match/court";
 import { Stride, strideEnvelope, strideParams } from "../spatial/gait";
 import { V3 } from "../spatial/math3d";
@@ -366,11 +367,13 @@ export const VideoReconstructor = {
       }
       const poseFrames = tr.samples.map((s) => ({ time: s.time, floor: s.floor, measured: s.measured, keypoints: s.keypoints }));
       const fit = fitter.fitTrack(poseFrames, camera, tr.side === "home" ? Math.PI : 0);
-      const samples = tr.samples.map((s, k) => {
+      // Web addition: positions smoothed through the gaps with the camera's own uncertainty, jumps only where and as
+      // long as volleyball jumps happen (TrackCleanup): no gliding, wobbling or flying players.
+      const samples = TrackCleanup.clean(tr.samples.map((s, k) => {
         const e = fit.estimates[k];
         return VideoPlayerSample.create(s.time, fit.floor[k].x, fit.floor[k].z, e.yaw, e.posture,
           { jump: e.jump, confidence: e.confidence, occluded: s.occluded });
-      });
+      }), defaultTrackCleanup, camera);
       players.push(VideoPlayerTrack.create({ id: tr.id, side: tr.side, label, role, samples }));
       progress?.(0.2 + (0.6 * (n + 1)) / Math.max(tracked.length, 1), "Reading body positions");
     });
