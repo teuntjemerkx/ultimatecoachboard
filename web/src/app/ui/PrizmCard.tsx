@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /** A card's finish, after the trading cards: base (squad), chrome, prizm (holographic) and gold. */
 export type PrizmTier = "base" | "chrome" | "prizm" | "gold";
@@ -15,16 +15,91 @@ function easeInOut(u: number): number {
 }
 
 /**
- * Where the light rests on a card nobody holds, a fraction `f` of the way round its drift (light at --mx/--my, the
+ * Where the light is on a card nobody holds, a fraction `f` of the way round its drift (light at --mx/--my, the
  * refraction at --bgx/--bgy): from the top left (22%, 18%) to the bottom right (78%, 70%) and back, easing in and out.
- * Each number has its own place on the way, so a team's cards do not all shine alike. The light no longer drifts by
- * itself: a card that keeps moving keeps the iPad drawing it.
  */
 function restingLight(f: number): Record<string, string> {
   const half = f < 0.5;
   const e = easeInOut(half ? f / 0.5 : (f - 0.5) / 0.5);
-  const at = (a: number, b: number) => `${(half ? a + (b - a) * e : b + (a - b) * e).toFixed(3)}%`;
+  const at = (a: number, b: number) => `${(half ? a + (b - a) * e : b + (a - b) * e).toFixed(1)}%`;
   return { "--mx": at(22, 78), "--my": at(18, 70), "--bgx": at(40, 60), "--bgy": at(36, 64) };
+}
+
+// MARK: - The drift
+
+/**
+ * The light drifts slowly over cards nobody holds (once round in 11 s), sparingly: one clock for every card, 12 small
+ * steps a second instead of a redraw every frame, only for cards on screen and showing their front, never while the
+ * app is in the background or the iPad asks for less motion, and it comes to rest 45 s after the last touch (the next
+ * touch sets it going again).
+ */
+const drift = { period: 11000, step: 80, idle: 45000 };
+/** Each card's own place on the way (0...1), so a team's cards do not all shine alike. */
+const phases = new Map<HTMLElement, number>();
+const onScreen = new Set<HTMLElement>();
+const written = new WeakMap<HTMLElement, string>();
+let timer: number | undefined;
+let observer: IntersectionObserver | undefined;
+let lastTouch = 0;
+let listening = false;
+
+const lightAt = (phase: number, t: number) => restingLight((((t / drift.period) + phase) % 1 + 1) % 1);
+const calm = () => typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function setLight(el: HTMLElement, light: Record<string, string>) {
+  const key = Object.values(light).join();
+  if (written.get(el) === key) return;
+  written.set(el, key);
+  for (const [k, v] of Object.entries(light)) el.style.setProperty(k, v);
+}
+
+function tick() {
+  const now = performance.now();
+  if (now - lastTouch > drift.idle) return sync();
+  if (document.visibilityState !== "visible") return;
+  for (const el of onScreen) {
+    const phase = phases.get(el);
+    if (phase === undefined || el.classList.contains("tilting") || el.classList.contains("settling") || el.classList.contains("flipped")) continue;
+    setLight(el, lightAt(phase, now));
+  }
+}
+
+/** Runs the clock while a card is on screen and the coach was here lately; stops it otherwise. */
+function sync() {
+  const run = onScreen.size > 0 && performance.now() - lastTouch <= drift.idle && !calm();
+  if (run && timer === undefined) timer = window.setInterval(tick, drift.step);
+  if (!run && timer !== undefined) { clearInterval(timer); timer = undefined; }
+}
+
+function touched() {
+  lastTouch = performance.now();
+  sync();
+}
+
+/** Lets a card's light drift; returns how to stop. */
+function startDrift(el: HTMLElement, phase: number): () => void {
+  if (!listening && typeof document !== "undefined") {
+    listening = true;
+    document.addEventListener("pointerdown", touched, { passive: true, capture: true });
+    document.addEventListener("keydown", touched, { passive: true, capture: true });
+  }
+  phases.set(el, phase);
+  observer ??= new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) onScreen.add(e.target as HTMLElement);
+      else onScreen.delete(e.target as HTMLElement);
+    }
+    sync();
+  });
+  observer.observe(el);
+  // A card coming on screen is a screen just opened: let it shine.
+  touched();
+  return () => {
+    phases.delete(el);
+    onScreen.delete(el);
+    observer?.unobserve(el);
+    sync();
+  };
 }
 
 /**
@@ -61,7 +136,13 @@ export function PrizmCard({ number, name, role, line, tier = "prizm", tag, back,
   // Each number its own place in the prism, so a team's cards do not all look alike.
   const seed = ((typeof number === "number" ? number : Number(number) || 0) * 47) % 360;
   const hue = `${seed}deg`;
-  const light = restingLight(seed / 360);
+  const phase = seed / 360;
+  // Where the drift has the light right now, so the card does not jump when the clock first moves it.
+  const [light] = useState(() => lightAt(phase, typeof performance === "undefined" ? 0 : performance.now()));
+  useEffect(() => {
+    const el = card.current;
+    return el ? startDrift(el, phase) : undefined;
+  }, [phase]);
 
   const tilt = (e: React.PointerEvent) => {
     const el = card.current;
@@ -76,13 +157,18 @@ export function PrizmCard({ number, name, role, line, tier = "prizm", tag, back,
     el.style.setProperty("--bgx", `${63 - px * 26}%`);
     el.style.setProperty("--bgy", `${67 - py * 34}%`);
   };
+  const settle = useRef<number | undefined>(undefined);
   const rest = () => {
     const el = card.current;
     if (!el) return;
     el.classList.remove("tilting");
-    // Back level, the light gliding back to where it rests.
+    // Back level, the light gliding (0.6 s) to where the drift will have it by then, and drifting on from there.
+    el.classList.add("settling");
     for (const v of ["--rx", "--ry"]) el.style.removeProperty(v);
-    for (const [k, v] of Object.entries(light)) el.style.setProperty(k, v);
+    written.delete(el);
+    setLight(el, lightAt(phase, performance.now() + 600));
+    clearTimeout(settle.current);
+    settle.current = window.setTimeout(() => el.classList.remove("settling"), 600);
   };
   const activate = () => {
     if (onSelect) onSelect();
