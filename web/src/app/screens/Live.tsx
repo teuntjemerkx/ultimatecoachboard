@@ -5,7 +5,29 @@ import { Court2D, type CourtToken } from "../ui/Court2D";
 import { useNav } from "../store/nav";
 import { usePortrait } from "../hooks/useViewport";
 import { MatchSession, useMatch } from "../match/session";
-import { CourtFrame, LiveEvent, RotationRecord, RotationStats, Scoring, type Side } from "../../core/match";
+import { CourtFrame, LiveEvent, RotationRecord, RotationStats, Scoring, type LoggedAction, type Side } from "../../core/match";
+import { SubSheet } from "./SubSheet";
+
+/** What the next undo takes back, in a few words under the Undo button. */
+function undoText(session: MatchSession, last: LoggedAction | undefined): string {
+  if (!last) return "Nothing yet";
+  const a = last.action;
+  const team = (side: Side) => (side === "home" ? session.state.setup.homeName ?? "Us" : session.state.setup.opponentName ?? "Them");
+  switch (a.kind) {
+    case "rally": return `Point ${team(a.winner)}`;
+    case "timeOut": return `Time-out ${team(a.side)}`;
+    case "substitution": {
+      const n = (id: string) => session.number(id);
+      return a.side === "home" && n(a.incoming) !== undefined && n(a.outgoing) !== undefined
+        ? `Sub #${n(a.incoming)} for #${n(a.outgoing)}` : "Substitution";
+    }
+    case "nextSet": return "Start of the set";
+    default: return "Last entry";
+  }
+}
+
+/** A time-out being taken: the logged action it belongs to, and when its time runs out (ms). */
+interface RunningTimeOut { side: Side; seq: number; endsAt: number }
 
 /** Screen 3: the court with both teams in their rotations, the score, and one tap for each point. */
 export function Live({ matchId }: { matchId: string }) {
@@ -14,7 +36,11 @@ export function Live({ matchId }: { matchId: string }) {
   const portrait = usePortrait();
   const [flipped, setFlipped] = useState(false);
   const [missing, setMissing] = useState(false);
-  const lastPoint = useRef(0);
+  const [subbing, setSubbing] = useState(false);
+  const [notice, setNotice] = useState<{ text: string; id: number } | null>(null);
+  const [clock, setClock] = useState<RunningTimeOut | null>(null);
+  const [, setTick] = useState(0);
+  const lastTap = useRef<Record<string, number>>({});
 
   useEffect(() => {
     if (session?.id === matchId) return;
@@ -31,12 +57,38 @@ export function Live({ matchId }: { matchId: string }) {
     return () => { document.removeEventListener("visibilitychange", away); window.removeEventListener("pagehide", leave); void session.flush(); };
   }, [session]);
 
-  // One point per tap: a finger that bounces on the glass does not score twice.
-  const point = (side: Side) => {
+  // The time-out clock: redraw every half second while one runs, and let it go when the time is up.
+  useEffect(() => {
+    if (!clock) return;
+    const id = window.setInterval(() => {
+      if (Date.now() >= clock.endsAt) setClock(null);
+      else setTick((n) => n + 1);
+    }, 500);
+    return () => window.clearInterval(id);
+  }, [clock]);
+
+  // A confirmation over the court fades after a few seconds.
+  useEffect(() => {
+    if (!notice) return;
+    const id = window.setTimeout(() => setNotice((n) => (n?.id === notice.id ? null : n)), 3500);
+    return () => window.clearTimeout(id);
+  }, [notice]);
+
+  // One action per tap: a finger that bounces on the glass does not score (or take a time-out) twice.
+  const once = (key: string, ms: number) => {
     const t = performance.now();
-    if (t - lastPoint.current < 250) return;
-    lastPoint.current = t;
-    dispatch(LiveEvent.pointSwipe(side));
+    if (t - (lastTap.current[key] ?? -Infinity) < ms) return false;
+    lastTap.current[key] = t;
+    return true;
+  };
+  const point = (side: Side) => { if (once("point", 250)) dispatch(LiveEvent.pointSwipe(side)); };
+  const callTimeOut = (side: Side) => {
+    if (!once(`timeOut${side}`, 600) || !session) return;
+    dispatch(LiveEvent.timeOut(side));
+    const last = session.state.lastAction;
+    if (last?.action.kind === "timeOut" && last.action.side === side) {
+      setClock({ side, seq: last.seq, endsAt: Date.now() + session.state.profile.timeOuts.seconds * 1000 });
+    }
   };
 
   if (missing) return <div className="screen"><div className="empty" style={{ flex: 1 }}>This match could not be opened.<button className="btn big" onClick={() => go({ name: "home" })}>Home</button></div></div>;
@@ -46,15 +98,22 @@ export function Live({ matchId }: { matchId: string }) {
   const m = st.match;
   const set = m.current;
   const home = st.setup.homeName ?? "Us", away = st.setup.opponentName ?? "Opponent";
+  const liberoIn = m.liberoIn("home");
   const tokens: CourtToken[] = st.tokens().map((t) => {
     const w = CourtFrame.world(t.point, t.side);
+    const note = t.isLibero && t.side === "home" && liberoIn ? `for ${session.label(liberoIn.replaces, "")}` : undefined;
     return { id: `${t.side}${t.position}`, side: t.side, x: w.x, z: w.z, label: session.label(t.player, t.role),
-             isLibero: t.isLibero, isServer: t.isServer };
+             isLibero: t.isLibero, isServer: t.isServer, note };
   });
   const serverToken = st.tokens().find((t) => t.isServer);
   const serveText = set.serving === "home" ? `Our serve${serverToken ? ` · #${session.label(serverToken.player, "")}` : ""}` : "Their serve";
   const status = (["home", "opponent"] as Side[]).map((s) => ({ s, p: m.pointStatus(s) })).find((x) => x.p);
   const setOver = set.winner !== undefined;
+  const last = st.lastAction;
+  // The running time-out shows while its time lasts and it has not been undone.
+  const running = clock && st.log.some((e) => e.seq === clock.seq && e.active) ? clock : null;
+  const secondsLeft = running ? Math.max(0, Math.ceil((running.endsAt - Date.now()) / 1000)) : 0;
+  const teamName = (side: Side) => (side === "home" ? home : away);
 
   return (
     <div className="screen" data-version={version}>
@@ -77,23 +136,30 @@ export function Live({ matchId }: { matchId: string }) {
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: portrait ? "column" : "row" }}>
         <div style={{ flex: 1, minWidth: 0, minHeight: 0, position: "relative" }}>
           <Court2D tokens={tokens} vertical={portrait} flipped={flipped} />
-          {session.unsaved && (
-            <button className="hint-pill unsaved-pill" onClick={() => void session.save()}>
-              Not saved on this iPad yet · tap to try again
-            </button>
-          )}
-          {status && !session.unsaved && (
-            <div className="hint-pill" style={{ position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)", color: "var(--c-text)", fontWeight: 800, fontSize: 20 }}>
-              {status.p === "matchPoint" ? "Match point" : "Set point"} for {status.s === "home" ? home : away}
-            </div>
-          )}
+          <div className="court-pills">
+            {session.unsaved && (
+              <button className="hint-pill unsaved-pill" onClick={() => void session.save()}>
+                Not saved on this iPad yet · tap to try again
+              </button>
+            )}
+            {running && (
+              <button className="hint-pill timeout-pill" style={{ ["--team" as string]: running.side === "home" ? "var(--c-home)" : "var(--c-opponent)" }}
+                      onClick={() => setClock(null)} aria-label={`Time-out ${teamName(running.side)}, ${secondsLeft} seconds left. Tap to close.`}>
+                <span className="pip on" aria-hidden="true" />
+                <span>Time-out {teamName(running.side)}</span>
+                <span className="clock">{Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, "0")}</span>
+                <Icon name="close" size={20} />
+              </button>
+            )}
+            {status && !session.unsaved && (
+              <div className="hint-pill" style={{ color: "var(--c-text)", fontWeight: 800, fontSize: 20 }}>
+                {status.p === "matchPoint" ? "Match point" : "Set point"} for {status.s === "home" ? home : away}
+              </div>
+            )}
+            {notice && <div className="hint-pill" role="status" style={{ color: "var(--c-text)", fontWeight: 700, fontSize: 18 }}>{notice.text}</div>}
+          </div>
         </div>
-        <aside style={{
-          display: "flex", flexDirection: portrait ? "row" : "column", gap: 14, padding: 18, width: portrait ? "auto" : 330,
-          background: "linear-gradient(180deg, var(--c-surface), color-mix(in srgb, var(--c-surface) 80%, var(--c-bg)))",
-          borderLeft: portrait ? 0 : "1px solid var(--c-hairline)", borderTop: portrait ? "1px solid var(--c-hairline)" : 0,
-          paddingBottom: `calc(18px + env(safe-area-inset-bottom, 0px))`,
-        }}>
+        <aside className={`live-aside ${portrait ? "portrait" : "landscape"}`}>
           <button className="point-btn" disabled={setOver} onClick={() => point("home")} style={{ ["--team" as string]: "var(--c-home)", ["--on-team" as string]: "var(--c-onHome)" }}>
             Point
             <small>{home}</small>
@@ -102,18 +168,47 @@ export function Live({ matchId }: { matchId: string }) {
             Point
             <small>{away}</small>
           </button>
-          <div style={{ display: "flex", flexDirection: portrait ? "column" : "row", gap: 10 }}>
-            <button className="btn big" style={{ flex: 1 }} onClick={() => dispatch(LiveEvent.undo)} disabled={st.log.length === 0}>
-              <Icon name="undo" /> Undo
-            </button>
-            <button className="btn big" style={{ flex: 1 }} onClick={() => setFlipped((f) => !f)}>
-              <Icon name="swap" /> Swap
-            </button>
-          </div>
-          <button className="btn big secondary" onClick={() => go({ name: "log", matchId })}><Icon name="film" /> Match log</button>
+          {(["home", "opponent"] as Side[]).map((side) => {
+            const left = m.timeOutsLeft(side);
+            return (
+              <button key={side} className="btn live-btn timeout-btn" disabled={setOver || left === 0} onClick={() => callTimeOut(side)}
+                      style={{ ["--team" as string]: side === "home" ? "var(--c-home)" : "var(--c-opponent)" }}
+                      aria-label={`Time-out ${teamName(side)}, ${left} of ${m.maxTimeOutsPerSet} left in this set`}>
+                <span className="live-btn-title"><Icon name="timeout" /> Time-out</span>
+                <small className="with-pips">
+                  <span className="pips" aria-hidden="true">
+                    {Array.from({ length: m.maxTimeOutsPerSet }, (_, i) => <span key={i} className={`pip${i < left ? " on" : ""}`} />)}
+                  </span>
+                  <span className="who">{teamName(side)}</span>
+                </small>
+              </button>
+            );
+          })}
+          <button className="btn live-btn" disabled={setOver} onClick={() => setSubbing(true)}
+                  aria-label={`Substitution, ${m.substitutionsLeft("home")} of ${m.maxSubstitutionsPerSet} left in this set`}>
+            <span className="live-btn-title"><Icon name="sub" /> Sub</span>
+            <small>{m.substitutionsLeft("home")} of {m.maxSubstitutionsPerSet} left</small>
+          </button>
+          <button className="btn live-btn" onClick={() => dispatch(LiveEvent.undo)} disabled={!last}
+                  aria-label={last ? `Undo ${undoText(session, last)}` : "Undo"}>
+            <span className="live-btn-title"><Icon name="undo" /> Undo</span>
+            <small>{undoText(session, last)}</small>
+          </button>
+          <button className="btn live-btn" onClick={() => setFlipped((f) => !f)}>
+            <span className="live-btn-title"><Icon name="swap" /> Swap</span>
+            <small>Sides on screen</small>
+          </button>
+          <button className="btn live-btn secondary" onClick={() => go({ name: "log", matchId })}>
+            <span className="live-btn-title"><Icon name="film" /> Log</span>
+            <small>Every rally</small>
+          </button>
         </aside>
       </div>
 
+      {subbing && !setOver && (
+        <SubSheet session={session} onClose={() => setSubbing(false)}
+                  onDone={(text) => { setSubbing(false); setNotice({ text, id: Date.now() }); }} />
+      )}
       {setOver && <SetBreak session={session} onDone={() => go({ name: "home" })} onLog={() => go({ name: "log", matchId })} />}
     </div>
   );

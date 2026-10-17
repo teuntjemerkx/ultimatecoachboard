@@ -12,6 +12,8 @@ export interface CourtToken {
   selected?: boolean;
   /** Where the player looks (radians from +Z toward +X); a dot on the ring shows it. */
   facing?: number;
+  /** A short line on a tag under the token (e.g. whom the libero plays for). */
+  note?: string;
 }
 
 /** World (x, z) to the SVG's view (u, v) and back, for a layout; overlays drawn as children use the same mapping. */
@@ -93,6 +95,16 @@ export function Court2D({ tokens, vertical, flipped = false, onPointer, children
                   fontWeight={800} fill="var(--c-tokenLabel)" style={{ fontFamily: "var(--font-athletic)", letterSpacing: "0.02em" }}>
               {t.label}
             </text>
+            {t.note && (() => {
+              const w = 0.22 + t.note.length * 0.165, y = r + (t.isServer ? 0.5 : 0.36);
+              return (
+                <g transform={`translate(0 ${y})`}>
+                  <rect x={-w / 2} y={-0.19} width={w} height={0.38} rx={0.19} fill="var(--c-tokenLabel)" stroke={ring} strokeWidth={0.04} />
+                  <text textAnchor="middle" dominantBaseline="central" fontSize={0.25} fontWeight={800} fill="var(--c-tokenFill)"
+                        style={{ fontFamily: "var(--font-athletic)", letterSpacing: "0.04em", textTransform: "uppercase" }}>{t.note}</text>
+                </g>
+              );
+            })()}
           </g>
         );
       })}

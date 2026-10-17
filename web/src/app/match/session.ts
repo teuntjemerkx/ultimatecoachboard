@@ -184,6 +184,15 @@ export class MatchSession {
 
   name(player: PlayerID): string | undefined { return this.state.setup.names?.[player]; }
 
+  number(player: PlayerID): number | undefined { return this.state.setup.jerseys?.[player]; }
+
+  /** A player as the coach names them: "#12 Anna", "#12", or the role when no number is known. */
+  who(player: PlayerID): string {
+    const n = this.number(player), name = this.name(player);
+    if (n === undefined) return name ?? this.state.match.displayRole(player, "home") ?? "a player";
+    return `#${n}${name ? ` ${name}` : ""}`;
+  }
+
   /** One write of the match record. */
   async write() {
     const m = this.state.match;

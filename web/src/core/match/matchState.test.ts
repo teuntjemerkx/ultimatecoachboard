@@ -153,4 +153,62 @@ describe("MatchStateTests", () => {
     expect(decoded).toEqual(m);
     expect(decoded.rotationNumber("home")).toBe(m.rotationNumber("home"));
   });
+
+  it("two time-outs per team per set, fresh in the next set (web)", () => {
+    const [m] = makeMatch("home");
+    m.timeOut("home");
+    m.timeOut("opponent");
+    m.timeOut("home");
+    expect(m.timeOutsLeft("home")).toBe(0);
+    expect(m.timeOutsLeft("opponent")).toBe(1);
+    expectMatchError(() => m.timeOut("home"), "timeOutLimitReached");
+    for (let i = 0; i < 25; i++) m.applyRally("opponent");
+    expectMatchError(() => m.timeOut("opponent"), "setOver");
+    m.startNextSet();
+    expect(m.timeOutsLeft("home")).toBe(2);
+    expect(m.timeOutsLeft("opponent")).toBe(2);
+  });
+
+  it("a refused substitution names the rule (web)", () => {
+    const [m, home] = makeMatch("home");
+    const [b1, b2] = [newPlayerID(), newPlayerID()];
+    const reason = (outgoing: string, incoming?: string) => m.substitutionRefusal("home", outgoing, incoming);
+    expect(reason(b1, b2)).toEqual({ reason: "notOnCourt", code: "playerNotOnCourt" });
+    expect(reason(home.oh2, home.s)).toEqual({ reason: "alreadyOnCourt", code: "illegalSubstitution" });
+    expect(reason(home.oh2, home.libero)).toEqual({ reason: "libero", code: "illegalSubstitution" });
+    expect(reason(home.oh2, b1)).toBeUndefined();
+    m.substitute("home", home.oh2, b1);
+    // b1 came on for OH2: only OH2 may replace b1, and OH2 may only come back for b1.
+    expect(reason(b1, b2)).toEqual({ reason: "onlyPartner", code: "illegalSubstitution", partner: home.oh2 });
+    expect(reason(home.oh1, home.oh2)).toEqual({ reason: "ownPositionOnly", code: "illegalSubstitution", partner: b1 });
+    expect(m.substitutionPartner("home", b1)).toBe(home.oh2);
+    expect(reason(b1)).toBeUndefined();
+    m.substitute("home", b1, home.oh2);
+    expect(reason(home.oh2)).toEqual({ reason: "outgoingDone", code: "illegalSubstitution" });
+    expect(reason(home.oh1, b1)).toEqual({ reason: "incomingDone", code: "illegalSubstitution" });
+    expect(m.substitutionsLeft("home")).toBe(4);
+    // Each refusal is exactly what substitute throws.
+    expectMatchError(() => m.substitute("home", home.oh1, b1), "illegalSubstitution");
+    for (const [out, inn] of [[home.oh1, b2], [b2, home.oh1], [home.opp, newPlayerID()], [home.mb1, newPlayerID()]]) {
+      m.substitute("home", out, inn);
+    }
+    expect(reason(home.s, newPlayerID())).toEqual({ reason: "limitReached", code: "substitutionLimitReached" });
+  });
+
+  it("liberoIn names the player the libero replaces (web)", () => {
+    const [m, home] = makeMatch("home");
+    // MB2 starts in P6: the libero plays there for MB2.
+    expect(m.liberoIn("home")).toEqual({ libero: home.libero, replaces: home.mb2, position: 6 });
+    m.applyRally("opponent");
+    m.applyRally("home");                             // home rotates: MB2 to P5, still back row
+    expect(m.liberoIn("home")).toEqual({ libero: home.libero, replaces: home.mb2, position: 5 });
+    const sub = newPlayerID();
+    m.substitute("home", home.mb2, sub);
+    expect(m.liberoIn("home")?.replaces).toBe(sub);   // the rule follows the slot
+    m.applyRally("opponent");
+    m.applyRally("home");
+    // Now MB1 is in P1 and serving (the substitute is at the net): liberos may not serve, so the libero is off court.
+    expect(TeamInSet.playerAt(m.current.home, 1)).toBe(home.mb1);
+    expect(m.liberoIn("home")).toBeUndefined();
+  });
 });

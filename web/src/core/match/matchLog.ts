@@ -160,6 +160,7 @@ export const MatchLog = {
         case "scout": pending.scoutLines += 1; break;
         case "ink": pending.sketchStrokes += 1; break;
         case "substitution": pending.substitutions += 1; break;
+        case "timeOut": pending.timeOuts += 1; break;
         case "skill": pending.skills.push(action.code); break;
         case "nextSet":
         case "rotationCorrection": break;
@@ -167,11 +168,6 @@ export const MatchLog = {
     }
     for (const r of records) {
       switch (JournalRecord.knownType(r)) {
-        case JournalRecordType.timeOutStarted: {
-          const i = rows.findIndex((row) => row.rally.seq > r.seq);
-          if (i >= 0) rows[i].timeOuts += 1;
-          break;
-        }
         case JournalRecordType.note: {
           let note: NotePayload;
           try {

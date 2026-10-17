@@ -42,6 +42,10 @@ export function MatchSetup() {
   const [libero, setLibero] = useState<PlayerRef | undefined>(last?.libero);
   const [setter, setSetter] = useState<number>(last?.setterPosition ?? 1);
   const [firstServer, setFirstServer] = useState<Side>("home");
+  // Their lineup is optional: unknown numbers stay empty, and their setter is assumed in position 1.
+  const [theirNumbers, setTheirNumbers] = useState<(number | null)[]>([null, null, null, null, null, null]);
+  const [theirSetter, setTheirSetter] = useState(1);
+  const [editingTheirs, setEditingTheirs] = useState(false);
   const [picking, setPicking] = useState<number | "libero" | null>(null);
   const [typed, setTyped] = useState("");
   const [error, setError] = useState("");
@@ -82,7 +86,7 @@ export function MatchSetup() {
     const setup = {
       homeName: settings.teamName || "Us", opponentName: opponent.trim() || "Opponent", system, slots, libero,
       bench: roster.filter((r) => !used.has(r.number)).map((r) => ({ id: r.id.toUpperCase(), number: r.number, name: r.name || undefined })),
-      setterPosition: setter, opponentNumbers: [null, null, null, null, null, null], opponentSetterPosition: 1, firstServer,
+      setterPosition: setter, opponentNumbers: theirNumbers, opponentSetterPosition: theirSetter, firstServer,
       netHeight: netHeight(settings.women), mode: settings.advanced ? "advanced" as const : "solo" as const,
     };
     try { localStorage.setItem(SETUP_KEY, JSON.stringify({ opponentName: setup.opponentName, system, slots, libero, setterPosition: setter })); } catch { /* ignore */ }
@@ -193,10 +197,26 @@ export function MatchSetup() {
                 })}
               </div>
             </div>
-            <div className="stack" style={{ gap: 8 }}>
-              <span className="label">Who serves first?</span>
-              <Choice label="Who serves first" value={firstServer} onChange={setFirstServer}
-                      options={[{ value: "home", title: "Us" }, { value: "opponent", title: "Them" }]} />
+            <div className="setup-pair">
+              <div className="stack" style={{ gap: 8 }}>
+                <span className="label">Who serves first?</span>
+                <Choice label="Who serves first" value={firstServer} onChange={setFirstServer}
+                        options={[{ value: "home", title: "Us" }, { value: "opponent", title: "Them" }]} />
+              </div>
+              <div className="stack" style={{ gap: 8 }}>
+                <span className="label">Their lineup · optional</span>
+                <button type="button" className={`btn their-btn${theirNumbers.some((n) => n !== null) ? " filled" : ""}`} onClick={() => setEditingTheirs(true)}
+                        aria-label={theirNumbers.some((n) => n !== null)
+                          ? `Their lineup: ${theirNumbers.map((n, i) => `position ${i + 1} ${n ?? "unknown"}`).join(", ")}; setter in position ${theirSetter}. Tap to change.`
+                          : "Add their shirt numbers and setter"}>
+                  {theirNumbers.some((n) => n !== null) ? (
+                    <>
+                      <span className="their-numbers">{theirNumbers.map((n, i) => <span key={i}>{n ?? "–"}</span>)}</span>
+                      <small>Setter in {theirSetter}</small>
+                    </>
+                  ) : <><Icon name="plus" /> Numbers</>}
+                </button>
+              </div>
             </div>
             <div className="stack" style={{ gap: 8, marginTop: "auto" }}>
               {error && <p role="alert" style={{ margin: 0, color: "var(--c-fault)", fontWeight: 600 }}>{error}</p>}
@@ -208,6 +228,12 @@ export function MatchSetup() {
           </div>
         </section>
       </main>
+
+      {editingTheirs && (
+        <TheirLineupSheet name={opponent.trim() || "Opponent"} numbers={theirNumbers} setter={theirSetter}
+                          onDone={(numbers, s) => { setTheirNumbers(numbers); setTheirSetter(s); setEditingTheirs(false); }}
+                          onClose={() => setEditingTheirs(false)} />
+      )}
 
       {picking !== null && (
         <PickSheet title={picking === "libero" ? "Who is the libero?" : `Who plays position ${picking}?`} roster={roster}
@@ -261,6 +287,112 @@ function PickSheet({ title, roster, onCourt, libero, line, typed, setTyped, onPi
                  style={{ width: 120, font: "400 34px/1 var(--font-display-big)", textAlign: "center" }} />
           <button className="btn big" type="submit">Use this number</button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Their lineup, quick to type or to skip: the six positions as they stand on court (their shirt numbers in gold), a big
+ * number pad that steps through positions 1 to 6, and the position of their setter.
+ */
+function TheirLineupSheet({ name, numbers, setter, onDone, onClose }: {
+  name: string; numbers: (number | null)[]; setter: number;
+  onDone: (numbers: (number | null)[], setter: number) => void; onClose: () => void;
+}) {
+  const [draft, setDraft] = useState(numbers);
+  const [theirSetter, setTheirSetter] = useState(setter);
+  const firstEmpty = draft.findIndex((n) => n === null);
+  const [active, setActive] = useState<number | null>((firstEmpty < 0 ? 0 : firstEmpty) + 1);
+  // A number typed into a position that already has one starts afresh; two digits make a number and move on.
+  const [fresh, setFresh] = useState(true);
+
+  const set = (pos: number, value: number | null) => setDraft((d) => d.map((n, i) => (i === pos - 1 ? value : n)));
+  const next = (pos: number) => { setActive(pos < 6 ? pos + 1 : null); setFresh(true); };
+  const digit = (k: number) => {
+    if (active === null) return;
+    const now = draft[active - 1];
+    if (fresh || now === null || now >= 10) {
+      set(active, k);
+      setFresh(false);
+    } else {
+      set(active, now * 10 + k);
+      next(active);
+    }
+  };
+  const erase = () => {
+    if (active === null) return;
+    const now = draft[active - 1];
+    if (now === null) {
+      if (active > 1) { setActive(active - 1); setFresh(false); }
+      return;
+    }
+    set(active, now >= 10 ? Math.floor(now / 10) : null);
+    setFresh(false);
+  };
+  const dupes = new Set(draft.filter((n, i) => n !== null && draft.indexOf(n) !== i));
+
+  return (
+    <div className="sheet" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="card stack pick-sheet their-sheet" style={{ gap: 16 }} role="dialog" aria-label={`${name}: their lineup`}>
+        <div className="row" style={{ justifyContent: "space-between", flexWrap: "nowrap" }}>
+          <div className="stack" style={{ gap: 6, minWidth: 0 }}>
+            <span className="label">Optional · their shirt numbers by position</span>
+            <h2 className="group-title" style={{ margin: 0, fontSize: 40, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</h2>
+          </div>
+          <button className="btn big secondary" type="button" onClick={onClose}><Icon name="close" /> Cancel</button>
+        </div>
+        <div className="their-body">
+          <div className="lineup their-lineup">
+            <div className="stack" style={{ gap: 6 }}>
+              <span className="label" style={{ textAlign: "center" }}>Net</span>
+              <div className="net" />
+            </div>
+            {layout.map((row, r) => (
+              <div key={r} className="lineup-row">
+                {row.map((pos) => {
+                  const n = draft[pos - 1];
+                  return (
+                    <button key={pos} type="button" className={`slot their-slot${n !== null ? " set" : ""}${active === pos ? " picking" : ""}${n !== null && dupes.has(n) ? " dupe" : ""}`}
+                            onClick={() => { setActive(pos); setFresh(true); }} aria-pressed={active === pos}
+                            aria-label={`Their position ${pos}: ${n ?? "no number"}${theirSetter === pos ? ", setter" : ""}`}>
+                      <span className="pos">Position {pos}</span>
+                      <span className="no">{n ?? "–"}</span>
+                      {theirSetter === pos && <span className="tag">Setter</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+          <div className="stack their-pad">
+            <div className="numbers their-keys" role="group" aria-label="Number pad">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((k) => (
+                <button key={k} type="button" className="btn" disabled={active === null} onClick={() => digit(k)}>{k}</button>
+              ))}
+              <button type="button" className="btn" disabled={active === null} onClick={erase} aria-label="Delete"><Icon name="backspace" size={30} /></button>
+              <button type="button" className="btn" disabled={active === null} onClick={() => digit(0)}>0</button>
+              <button type="button" className="btn next" disabled={active === null} onClick={() => active !== null && next(active)}>Next</button>
+            </div>
+            <div className="stack" style={{ gap: 6 }}>
+              <span className="label">Their setter in position</span>
+              <div className="seg6" role="group" aria-label="Their setter in position">
+                {[1, 2, 3, 4, 5, 6].map((p) => (
+                  <button key={p} type="button" className={`btn ${theirSetter === p ? "on" : ""}`} aria-pressed={theirSetter === p} onClick={() => setTheirSetter(p)}>{p}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="row" style={{ justifyContent: "space-between", flexWrap: "nowrap" }}>
+          <p className="muted" role={dupes.size ? "alert" : undefined} style={{ margin: 0, color: dupes.size ? "var(--c-fault)" : undefined, fontWeight: dupes.size ? 700 : undefined }}>
+            {dupes.size ? `#${[...dupes].join(" and #")} ${dupes.size > 1 ? "are each" : "is"} in two positions.` : "Leave a position empty when you do not know the number."}
+          </p>
+          <div className="row" style={{ gap: 10, flexWrap: "nowrap" }}>
+            <button className="btn big secondary" type="button" onClick={() => { setDraft([null, null, null, null, null, null]); setTheirSetter(1); setActive(1); setFresh(true); }}>Clear</button>
+            <button className="btn primary" type="button" onClick={() => onDone(draft, theirSetter)}><Icon name="check" /> Done</button>
+          </div>
+        </div>
       </div>
     </div>
   );

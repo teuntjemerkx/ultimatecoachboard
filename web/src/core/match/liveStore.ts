@@ -10,7 +10,7 @@ import {
 } from "./journal";
 import { type CoachMode, InkStroke } from "./liveTypes";
 import type { RallyRecord } from "./matchLog";
-import { MatchError, MatchState, type PlayerID, TeamSheet } from "./matchState";
+import { MatchError, MatchState, type PlayerID, type SubstitutionRefusal, TeamSheet } from "./matchState";
 import { MicroScout, ScoutLine } from "./microScout";
 import { ConstraintResult, OverlapEngine } from "./overlapEngine";
 import { RotationTemplate, TemplateLibrary } from "./rotationTemplate";
@@ -88,6 +88,8 @@ export type LiveEvent =
   | { kind: "moveToken"; side: Side; position: CourtPosition; to: LocalPoint }
   | { kind: "resetTokens" }
   | { kind: "substitution"; side: Side; outgoing: PlayerID; incoming: PlayerID }
+  /** A time-out for a side, counted in the set (web addition; the panic time-out counts as one for home). */
+  | { kind: "timeOut"; side: Side }
   | { kind: "toggleMode" }
   | { kind: "undo" }
   | { kind: "redo" }
@@ -107,6 +109,7 @@ export const LiveEvent = {
   resetTokens: { kind: "resetTokens" } as LiveEvent,
   substitution: (side: Side, outgoing: PlayerID, incoming: PlayerID): LiveEvent =>
     ({ kind: "substitution", side, outgoing, incoming }),
+  timeOut: (side: Side): LiveEvent => ({ kind: "timeOut", side }),
   toggleMode: { kind: "toggleMode" } as LiveEvent,
   undo: { kind: "undo" } as LiveEvent,
   redo: { kind: "redo" } as LiveEvent,
@@ -133,6 +136,7 @@ export interface BoardToken {
 export type LiveAction =
   | { kind: "rally"; winner: Side }
   | { kind: "substitution"; side: Side; outgoing: PlayerID; incoming: PlayerID }
+  | { kind: "timeOut"; side: Side }
   | { kind: "scout"; line: ScoutLine }
   | { kind: "ink"; stroke: InkStroke }
   | { kind: "nextSet"; firstServer?: Side; homeStartRotation?: number }
@@ -145,6 +149,7 @@ export const LiveAction = {
     switch (a.kind) {
       case "rally": return encodeTagged("rally", { _0: a.winner });
       case "substitution": return encodeTagged("substitution", { _0: a.side, _1: a.outgoing, _2: a.incoming });
+      case "timeOut": return encodeTagged("timeOut", { _0: a.side });
       case "scout": return encodeTagged("scout", { _0: ScoutLine.encode(a.line) });
       case "ink": return encodeTagged("ink", { _0: InkStroke.encode(a.stroke) });
       case "nextSet": return encodeTagged("nextSet", { _0: a.firstServer, _1: a.homeStartRotation });
@@ -160,6 +165,7 @@ export const LiveAction = {
       case "substitution":
         return { kind: "substitution", side: p.req("_0", Side.decode), outgoing: p.req("_1", decodeUUID),
                  incoming: p.req("_2", decodeUUID) };
+      case "timeOut": return { kind: "timeOut", side: p.req("_0", Side.decode) };
       case "scout": return { kind: "scout", line: p.req("_0", ScoutLine.decode) };
       case "ink": return { kind: "ink", stroke: p.req("_0", InkStroke.decode) };
       case "nextSet": return { kind: "nextSet", firstServer: p.opt("_0", Side.decode), homeStartRotation: p.optInt("_1") };
@@ -349,12 +355,19 @@ export class LiveState {
       case "tick":
         return this._scout.tick(event.time) ? [LiveEffect.haptic("rejected")] : [];
 
-      case "panicPressed":
+      case "panicPressed": {
         if (this._context.kind !== "live") return [];
+        // The panic time-out is a home time-out: counted when one is left. Every TimeOutStarted record is a counted
+        // time-out, so replay rebuilds the same log.
+        const counted = attempt(() => this._match.clone().timeOut("home"));
+        const effects = counted
+          ? this.record({ kind: "timeOut", side: "home" }, JournalRecordType.timeOutStarted, TimeOutPayload, { side: "home" })
+          : [];
+        if (counted) this.rebuild();
         this._context = LiveContext.panicTimeOut(event.time);
         this._scout.cancel();
-        return [...this.record(undefined, JournalRecordType.timeOutStarted, TimeOutPayload, { side: "home" }),
-                LiveEffect.haptic("panic"), LiveEffect.commitJournal];
+        return [...effects, LiveEffect.haptic("panic"), LiveEffect.commitJournal];
+      }
 
       case "panicDone":
         if (this._context.kind !== "panicTimeOut") return [];
@@ -384,8 +397,7 @@ export class LiveState {
         return [];
 
       case "substitution": {
-        const probe = this._match.clone();
-        if (!attempt(() => probe.substitute(event.side, event.outgoing, event.incoming))) {
+        if (this.substitutionRefusal(event.side, event.outgoing, event.incoming) !== undefined) {
           return [LiveEffect.haptic("rejected")];
         }
         const effects = this.record({ kind: "substitution", side: event.side, outgoing: event.outgoing, incoming: event.incoming },
@@ -393,6 +405,14 @@ export class LiveState {
                                     { side: event.side, outgoing: event.outgoing, incoming: event.incoming });
         this.rebuild();
         return [...effects, LiveEffect.commitJournal];
+      }
+
+      case "timeOut": {
+        if (!attempt(() => this._match.clone().timeOut(event.side))) return [LiveEffect.haptic("rejected")];
+        const effects = this.record({ kind: "timeOut", side: event.side }, JournalRecordType.timeOutStarted, TimeOutPayload,
+                                    { side: event.side });
+        this.rebuild();
+        return [...effects, LiveEffect.haptic("originAccepted"), LiveEffect.commitJournal];
       }
 
       case "toggleMode":
@@ -495,6 +515,9 @@ export class LiveState {
         }
         case "substitution":
           attempt(() => m.substitute(a.side, a.outgoing, a.incoming));
+          break;
+        case "timeOut":
+          attempt(() => m.timeOut(a.side));
           break;
         case "scout":
           lines.push(a.line);
@@ -620,6 +643,22 @@ export class LiveState {
     return out;
   }
 
+  /**
+   * Why a substitution would be refused now, or undefined when it is allowed (web addition): never once the set is
+   * over, otherwise the match's own rule (`MatchState.substitutionRefusal`). Without `incoming`, only what concerns
+   * the player going off.
+   */
+  substitutionRefusal(side: Side, outgoing: PlayerID, incoming?: PlayerID): SubstitutionRefusal | "setOver" | undefined {
+    if (this._match.isOver || this._match.current.winner !== undefined) return "setOver";
+    return this._match.substitutionRefusal(side, outgoing, incoming);
+  }
+
+  /** The action the next undo takes back (web addition). */
+  get lastAction(): LoggedAction | undefined {
+    for (let i = this._log.length - 1; i >= 0; i--) if (this._log[i].active) return this._log[i];
+    return undefined;
+  }
+
   /** The home team's substitutes right now (roster bench plus starters who went off). */
   get homeBench(): PlayerID[] {
     return this._match.bench("home", this.setup.homeBench ?? []);
@@ -694,6 +733,11 @@ export class LiveState {
           if (p) state.appendReplayed({ kind: "substitution", side: p.side, outgoing: p.outgoing, incoming: p.incoming }, r.seq);
           break;
         }
+        case JournalRecordType.timeOutStarted: {
+          const p = decode(TimeOutPayload);
+          if (p) state.appendReplayed({ kind: "timeOut", side: p.side }, r.seq);
+          break;
+        }
         case JournalRecordType.setStarted: {
           const p = decode(SetStartedPayload);
           if (p) state.appendReplayed({ kind: "nextSet", firstServer: p.firstServer, homeStartRotation: p.homeStartRotation }, r.seq);
@@ -736,7 +780,7 @@ export class LiveState {
           break;
         }
         default:
-          break;   // types without derived state (notes, time-outs, view facts) or unknown types
+          break;   // types without derived state (notes, the end of a time-out, view facts) or unknown types
       }
       state._nextSeq = r.seq + 1;
     }

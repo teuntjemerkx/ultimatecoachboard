@@ -106,6 +106,8 @@ export interface TeamInSet {
   /** Side-out rotations performed in this set. */
   rotations: number;
   substitutionsUsed: number;
+  /** Time-outs taken in this set (web addition). */
+  timeOutsUsed: number;
   /** Substitution partners in this set (starter <-> substitute), both directions. */
   partners: Record<PlayerID, PlayerID>;
   /** Players whose substitution pair is complete (the starter came back): no further substitution this set. */
@@ -114,13 +116,14 @@ export interface TeamInSet {
 
 export const TeamInSet = {
   make(lineup: readonly PlayerID[]): TeamInSet {
-    return { lineup: [...lineup], starters: [...lineup], rotations: 0, substitutionsUsed: 0, partners: {},
+    return { lineup: [...lineup], starters: [...lineup], rotations: 0, substitutionsUsed: 0, timeOutsUsed: 0, partners: {},
              completed: new Set() };
   },
 
   clone(t: TeamInSet): TeamInSet {
     return { lineup: [...t.lineup], starters: [...t.starters], rotations: t.rotations,
-             substitutionsUsed: t.substitutionsUsed, partners: { ...t.partners }, completed: new Set(t.completed) };
+             substitutionsUsed: t.substitutionsUsed, timeOutsUsed: t.timeOutsUsed, partners: { ...t.partners },
+             completed: new Set(t.completed) };
   },
 
   /** The starter of the slot a player occupies now. Swift `starter(ofSlotHeldBy:)`. */
@@ -142,6 +145,7 @@ export const TeamInSet = {
   encode(t: TeamInSet): JsonValue {
     return {
       lineup: [...t.lineup], starters: [...t.starters], rotations: t.rotations, substitutionsUsed: t.substitutionsUsed,
+      timeOutsUsed: t.timeOutsUsed,
       partners: encodeFlatDictionary(Object.entries(t.partners), (k) => k, (v) => v),
       completed: [...t.completed],
     };
@@ -154,6 +158,7 @@ export const TeamInSet = {
       starters: r.array("starters", decodeUUID),
       rotations: r.int("rotations"),
       substitutionsUsed: r.int("substitutionsUsed"),
+      timeOutsUsed: r.optInt("timeOutsUsed") ?? 0,
       partners: Object.fromEntries(r.req("partners", (j, w) => decodeFlatDictionary(j, w, decodeUUID, decodeUUID))),
       completed: new Set(r.array("completed", decodeUUID)),
     };
@@ -208,13 +213,41 @@ export interface RallyOutcome {
  */
 export type MatchErrorCode =
   | "matchOver" | "setOver" | "setNotOver" | "playerNotOnCourt" | "substitutionLimitReached" | "notALiberoChange"
-  | "illegalSubstitution";
+  | "illegalSubstitution" | "timeOutLimitReached";
 
 export class MatchError extends Error {
   constructor(readonly code: MatchErrorCode) {
     super(code);
     this.name = "MatchError";
   }
+}
+
+/**
+ * Why a substitution is refused, in more detail than its MatchError (web addition, for the coach):
+ * - `limitReached`: the team has used all its substitutions in this set.
+ * - `notOnCourt`: the player going off is not on court; `alreadyOnCourt`: the player coming on already is.
+ * - `libero`: a libero is never part of a regular substitution.
+ * - `outgoingDone` / `incomingDone`: that player's pair is complete (a starter who came back, or the substitute who
+ *   made way for them): no further substitution for them in this set.
+ * - `onlyPartner`: the player going off came on as a substitute; only `partner`, the starter, may replace them.
+ * - `ownPositionOnly`: the player coming on is a starter who went off; they may only return for `partner`, who took
+ *   their position.
+ */
+export type SubstitutionRefusalReason =
+  | "limitReached" | "notOnCourt" | "alreadyOnCourt" | "libero" | "outgoingDone" | "incomingDone" | "onlyPartner"
+  | "ownPositionOnly";
+
+export interface SubstitutionRefusal {
+  reason: SubstitutionRefusalReason;
+  code: MatchErrorCode;
+  partner?: PlayerID;
+}
+
+/** Where the libero plays now: in `position` for `replaces`, the player holding that rotational slot. */
+export interface LiberoIn {
+  libero: PlayerID;
+  replaces: PlayerID;
+  position: CourtPosition;
 }
 
 /** Swift `MatchState.PointStatus`. */
@@ -227,6 +260,8 @@ export type PointStatus = "setPoint" | "matchPoint";
 export class MatchState {
   scoring!: Scoring;
   maxSubstitutionsPerSet!: number;
+  /** Web addition: time-outs per team per set. */
+  maxTimeOutsPerSet!: number;
   liberoMayServe!: boolean;
   sheets!: Partial<Record<Side, TeamSheet>>;
   sets!: SetState[];
@@ -237,6 +272,7 @@ export class MatchState {
               { profile: RuleCourtProfile; home: TeamSheet; opponent: TeamSheet; firstServer: Side }) {
     this.scoring = { ...profile.scoring };
     this.maxSubstitutionsPerSet = profile.substitutions.maxPerSet;
+    this.maxTimeOutsPerSet = profile.timeOuts.perSet;
     this.liberoMayServe = profile.libero.mayServe;
     this.sheets = { home: TeamSheet.clone(home), opponent: TeamSheet.clone(opponent) };
     this.sets = [{ number: 1, score: Score.make(), serving: firstServer, firstServer,
@@ -250,6 +286,7 @@ export class MatchState {
     const m = Object.create(MatchState.prototype) as MatchState;
     m.scoring = { ...this.scoring };
     m.maxSubstitutionsPerSet = this.maxSubstitutionsPerSet;
+    m.maxTimeOutsPerSet = this.maxTimeOutsPerSet;
     m.liberoMayServe = this.liberoMayServe;
     m.sheets = {};
     for (const side of Side.allCases) {
@@ -325,29 +362,66 @@ export class MatchState {
    * come back once, into its own slot, and only for its substitute; then the pair is closed for the set.
    */
   substitute(side: Side, outgoing: PlayerID, incoming: PlayerID): void {
+    const refusal = this.substitutionRefusal(side, outgoing, incoming);
+    if (refusal !== undefined) throw new MatchError(refusal.code);
     const set = SetState.clone(this.current);
     const team = set[side];
-    if (team.substitutionsUsed >= this.maxSubstitutionsPerSet) throw new MatchError("substitutionLimitReached");
-    const slot = team.lineup.indexOf(outgoing);
-    if (slot < 0) throw new MatchError("playerNotOnCourt");
-    const liberos = this.sheets[side]?.liberos ?? [];
-    if (team.lineup.includes(incoming) || liberos.includes(incoming) || liberos.includes(outgoing)
-        || team.completed.has(outgoing) || team.completed.has(incoming)) {
-      throw new MatchError("illegalSubstitution");
-    }
     const partner = own(team.partners, outgoing);
     if (partner !== undefined) {
-      if (partner !== incoming) throw new MatchError("illegalSubstitution");
       team.completed.add(outgoing);
       team.completed.add(incoming);
     } else {
-      if (own(team.partners, incoming) !== undefined) throw new MatchError("illegalSubstitution");
       team.partners[outgoing] = incoming;
       team.partners[incoming] = outgoing;
     }
-    team.lineup[slot] = incoming;
+    team.lineup[team.lineup.indexOf(outgoing)] = incoming;
     team.substitutionsUsed += 1;
     this.current = set;
+  }
+
+  /**
+   * Why `substitute` would refuse, checked in the same order (web addition); undefined when it is allowed. Without
+   * `incoming`, only what concerns the player going off.
+   */
+  substitutionRefusal(side: Side, outgoing: PlayerID, incoming?: PlayerID): SubstitutionRefusal | undefined {
+    const team = this.current[side];
+    const illegal = (reason: SubstitutionRefusalReason, partner?: PlayerID): SubstitutionRefusal =>
+      (partner === undefined ? { reason, code: "illegalSubstitution" } : { reason, code: "illegalSubstitution", partner });
+    if (team.substitutionsUsed >= this.maxSubstitutionsPerSet) return { reason: "limitReached", code: "substitutionLimitReached" };
+    if (!team.lineup.includes(outgoing)) return { reason: "notOnCourt", code: "playerNotOnCourt" };
+    const liberos = this.sheets[side]?.liberos ?? [];
+    if (incoming !== undefined && team.lineup.includes(incoming)) return illegal("alreadyOnCourt");
+    if ((incoming !== undefined && liberos.includes(incoming)) || liberos.includes(outgoing)) return illegal("libero");
+    if (team.completed.has(outgoing)) return illegal("outgoingDone");
+    if (incoming !== undefined && team.completed.has(incoming)) return illegal("incomingDone");
+    const partner = own(team.partners, outgoing);
+    if (incoming === undefined) return undefined;
+    if (partner !== undefined) return partner === incoming ? undefined : illegal("onlyPartner", partner);
+    const theirs = own(team.partners, incoming);
+    return theirs === undefined ? undefined : illegal("ownPositionOnly", theirs);
+  }
+
+  /** The substitute partner of a player in this set (starter <-> substitute), if any (web addition). */
+  substitutionPartner(side: Side, id: PlayerID): PlayerID | undefined {
+    return own(this.current[side].partners, id);
+  }
+
+  substitutionsLeft(side: Side): number {
+    return Math.max(0, this.maxSubstitutionsPerSet - this.current[side].substitutionsUsed);
+  }
+
+  /** A time-out for a side in the set being played (web addition). Throws MatchError. */
+  timeOut(side: Side): void {
+    if (this.isOver) throw new MatchError("matchOver");
+    if (this.current.winner !== undefined) throw new MatchError("setOver");
+    if (this.current[side].timeOutsUsed >= this.maxTimeOutsPerSet) throw new MatchError("timeOutLimitReached");
+    const set = SetState.clone(this.current);
+    set[side].timeOutsUsed += 1;
+    this.current = set;
+  }
+
+  timeOutsLeft(side: Side): number {
+    return Math.max(0, this.maxTimeOutsPerSet - this.current[side].timeOutsUsed);
   }
 
   /** The role shown for a player: its own role, or the role of the starter whose slot it took. Swift `displayRole(of:side:)`. */
@@ -420,6 +494,16 @@ export class MatchState {
       out.set(pos, libero);
     }
     return out;
+  }
+
+  /** Where the libero plays right now and for whom; undefined while the libero is off court (web addition). */
+  liberoIn(side: Side): LiberoIn | undefined {
+    const libero = this.sheets[side]?.liberos[0];
+    if (libero === undefined) return undefined;
+    for (const [position, id] of this.onCourt(side)) {
+      if (id === libero) return { libero, replaces: TeamInSet.playerAt(this.current[side], position), position };
+    }
+    return undefined;
   }
 
   /** Rotation number named by the setter's position (R1 = setter in P1), or by sequence when no setter is known. */
@@ -508,6 +592,7 @@ export class MatchState {
     return {
       scoring: Scoring.encode(m.scoring),
       maxSubstitutionsPerSet: m.maxSubstitutionsPerSet,
+      maxTimeOutsPerSet: m.maxTimeOutsPerSet,
       liberoMayServe: m.liberoMayServe,
       sheets: encodeFlatDictionary(sheets, (k) => k, TeamSheet.encode),
       sets: m.sets.map(SetState.encode),
@@ -521,6 +606,7 @@ export class MatchState {
     const m = Object.create(MatchState.prototype) as MatchState;
     m.scoring = r.req("scoring", Scoring.decode);
     m.maxSubstitutionsPerSet = r.int("maxSubstitutionsPerSet");
+    m.maxTimeOutsPerSet = r.optInt("maxTimeOutsPerSet") ?? 2;
     m.liberoMayServe = r.bool("liberoMayServe");
     m.sheets = {};
     for (const [side, sheet] of r.req("sheets", (j, w) => decodeFlatDictionary(j, w, Side.decode, TeamSheet.decode))) {

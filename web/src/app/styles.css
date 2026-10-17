@@ -484,6 +484,74 @@ button { font: inherit; color: inherit; }
 .point-btn:active { transform: scale(0.98); filter: brightness(1.08); }
 .point-btn:disabled { opacity: 0.4; }
 
+/* New match: who serves and their lineup side by side; their lineup in a sheet, the numbers in their gold. */
+.setup-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: end; }
+.their-btn { min-height: var(--target); width: 100%; padding: 4px 16px; }
+.their-btn.filled { flex-direction: column; gap: 6px; border-color: color-mix(in srgb, var(--c-opponent) 55%, transparent); }
+.their-btn small { font: 600 13px/1 var(--font); color: var(--c-text2); }
+.their-numbers { display: flex; gap: 8px; font: 400 24px/1 var(--font-display-big); color: var(--c-opponent); font-variant-numeric: tabular-nums; }
+.their-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 22px; }
+.their-lineup { min-height: 0; }
+.their-slot.set { border-style: solid; border-color: color-mix(in srgb, var(--c-opponent) 75%, transparent); background: color-mix(in srgb, var(--c-opponent) 14%, var(--c-surface)); }
+.their-slot.set .no { color: var(--c-opponent); }
+.their-slot .no { font-family: var(--font-display-big); font-weight: 400; }
+.their-slot.dupe { border-color: var(--c-fault); }
+.their-slot .tag { background: var(--c-opponent); color: var(--c-onOpponent); }
+.their-pad { gap: 16px; justify-content: space-between; min-height: 0; }
+.their-keys { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.their-keys .btn.next { font: 800 20px/1 var(--font); }
+.their-keys .icon { width: 34px; height: 34px; }
+@media (orientation: portrait) {
+  .sheet > .pick-sheet.their-sheet { height: min(980px, 100%); }
+  .their-body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+}
+
+/* Live: the side panel (points, time-outs, Sub, Undo) and the pills over the court. */
+.live-aside {
+  display: grid; gap: 12px; padding: 18px; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, var(--c-surface), color-mix(in srgb, var(--c-surface) 80%, var(--c-bg)));
+}
+.live-aside.landscape {
+  width: 330px; border-left: 1px solid var(--c-hairline);
+  grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) repeat(3, auto);
+}
+.live-aside.landscape .point-btn { grid-column: 1 / -1; min-height: 0; }
+.live-aside.portrait { grid-template-columns: repeat(6, minmax(0, 1fr)); border-top: 1px solid var(--c-hairline); }
+.live-aside.portrait .point-btn { grid-column: span 3; min-height: 120px; }
+.live-aside.portrait .live-btn { grid-column: span 2; }
+.live-btn { min-height: 70px; min-width: 0; padding: 6px 12px; flex-direction: column; gap: 6px; border-radius: 24px; }
+.live-btn-title { display: inline-flex; align-items: center; gap: 8px; font: 800 18px/1 var(--font); }
+.live-btn small {
+  display: block; max-width: 100%; font: 600 13px/1.1 var(--font); color: var(--c-text2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.live-btn small.with-pips { display: flex; align-items: center; justify-content: center; gap: 7px; }
+.live-btn small .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.timeout-btn { border-color: color-mix(in srgb, var(--team) 45%, var(--c-hairline)); }
+/* Time-outs left, as lit dots in the team's colour; a used one is an empty ring. */
+.pips { display: inline-flex; gap: 4px; flex: none; }
+.pip { width: 10px; height: 10px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--team) 55%, transparent); }
+.pip.on { background: var(--team); border-color: var(--team); box-shadow: 0 0 8px -1px var(--team); }
+.court-pills {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 2; max-width: calc(100% - 24px);
+  display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none;
+}
+.court-pills > * { pointer-events: auto; white-space: nowrap; }
+.court-pills .unsaved-pill { position: static; transform: none; }
+.timeout-pill {
+  display: inline-flex; align-items: center; gap: 12px; cursor: pointer; padding: 6px 16px 6px 18px; color: var(--c-text);
+  font: 800 19px/1 var(--font); border-color: color-mix(in srgb, var(--team) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--team) 25%, transparent), 0 8px 20px -8px rgba(0,0,0,0.4);
+}
+.timeout-pill .pip { width: 12px; height: 12px; }
+.timeout-pill .clock { font: 400 38px/1 var(--font-display-big); font-variant-numeric: tabular-nums; color: var(--team); padding-top: 4px; }
+.timeout-pill .icon { color: var(--c-text2); }
+/* The substitution sheet: the net over the six on court, and the line that explains a refusal. */
+.sub-net { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.sub-net .net { width: 100%; height: 6px; border-radius: 3px; background: var(--c-text); box-shadow: 0 0 14px -2px color-mix(in srgb, var(--c-text) 60%, transparent); }
+.sub-message { margin: 0; min-height: 48px; display: grid; place-items: center; text-align: center; font: 600 18px/1.3 var(--font); color: var(--c-text2); text-wrap: balance; }
+.sub-message.refused { color: var(--c-fault); font-weight: 700; }
+
 /* Match log: one card per rally. */
 .rally-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); grid-auto-rows: 74px; gap: 10px; overflow-y: auto; align-content: start; }
 .rally {

@@ -111,4 +111,62 @@ describe("LiveStateTests", () => {
     }
     expect(LiveContext.decode({ setBreak: {} })).toEqual(LiveContext.setBreak);
   });
+
+  it("time-outs are counted per set, undone and replayed (web)", () => {
+    const [s, home] = makeState();
+    const records: JournalRecord[] = [matchStartedRecord(s)];
+    run(s, records, LiveEvent.timeOut("opponent"));
+    run(s, records, LiveEvent.pointSwipe("home"));
+    run(s, records, LiveEvent.timeOut("home"));
+    run(s, records, LiveEvent.timeOut("home"));
+    expect(s.match.timeOutsLeft("home")).toBe(0);
+    expect(s.match.timeOutsLeft("opponent")).toBe(1);
+    // A third one is refused and writes nothing.
+    const before = records.length;
+    expect(run(s, records, LiveEvent.timeOut("home"))).toEqual([LiveEffect.haptic("rejected")]);
+    expect(records.length).toBe(before);
+    expect(s.lastAction?.action).toEqual({ kind: "timeOut", side: "home" });
+    run(s, records, LiveEvent.undo);
+    expect(s.match.timeOutsLeft("home")).toBe(1);
+    run(s, records, LiveEvent.substitution("home", home.oh2, home.bench));
+    const replayed = LiveState.replay(records, s.profile, { template: s.template })!;
+    expect(replayed.match).toEqual(s.match);
+    expect(replayed.log).toEqual(s.log);
+    expect(replayed.match.timeOutsLeft("home")).toBe(1);
+    // After reopening, undo takes back the same actions in the same order.
+    for (const state of [s, replayed]) {
+      state.reduce(LiveEvent.undo);
+      state.reduce(LiveEvent.undo);
+    }
+    expect(replayed.match).toEqual(s.match);
+    expect(s.match.timeOutsLeft("home")).toBe(2);
+    expect(s.match.current.score).toEqual({ home: 1, opponent: 0 });
+  });
+
+  it("the panic time-out counts as a home time-out (web)", () => {
+    const [s] = makeState();
+    const records: JournalRecord[] = [matchStartedRecord(s)];
+    run(s, records, LiveEvent.timeOut("home"));
+    run(s, records, LiveEvent.panicPressed(1));
+    run(s, records, LiveEvent.panicDone);
+    expect(s.match.timeOutsLeft("home")).toBe(0);
+    run(s, records, LiveEvent.panicPressed(2));   // none left: the board still freezes, nothing is counted
+    expect(s.context.kind).toBe("panicTimeOut");
+    run(s, records, LiveEvent.panicDone);
+    const replayed = LiveState.replay(records, s.profile, { template: s.template })!;
+    expect(replayed.log).toEqual(s.log);
+    expect(replayed.match).toEqual(s.match);
+  });
+
+  it("no substitution or time-out once the set is over (web)", () => {
+    const [s, home] = makeState();
+    for (let i = 0; i < 25; i++) s.reduce(LiveEvent.pointSwipe("home"));
+    expect(s.substitutionRefusal("home", home.oh2, home.bench)).toBe("setOver");
+    expect(s.reduce(LiveEvent.substitution("home", home.oh2, home.bench))).toEqual([LiveEffect.haptic("rejected")]);
+    expect(s.reduce(LiveEvent.timeOut("opponent"))).toEqual([LiveEffect.haptic("rejected")]);
+    s.reduce(LiveEvent.startNextSet());
+    expect(s.substitutionRefusal("home", home.oh2, home.bench)).toBeUndefined();
+    expect(LiveAction.decode(LiveAction.encode({ kind: "timeOut", side: "opponent" }))).toEqual({ kind: "timeOut", side: "opponent" });
+    expect(LiveAction.encode({ kind: "timeOut", side: "home" })).toEqual({ timeOut: { _0: "home" } });
+  });
 });
