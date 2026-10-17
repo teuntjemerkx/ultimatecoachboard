@@ -398,7 +398,8 @@ export const VideoReconstructor = {
         anchors.push(end);
       } else {
         const last = flight[flight.length - 1];
-        const free = last ? BallReconstruction.fit(flight, camera, [], false) : undefined;
+        // Web addition: with drag, as `split` grew the flight; drag-free a long serve ends metres further and lower.
+        const free = last ? BallReconstruction.fit(flight, camera) : undefined;
         if (last && free && free.position(last.time).y < 0.4) anchors.push(BallAnchor.floor(last.time));
       }
     }
@@ -474,9 +475,9 @@ export const VideoReconstructor = {
 
   /**
    * Web addition: whether one believable flight (`BallReconstruction.plausible`, within `rmsThreshold` and each new
-   * point within `pointThreshold`, as `split` grows a flight) runs through the flight and the two or three ball points
-   * of `track` nearest past its start (or end), within half a second: then the ball flew on there, and an outlier or a
-   * gap in the track split the flight, not a contact.
+   * point within `pointThreshold`, as `split` grows a flight, with drag) runs through the flight and the two or three
+   * ball points of `track` nearest past its start (or end), within half a second: then the ball flew on there, and an
+   * outlier or a gap in the track split the flight, not a contact.
    */
   fliesOn(flight: readonly BallObservation[], track: readonly BallObservation[], camera: VideoCamera, atStart: boolean): boolean {
     const s = defaultBallSettings;
@@ -485,7 +486,7 @@ export const VideoReconstructor = {
       .sort((a, b) => Math.abs(a.time - edge) - Math.abs(b.time - edge)).slice(0, 3);
     if (past.length < 2) return false;
     const all = [...flight, ...past].sort((a, b) => a.time - b.time);
-    const fit = BallReconstruction.bestFit(all, camera, [], false, s);
+    const fit = BallReconstruction.bestFit(all, camera, [], s.drag, s);
     if (!fit || !(Math.sqrt(fit.pixelCost / fit.count) <= s.rmsThreshold)
       || !(Math.sqrt(fit.sizeCost / Math.max(fit.sizeCount, 1)) <= s.sizeThreshold)) return false;
     const seg = new BallSegment(all[0].time, all[all.length - 1].time, fit.p0, fit.v0, fit.aero);

@@ -216,7 +216,7 @@ export interface BallSettings {
   minPoints: number;
   /** Longer gaps without the ball always end a flight (seconds). */
   maxGap: number;
-  /** Refine with drag and lift. */
+  /** Refine with drag and lift (web addition: and grow flights in `split` with the drag coefficient fitted). */
   drag: boolean;
   /** Join consecutive flights at their contact (each pulls the other by its own uncertainty). */
   chain: boolean;
@@ -256,12 +256,16 @@ export interface BallSettings {
 export const defaultBallSettings: Readonly<BallSettings> = { rmsThreshold: 3, pointThreshold: 7, minPoints: 5, maxGap: 0.35, drag: true, chain: true,
   hallHalfWidth: 13.5, hallHalfLength: 19, maxHeight: 15, maxSpeed: 35, minTop: 0.5, placedSigma: 2.5, placedSpeed: 10, sizeThreshold: 2 };
 
-/** The flight model's free parameters: launch position and velocity, and the lift coefficient when it is free. */
+/**
+ * The flight model's free parameters: launch position and velocity, the lift coefficient when it is free, and (web
+ * addition) the drag coefficient when it is free.
+ */
 interface Fit {
   p0: V3;
   v0: V3;
   aero: Aero;
   fitsLift: boolean;
+  fitsDrag: boolean;
   /** Total cost (pixels squared plus priors) and the pixel part. */
   cost: number;
   pixelCost: number;
@@ -281,7 +285,7 @@ function sizeRMS(f: Fit): number {
 }
 
 function fitParams(f: Fit): number[] {
-  return [f.p0.x, f.p0.y, f.p0.z, f.v0.x, f.v0.y, f.v0.z, ...(f.fitsLift ? [f.aero.lift] : [])];
+  return [f.p0.x, f.p0.y, f.p0.z, f.v0.x, f.v0.y, f.v0.z, ...(f.fitsLift ? [f.aero.lift] : []), ...(f.fitsDrag ? [f.aero.drag] : [])];
 }
 
 /** Residual weights: pixels per metre below the floor; the lift prior without and with a contact hint. */
@@ -291,6 +295,23 @@ const liftScale = 0.2;
 const hintedLiftScale = 0.04;
 
 const clampLift = (x: number) => Math.min(liftRange[1], Math.max(liftRange[0], x));
+
+/**
+ * Web addition: the range of the drag coefficient a flight is fitted with, and its prior (centre and scale). In the
+ * wind tunnel a volleyball's C_D drops from about 0.5 below its critical Reynolds number to 0.15 to 0.2 above it, and
+ * that number (2 to 3.4 x 10^5 by the ball and the panel facing the air) is 14 to 24 m/s: a float serve flies through
+ * the drag crisis. With the core's single 0.25 the OK Hoče float serve (the clean copy's 26 points up to the reception)
+ * fits one flight at 3.5 px and flies 5 m past the receiver; with its C_D free it wants the top of the range: grown as
+ * `split` grows it, it is 3.0 px at 0.6, while at 0.55 it passes 3 px one point earlier (cut at 6.68 s) and at 0.5 two
+ * points earlier (6.60 s). A drag that rises as the ball slows (the crisis itself: 0.15 to 0.2 above about 18 m/s, 0.5
+ * below) fits it worse than 0.25 (3.7 to 3.9 px): the image wants more drag early, not less. So a flight's C_D is
+ * fitted from 0.15 to a little above the subcritical value, held near the model's 0.25 by a weak prior, and kept only
+ * where the image shows it (`BallReconstruction.dragSeen`).
+ */
+const dragRange: [number, number] = [0.15, 0.6];
+const dragPrior = { centre: Aero.float.drag, scale: 0.1 };
+
+const clampDrag = (x: number) => Math.min(dragRange[1], Math.max(dragRange[0], x));
 
 /**
  * Web addition: residual weights of the believable flight (`BallSettings`) in a bounded fit: pixels per metre outside
@@ -318,10 +339,18 @@ class Problem {
     readonly anchors: readonly BallAnchor[],
     readonly aero: Aero,
     readonly fitsLift: boolean,
+    /** Web addition: the drag coefficient is a parameter too (after the lift when that is free). */
+    readonly fitsDrag = false,
   ) {}
 
+  /** Web addition: where the drag coefficient is in the parameters. */
+  private get dragIndex(): number {
+    return this.fitsLift ? 7 : 6;
+  }
+
   aeroOf(x: readonly number[]): Aero {
-    return this.fitsLift ? { drag: this.aero.drag, lift: clampLift(x[6]) } : this.aero;
+    if (!this.fitsLift && !this.fitsDrag) return this.aero;
+    return { drag: this.fitsDrag ? clampDrag(x[this.dragIndex]) : this.aero.drag, lift: this.fitsLift ? clampLift(x[6]) : this.aero.lift };
   }
 
   positions(x: readonly number[], times: readonly number[]): V3[] {
@@ -376,15 +405,17 @@ class Problem {
       }
     }
     if (this.fitsLift) r.push((x[6] - this.liftPrior.centre) / this.liftPrior.scale);
+    if (this.fitsDrag) r.push((x[this.dragIndex] - dragPrior.centre) / dragPrior.scale);
     return { all: r, pixelCost, sizeCost };
   }
 
   refine(x0: readonly number[], maxIterations = 60): Fit | undefined {
     const steps = new Array<number>(x0.length).fill(1e-5);
     const clamp = (x: number[]) => {
-      if (!this.fitsLift) return x;
+      if (!this.fitsLift && !this.fitsDrag) return x;
       const y = [...x];
-      y[6] = clampLift(y[6]);
+      if (this.fitsLift) y[6] = clampLift(y[6]);
+      if (this.fitsDrag) y[this.dragIndex] = clampDrag(y[this.dragIndex]);
       return y;
     };
     const r = LevenbergMarquardt.minimize(x0, steps, (x) => this.residuals(x)?.all, { maxIterations, tolerance: 1e-10, clamp });
@@ -392,7 +423,7 @@ class Problem {
     const e = this.residuals(r.x);
     if (!e) return undefined;
     return { p0: new V3(r.x[0], r.x[1], r.x[2]), v0: new V3(r.x[3], r.x[4], r.x[5]), aero: this.aeroOf(r.x), fitsLift: this.fitsLift,
-      cost: r.cost, pixelCost: e.pixelCost, count: this.obs.length, sizeCost: e.sizeCost,
+      fitsDrag: this.fitsDrag, cost: r.cost, pixelCost: e.pixelCost, count: this.obs.length, sizeCost: e.sizeCost,
       sizeCount: this.obs.filter((o) => o.size !== undefined).length };
   }
 
@@ -563,8 +594,9 @@ export const BallReconstruction = {
 
   /**
    * Drag-free first, then the BallFlight model with drag: without anchors as a float (no spin, which the image cannot
-   * measure), kept if it fits at least as well; with anchors the lift coefficient is fitted too. Web addition: `bounds`
-   * as in `ballistic`.
+   * measure), kept if it fits at least as well; with anchors the lift coefficient is fitted too. Web additions: `bounds`
+   * as in `ballistic`, and then the drag coefficient is fitted too (`dragRange`), kept only where the image sees it
+   * (`dragSeen`).
    */
   bestFit(obs: readonly BallObservation[], camera: VideoCamera, anchors: readonly BallAnchor[], drag: boolean,
     bounds?: Readonly<BallSettings>): Fit | undefined {
@@ -574,27 +606,55 @@ export const BallReconstruction = {
     if (!free) return undefined;
     if (!drag) return free;
     const base = fitParams(free).slice(0, 6);
-    if (anchors.length === 0) {
-      const problem = new Problem(obs, t0, camera, [], Aero.float, false);
-      problem.bounds = bounds;
-      const f = problem.refine(base, 40);
-      if (!f) return free;
-      return f.cost <= free.cost ? f : free;
-    }
-    const problem = new Problem(obs, t0, camera, anchors, Aero.float, true);
-    problem.liftPrior = BallReconstruction.liftPrior(anchors, t0);
-    problem.bounds = bounds;
     let best = free;
-    for (const lift of [...new Set([problem.liftPrior.centre, 0, 0.15])].sort((a, b) => a - b)) {
-      const f = problem.refine([...base, lift], 40);
-      if (!f) continue;
-      if (f.cost < best.cost) best = f;
+    const fitsLift = anchors.length > 0;
+    const problem = new Problem(obs, t0, camera, anchors, Aero.float, fitsLift);
+    problem.bounds = bounds;
+    if (!fitsLift) {
+      const f = problem.refine(base, 40);
+      if (f && f.cost <= free.cost) best = f;
+    } else {
+      problem.liftPrior = BallReconstruction.liftPrior(anchors, t0);
+      for (const lift of [...new Set([problem.liftPrior.centre, 0, 0.15])].sort((a, b) => a - b)) {
+        const f = problem.refine([...base, lift], 40);
+        if (f && f.cost < best.cost) best = f;
+      }
     }
-    return best;
+    const dragged = new Problem(obs, t0, camera, anchors, Aero.float, fitsLift, true);
+    dragged.liftPrior = problem.liftPrior;
+    dragged.bounds = bounds;
+    const start = best === free ? [...base, ...(fitsLift ? [problem.liftPrior.centre] : [])] : fitParams(best);
+    const f = dragged.refine([...start, dragPrior.centre], 40);
+    return f && BallReconstruction.dragSeen(f, best) ? f : best;
+  },
+
+  /**
+   * Web addition: whether a fit with the drag coefficient free fits the image (and anchors and sizes) better than
+   * `other` (the model's C_D, or none) by more than chance: by nine times the per-coordinate pixel variance of the fit
+   * (three standard deviations for the one parameter more, as `VideoReconstructor.contactAnchor` weighs two contacts),
+   * its drag prior left out. A flight whose drag the image does not show (most flights: short, slow or near the
+   * camera) keeps the model's 0.25; fitted freely, its noise would move the ball.
+   */
+  dragSeen(fitted: Fit, other: Fit): boolean {
+    const prior = ((fitted.aero.drag - dragPrior.centre) / dragPrior.scale) ** 2;
+    return other.cost - (fitted.cost - prior) > 9 * Math.max(1, fitted.pixelCost / (2 * fitted.count));
+  },
+
+  /**
+   * Web addition: the unanchored flight `split` grows, from `warm` (the fit of the same flight one point shorter) when
+   * given: drag-free without `drag`, else as `bestFit` fits it (a float with its drag coefficient fitted, kept when it
+   * fits at least as well as drag-free).
+   */
+  grown(obs: readonly BallObservation[], camera: VideoCamera, drag: boolean, warm?: Fit): Fit | undefined {
+    const free = BallReconstruction.ballistic(obs, camera, [], warm);
+    if (!drag || !free) return free;
+    const problem = new Problem(obs, obs[0].time, camera, [], Aero.float, false, true);
+    const f = problem.refine(warm?.fitsDrag ? fitParams(warm) : [...fitParams(free).slice(0, 6), dragPrior.centre], warm ? 20 : 40);
+    return f && f.cost <= free.cost ? f : free;
   },
 
   problemFor(fit: Fit, obs: readonly BallObservation[], camera: VideoCamera, anchors: readonly BallAnchor[]): Problem {
-    const p = new Problem(obs, obs[0].time, camera, anchors, fit.aero, fit.fitsLift);
+    const p = new Problem(obs, obs[0].time, camera, anchors, fit.aero, fit.fitsLift, fit.fitsDrag);
     p.liftPrior = BallReconstruction.liftPrior(anchors, obs[0].time);
     return p;
   },
@@ -650,7 +710,12 @@ export const BallReconstruction = {
    * Splits a ball track into flights at contacts: a flight grows point by point while its drag-free fit stays below
    * `rmsThreshold` and the new point below `pointThreshold` (web addition: and the fit's sizes within `sizeThreshold`);
    * then each boundary moves by up to three points to the split with the lowest total error. Groups shorter than
-   * `minPoints` are dropped (a held ball, noise).
+   * `minPoints` are dropped (a held ball, noise). Web addition: with `drag` a flight grows with its drag coefficient
+   * fitted (`grown`, also for the boundaries). It still starts where a drag-free fit of `minPoints` points passes: so
+   * few show no drag, and with it a fit starting at the camera at a hundred metres a second passed the size check (a
+   * ball held at the frame's edge on the OK Hoče clip) and moved the boundary of the group before it. A float serve
+   * slows more than the model's drag lets it, and drag-free its far part does not fit: on the OK Hoče clip the serve
+   * was cut in two at 6.28 s, 0.44 s before the reception.
    */
   split(observations: readonly BallObservation[], camera: VideoCamera, settings: Partial<BallSettings> = {}): BallObservation[][] {
     const s = { ...defaultBallSettings, ...settings };
@@ -678,7 +743,7 @@ export const BallReconstruction = {
         continue;
       }
       while (end < n && obs[end].time - obs[end - 1].time <= s.maxGap) {
-        const candidate: Fit | undefined = BallReconstruction.ballistic(obs.slice(start, end + 1), camera, [], fit);
+        const candidate: Fit | undefined = BallReconstruction.grown(obs.slice(start, end + 1), camera, s.drag, fit);
         if (!candidate || !(fitRMS(candidate) <= s.rmsThreshold) || !(sizeRMS(candidate) <= s.sizeThreshold)
           || !(pointError(candidate, obs[end], obs[start].time) <= s.pointThreshold)) break;
         fit = candidate;
@@ -687,7 +752,7 @@ export const BallReconstruction = {
       ranges.push([start, end]);
       start = end;
     }
-    const cost = (lo: number, hi: number) => BallReconstruction.ballistic(obs.slice(lo, hi), camera)?.pixelCost ?? Infinity;
+    const cost = (lo: number, hi: number) => BallReconstruction.grown(obs.slice(lo, hi), camera, s.drag)?.pixelCost ?? Infinity;
     if (ranges.length > 1) {
       for (let i = 0; i < ranges.length - 1; i++) {
         const a = ranges[i], b = ranges[i + 1];
@@ -788,10 +853,10 @@ export const BallReconstruction = {
       groups.forEach((g, i) => {
         const f = fits[i];
         if (extra[i].length === 0 || !f) return;
-        const p = new Problem(g, g[0].time, camera, [...own(g), ...extra[i]], f.aero, s.drag);
+        const p = new Problem(g, g[0].time, camera, [...own(g), ...extra[i]], f.aero, s.drag, s.drag && f.fitsDrag);
         p.liftPrior = BallReconstruction.liftPrior(own(g), g[0].time);
         if (bounded[i]) p.bounds = s;
-        const x0 = [...fitParams(f).slice(0, 6), ...(s.drag ? [f.fitsLift ? f.aero.lift : 0] : [])];
+        const x0 = [...fitParams(f).slice(0, 6), ...(s.drag ? [f.fitsLift ? f.aero.lift : 0] : []), ...(s.drag && f.fitsDrag ? [f.aero.drag] : [])];
         const refit = p.refine(x0, 40);
         if (refit) fits[i] = refit;
       });
