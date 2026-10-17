@@ -38,6 +38,8 @@ export function Players() {
   /** The card being changed in the form, else the form makes a new one. */
   const [editing, setEditing] = useState<Player | null>(null);
   const [removing, setRemoving] = useState(false);
+  /** The card form, in a sheet over the team: open to add players one after another, or to change one. */
+  const [formOpen, setFormOpen] = useState(false);
   const line = `${teamName || "Your team"} · ${seasonOf()}`;
   const rack = useRef<HTMLDivElement>(null);
   const fit = useFitColumns(rack, players.length);
@@ -56,6 +58,7 @@ export function Players() {
   }
 
   function edit(p: Player) {
+    setFormOpen(true);
     setEditing(p);
     setNumber(String(p.number)); setName(p.name); setRole(p.role); setHeight(p.height ? p.height.toFixed(2) : "");
     setError(""); setRemoving(false);
@@ -68,8 +71,11 @@ export function Players() {
     const h = height ? Number(height.replace(",", ".")) : undefined;
     if (h !== undefined && !(h >= 1.2 && h <= 2.25)) return setError("Height must be between 1.20 and 2.25 m.");
     const player: Player = { id: editing?.id ?? crypto.randomUUID(), number: n, name: name.trim(), role, height: h ?? (advanced ? undefined : editing?.height) };
-    // The form empties before the write, so the next player can be typed at once without losing letters.
+    // The form empties before the write, so the next player can be typed at once without losing letters; a changed
+    // card closes the sheet, a new one keeps it open for the next player.
+    const changed = editing !== null;
     reset();
+    if (changed) setFormOpen(false);
     await put<Player>("players", player);
     reload();
   }
@@ -79,6 +85,7 @@ export function Players() {
     if (!removing) return setRemoving(true);
     const id = editing.id;
     reset();
+    setFormOpen(false);
     await remove("players", id);
     reload();
   }
@@ -88,8 +95,10 @@ export function Players() {
 
   return (
     <div className="screen">
-      <Bar title="Players" />
-      <main className="fill players-fill">
+      <Bar title="Team">
+        <button className="btn primary small" onClick={() => { reset(); setFormOpen(true); }}><Icon name="plus" /> Add player</button>
+      </Bar>
+      <main className="fill" style={{ gridTemplateRows: "minmax(0, 1fr)" }}>
         <section className="locker-card">
           <div className="plate-head">
             <span className="plate"><Icon name="shirt" size={20} /> The team</span>
@@ -100,6 +109,7 @@ export function Players() {
               <div className="empty" style={{ flex: 1 }}>
                 <Icon name="shirt" size={64} className="locker-icon" />
                 Add your players by shirt number. Names and roles are optional.
+                <button className="btn primary" onClick={() => { reset(); setFormOpen(true); }}><Icon name="plus" /> Add player</button>
               </div>
             ) : (
               <div className="card-rack" ref={rack}
@@ -128,18 +138,22 @@ export function Players() {
           </div>
         </section>
 
-        <form className="locker-card" onSubmit={(e) => { e.preventDefault(); save(); }}>
-          <div className="plate-head">
-            <span className="plate"><Icon name={editing ? "pen" : "plus"} size={20} /> {editing ? `Edit #${editing.number}` : "New card"}</span>
+      </main>
+        {formOpen && (
+        <div className="sheet" onClick={(e) => { if (e.target === e.currentTarget) { reset(); setFormOpen(false); } }}>
+        <form className="card player-sheet" onSubmit={(e) => { e.preventDefault(); save(); }}>
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <h2 className="group-title" style={{ margin: 0 }}>{editing ? `Edit #${editing.number}` : "New player"}</h2>
+            <button className="btn big secondary" type="button" onClick={() => { reset(); setFormOpen(false); }}><Icon name="close" /> {editing ? "Cancel" : "Done"}</button>
           </div>
-          <div className="card-body">
-            <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: 16, alignItems: "start" }}>
+          <div className="stack" style={{ gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: 20, alignItems: "start" }}>
               <PrizmCard number={number.trim() === "" ? "?" : number.trim()} name={name.trim()} role={roleChip(role)} line={line}
                          tier={number.trim() === "" ? "base" : "prizm"} label={editing ? "The card you are changing" : "The new card"} />
               <div className="stack" style={{ gap: 12 }}>
                 <label className="field">
                   <span className="label">Number</span>
-                  <input id="player-number" inputMode="numeric" value={number} onChange={(e) => setNumber(e.target.value)} placeholder="7"
+                  <input id="player-number" autoFocus inputMode="numeric" value={number} onChange={(e) => setNumber(e.target.value)} placeholder="7"
                          style={{ font: "800 30px/1 var(--font-num)", textAlign: "center", letterSpacing: "-0.02em" }} />
                 </label>
                 <label className="field">
@@ -168,7 +182,6 @@ export function Players() {
               <div className="stack" style={{ gap: 10, marginTop: "auto" }}>
                 <button className="btn primary wide" type="submit"><Icon name="check" /> Save changes</button>
                 <div className="row" style={{ gap: 10 }}>
-                  <button className="btn big secondary" type="button" style={{ flex: 1 }} onClick={reset}>Cancel</button>
                   <button className={`btn big ${removing ? "danger" : "secondary"}`} type="button" style={{ flex: 1 }} onClick={removeEditing}>
                     <Icon name="trash" /> {removing ? "Tap again" : "Remove"}
                   </button>
@@ -179,7 +192,8 @@ export function Players() {
             )}
           </div>
         </form>
-      </main>
+        </div>
+        )}
     </div>
   );
 }

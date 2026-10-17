@@ -5,8 +5,9 @@ import { Court2D, type CourtToken } from "../ui/Court2D";
 import { useNav } from "../store/nav";
 import { usePortrait } from "../hooks/useViewport";
 import { MatchSession, useMatch } from "../match/session";
-import { CourtFrame, LiveEvent, RotationRecord, RotationStats, Scoring, type LoggedAction, type Side } from "../../core/match";
+import { CourtFrame, LiveEvent, RotationRecord, RotationStats, Scoring, type LoggedAction, type PlayerID, type Side } from "../../core/match";
 import { SubSheet } from "./SubSheet";
+import { matchNotes } from "../match/notes";
 
 /** What the next undo takes back, in a few words under the Undo button. */
 function undoText(session: MatchSession, last: LoggedAction | undefined): string {
@@ -32,7 +33,7 @@ export function Live({ matchId }: { matchId: string }) {
   const portrait = usePortrait();
   const [flipped, setFlipped] = useState(false);
   const [missing, setMissing] = useState(false);
-  const [subbing, setSubbing] = useState(false);
+  const [subbing, setSubbing] = useState<{ side: Side; outgoing?: PlayerID } | null>(null);
   const [notice, setNotice] = useState<{ text: string; id: number } | null>(null);
   const [clock, setClock] = useState<RunningTimeOut | null>(null);
   const [, setTick] = useState(0);
@@ -53,12 +54,12 @@ export function Live({ matchId }: { matchId: string }) {
     return () => { document.removeEventListener("visibilitychange", away); window.removeEventListener("pagehide", leave); void session.flush(); };
   }, [session]);
 
-  // The time-out clock: redraw every half second while one runs, and let it go when the time is up.
+  // The time-out clock: redraw every half second while it runs; at the end it stays on "Time" until the coach is back.
   useEffect(() => {
     if (!clock) return;
     const id = window.setInterval(() => {
-      if (Date.now() >= clock.endsAt) setClock(null);
-      else setTick((n) => n + 1);
+      setTick((n) => n + 1);
+      if (Date.now() >= clock.endsAt) window.clearInterval(id);
     }, 500);
     return () => window.clearInterval(id);
   }, [clock]);
@@ -111,49 +112,86 @@ export function Live({ matchId }: { matchId: string }) {
   const secondsLeft = running ? Math.max(0, Math.ceil((running.endsAt - Date.now()) / 1000)) : 0;
   const teamName = (side: Side) => (side === "home" ? home : away);
 
+  // The current run: the same team winning the last rallies of this set in a row.
+  const inSet = st.rallies.filter((r) => r.setNumber === set.number);
+  let run = 0;
+  for (let i = inSet.length - 1; i >= 0 && inSet[i].winner === inSet[inSet.length - 1].winner; i--) run++;
+  const runSide = inSet.length ? inSet[inSet.length - 1].winner : undefined;
+  const lead = set.score.home - set.score.opponent;
+  const used = (side: Side) => ({
+    timeOuts: m.maxTimeOutsPerSet - m.timeOutsLeft(side),
+    subs: m.maxSubstitutionsPerSet - m.substitutionsLeft(side),
+  });
+  // A counter turns amber where the second referee would call it out: the last time-out, the last two substitutions.
+  const nearlyOut = (side: Side) => ({
+    timeOuts: used(side).timeOuts >= m.maxTimeOutsPerSet,
+    subs: used(side).subs >= m.maxSubstitutionsPerSet - 1,
+  });
+  // A player tapped on the court starts their substitution.
+  const tapToken = (id: string) => {
+    if (setOver) return;
+    const t = st.tokens().find((x) => `${x.side}${x.position}` === id);
+    if (!t) return;
+    setSubbing({ side: t.side, outgoing: t.player });
+  };
+
   return (
     <div className="screen" data-version={version}>
       <header className="bar scoreboard">
-        <button className="btn home-btn" onClick={() => go({ name: "home" })} aria-label="Home"><Icon name="back" /></button>
-        <span className="nameplate" style={{ fontSize: 17 }}>Set {set.number}</span>
-        <div className="row" style={{ gap: 16, flex: 1, justifyContent: "center", flexWrap: "nowrap", minWidth: 0 }}>
-          <span className="team" style={{ color: "var(--c-bandText)" }}>{home}</span>
+        <button className="btn home-btn" onClick={() => go({ name: "home" })} aria-label="Leave the match screen"><Icon name="back" /></button>
+        <div className="score-meta">
+          <span className="nameplate">Set {set.number}</span>
+          <span className="muted">Sets {m.setsWon("home")}–{m.setsWon("opponent")}</span>
+        </div>
+        <div className="score-line">
+          <span className="team" style={{ color: "var(--c-home)" }}>{home}</span>
           <span className="digits" aria-label={`${home} ${set.score.home}, ${away} ${set.score.opponent}`}>
             {set.score.home}<span className="sep">:</span>{set.score.opponent}
           </span>
-          <span className="team" style={{ color: "var(--c-bandText)" }}>{away}</span>
+          <span className="team" style={{ color: "var(--c-opponent)" }}>{away}</span>
         </div>
-        <div className="stack" style={{ gap: 4, alignItems: "flex-end" }}>
-          <span className="athletic" style={{ color: "var(--c-bandText)", fontSize: 18, whiteSpace: "nowrap" }}>{serveText}</span>
-          <span className="athletic" style={{ color: "var(--c-bandSoft)", fontSize: 16, whiteSpace: "nowrap" }}>Rotation {m.rotationNumber("home")}</span>
+        <div className="score-serve">
+          <span>{serveText}</span>
+          <span className="muted">Rotation {m.rotationNumber("home")}</span>
         </div>
+        <button className="btn home-btn" onClick={() => setFlipped((f) => !f)} aria-label="Swap the sides on screen"><Icon name="swap" /></button>
       </header>
 
-      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: portrait ? "column" : "row" }}>
-        <div style={{ flex: 1, minWidth: 0, minHeight: 0, position: "relative", padding: portrait ? "4px 16px 0" : "4px 0 16px 16px" }}>
-          <Court2D tokens={tokens} vertical={portrait} flipped={flipped} />
+      {/* What the coach reads between rallies, always in the same place: time-outs and substitutions used, the run, the lead. */}
+      <div className="live-info" role="status" aria-live="off">
+        {(["home", "opponent"] as Side[]).map((side) => (
+          <span key={`to${side}`} className={`info-chip${nearlyOut(side).timeOuts ? " warn" : ""}`} style={{ ["--team" as string]: side === "home" ? "var(--c-home)" : "var(--c-opponent)" }}>
+            <i aria-hidden="true" />Time-outs {side === "home" ? "us" : "them"} <b>{used(side).timeOuts}/{m.maxTimeOutsPerSet}</b>
+          </span>
+        ))}
+        {(["home", "opponent"] as Side[]).map((side) => (
+          <span key={`sub${side}`} className={`info-chip${nearlyOut(side).subs ? " warn" : ""}`} style={{ ["--team" as string]: side === "home" ? "var(--c-home)" : "var(--c-opponent)" }}>
+            <i aria-hidden="true" />Subs {side === "home" ? "us" : "them"} <b>{used(side).subs}/{m.maxSubstitutionsPerSet}</b>
+          </span>
+        ))}
+        <span className="info-chip run" style={{ ["--team" as string]: runSide === "home" ? "var(--c-home)" : runSide ? "var(--c-opponent)" : "transparent" }}>
+          <i aria-hidden="true" />{run >= 2 ? <>{runSide === "home" ? "Our" : "Their"} run <b>{run}</b></> : <>Run <b>–</b></>}
+        </span>
+        <span className="info-chip lead">{lead === 0 ? <>Level</> : lead > 0 ? <>Lead <b>+{lead}</b></> : <>Behind <b>{lead}</b></>}</span>
+      </div>
+
+      <div className="live-body" style={{ flexDirection: portrait ? "column" : "row" }}>
+        <div className="live-court" style={{ padding: portrait ? "0 16px" : "0 0 16px 16px" }}>
+          <Court2D tokens={tokens} vertical={portrait} flipped={flipped} onTokenTap={setOver ? undefined : tapToken} />
           <div className="court-pills">
             {session.unsaved && (
               <button className="hint-pill unsaved-pill" onClick={() => void session.save()}>
                 Not saved on this iPad yet · tap to try again
               </button>
             )}
-            {running && (
-              <button className="hint-pill timeout-pill" style={{ ["--team" as string]: running.side === "home" ? "var(--c-home)" : "var(--c-opponent)" }}
-                      onClick={() => setClock(null)} aria-label={`Time-out ${teamName(running.side)}, ${secondsLeft} seconds left. Tap to close.`}>
-                <span className="pip on" aria-hidden="true" />
-                <span>Time-out {teamName(running.side)}</span>
-                <span className="clock">{Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, "0")}</span>
-                <Icon name="close" size={20} />
-              </button>
-            )}
             {status && !session.unsaved && (
-              <div className="hint-pill" style={{ color: "var(--c-text)", fontWeight: 800, fontSize: 20 }}>
+              <div className="hint-pill" style={{ color: "var(--c-text)", fontWeight: 700, fontSize: 19 }}>
                 {status.p === "matchPoint" ? "Match point" : "Set point"} for {status.s === "home" ? home : away}
               </div>
             )}
             {notice && <div className="hint-pill" role="status" style={{ color: "var(--c-text)", fontWeight: 700, fontSize: 18 }}>{notice.text}</div>}
           </div>
+          {!setOver && <span className="court-hint">Tap a player to substitute</span>}
         </div>
         <aside className={`live-aside ${portrait ? "portrait" : "landscape"}`}>
           <button className="point-btn" disabled={setOver} onClick={() => point("home")} style={{ ["--team" as string]: "var(--c-home)", ["--on-team" as string]: "var(--c-onHome)" }}>
@@ -180,32 +218,85 @@ export function Live({ matchId }: { matchId: string }) {
               </button>
             );
           })}
-          <button className="btn live-btn" disabled={setOver} onClick={() => setSubbing(true)}
+          <button className="btn live-btn" disabled={setOver} onClick={() => setSubbing({ side: "home" })}
                   aria-label={`Substitution, ${m.substitutionsLeft("home")} of ${m.maxSubstitutionsPerSet} left in this set for ${home}, ${m.substitutionsLeft("opponent")} for ${away}`}>
             <span className="live-btn-title"><Icon name="sub" /> Sub</span>
-            <small>Us {m.substitutionsLeft("home")} · Them {m.substitutionsLeft("opponent")} left</small>
+            <small>or tap a player</small>
           </button>
           <button className="btn live-btn" onClick={() => dispatch(LiveEvent.undo)} disabled={!last}
                   aria-label={last ? `Undo ${undoText(session, last)}` : "Undo"}>
             <span className="live-btn-title"><Icon name="undo" /> Undo</span>
             <small>{undoText(session, last)}</small>
           </button>
-          <button className="btn live-btn" onClick={() => setFlipped((f) => !f)}>
-            <span className="live-btn-title"><Icon name="swap" /> Swap</span>
-            <small>Sides on screen</small>
-          </button>
-          <button className="btn live-btn secondary" onClick={() => go({ name: "log", matchId })}>
-            <span className="live-btn-title"><Icon name="film" /> Log</span>
-            <small>Every rally</small>
-          </button>
         </aside>
       </div>
 
       {subbing && !setOver && (
-        <SubSheet session={session} onClose={() => setSubbing(false)}
-                  onDone={(text) => { setSubbing(false); setNotice({ text, id: Date.now() }); }} />
+        <SubSheet session={session} startSide={subbing.side} startOutgoing={subbing.outgoing} onClose={() => setSubbing(null)}
+                  onDone={(text) => { setSubbing(null); setNotice({ text, id: Date.now() }); }} />
+      )}
+      {running && !setOver && (
+        <TimeOutView session={session} side={running.side} secondsLeft={secondsLeft} onClose={() => setClock(null)}
+                     onLog={() => { setClock(null); go({ name: "log", matchId }); }} />
       )}
       {setOver && <SetBreak session={session} onDone={() => go({ name: "home" })} onLog={() => go({ name: "log", matchId })} />}
+    </div>
+  );
+}
+
+/**
+ * The 30 seconds of a time-out: the clock large, then only what helps the talk: both rotations, side-out per rotation
+ * with its counts (a percentage of three rallies says little), and the coach's notes on the opponent.
+ */
+function TimeOutView({ session, side, secondsLeft, onClose, onLog }: {
+  session: MatchSession; side: Side; secondsLeft: number; onClose: () => void; onLog: () => void;
+}) {
+  const st = session.state, m = st.match;
+  const [notes, setNotes] = useState(() => matchNotes.read(session.id));
+  const records = RotationStats.records(st.rallies, "home");
+  const current = m.rotationNumber("home");
+  const name = side === "home" ? st.setup.homeName ?? "Us" : st.setup.opponentName ?? "Them";
+  return (
+    <div className="sheet" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="card timeout-view" style={{ ["--team" as string]: side === "home" ? "var(--c-home)" : "var(--c-opponent)" }}>
+        <div className="timeout-head">
+          <div>
+            <div className="label">Time-out {name}</div>
+            <div className={`timeout-clock${secondsLeft === 0 ? " done" : ""}`}>{secondsLeft === 0 ? "Time" : `0:${String(secondsLeft).padStart(2, "0")}`}</div>
+          </div>
+          <div className="timeout-rotations">
+            <div><span className="label">Our rotation</span><strong style={{ color: "var(--c-home)" }}>{current}</strong></div>
+            <div><span className="label">Their rotation</span><strong style={{ color: "var(--c-opponent)" }}>{m.rotationNumber("opponent")}</strong></div>
+            <div><span className="label">Score</span><strong>{m.current.score.home}–{m.current.score.opponent}</strong></div>
+          </div>
+        </div>
+        <section>
+          <h3 className="group-title">Side-out by rotation <span className="muted" style={{ fontSize: 15, fontWeight: 500 }}>· this match</span></h3>
+          <div className="so-grid">
+            {[1, 2, 3, 4, 5, 6].map((r) => {
+              const rec = records.find((x) => x.rotation === r);
+              const total = rec ? RotationRecord.receiveTotal(rec) : 0;
+              const rate = rec ? RotationRecord.sideOutRate(rec) : undefined;
+              return (
+                <div key={r} className={`so-cell${r === current ? " now" : ""}`}>
+                  <span className="so-r">R{r}</span>
+                  <strong>{rate === undefined ? "–" : `${Math.round(rate * 100)}%`}</strong>
+                  <span className="so-n">{rec ? `${rec.receiveWon}/${total}` : "0/0"}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+        <label className="field" style={{ flex: 1, minHeight: 0 }}>
+          <span className="label">Notes on them</span>
+          <textarea className="input notes" value={notes} placeholder="Their 7 hits line; serve short to their 4"
+                    onChange={(e) => { setNotes(e.target.value); matchNotes.write(session.id, e.target.value); }} />
+        </label>
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <button className="btn big secondary" onClick={onLog}><Icon name="film" /> Match log</button>
+          <button className="btn primary" onClick={onClose}><Icon name="play" /> Back to the match</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -275,6 +366,7 @@ function SetBreak({ session, onDone, onLog }: { session: MatchSession; onDone: (
                 <Icon name="play" /> Start set {set.number + 1}
               </button>
               <button className="btn big secondary" onClick={() => dispatch(LiveEvent.undo)}><Icon name="undo" /> Undo last point</button>
+              <button className="btn big secondary" onClick={onLog}><Icon name="film" /> Match log</button>
             </div>
           </>
         )}

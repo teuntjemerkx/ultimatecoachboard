@@ -60,6 +60,9 @@ export function Season() {
 
   const pct = (v?: number) => (v === undefined ? "–" : `${Math.round(v * 100)}%`);
   const rate = (xs: RallyRecord[]) => (xs.length ? xs.filter((x) => x.winner === "home").length / xs.length : undefined);
+  // A percentage always with what it is out of: 2 of 5 says more than 40%.
+  const outOf = (xs: RallyRecord[]) => `${xs.filter((x) => x.winner === "home").length} of ${xs.length}`;
+  const receiving = rallies.filter((x) => x.serving === "opponent"), serving = rallies.filter((x) => x.serving === "home");
   const finished = lines.filter((l) => l.won !== null);
   const wins = finished.filter((l) => l.won).length;
   const perRotation = RotationStats.records(rallies, "home");
@@ -74,8 +77,8 @@ export function Season() {
       <Bar title="Season" />
       <main className="fill season-fill">
         <Stat area="a" title="Matches" value={`${wins}–${finished.length - wins}`} note="won – lost" />
-        <Stat area="b" title="Side-out" value={pct(rate(rallies.filter((x) => x.serving === "opponent")))} note="points won on their serve" />
-        <Stat area="c" title="Break points" value={pct(rate(rallies.filter((x) => x.serving === "home")))} note="points won on our serve" />
+        <Stat area="b" title="Side-out" value={pct(rate(receiving))} note={`${outOf(receiving)} on their serve`} />
+        <Stat area="c" title="Break points" value={pct(rate(serving))} note={`${outOf(serving)} on our serve`} />
         <Stat area="d" title="Rallies" value={String(rallies.length)} note="this season" />
 
         <section className="locker-card" style={{ gridArea: "chart" }}>
@@ -88,6 +91,7 @@ export function Season() {
                 return (
                   <div key={r}>
                     <span className="bar-value">{pct(v)}</span>
+                    <span className="so-n">{rec ? `${rec.receiveWon}/${RotationRecord.receiveTotal(rec)}` : "0/0"}</span>
                     <div className="bar-fill" style={{ height: `${Math.max(4, (v ?? 0) * 100)}%`, opacity: v === undefined ? 0.25 : 1 }} />
                     <span className="label" style={{ color: "var(--c-text)" }}>R{r}</span>
                   </div>

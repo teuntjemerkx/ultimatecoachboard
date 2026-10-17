@@ -102,18 +102,23 @@ function NumberPad({ value, onChange, onDone }: { value: string; onChange: (v: s
  * the team). The rules are the match's own: a refused card is plain and says why on its tab, and a tap on it explains in
  * full.
  */
-export function SubSheet({ session, onClose, onDone }: {
+export function SubSheet({ session, onClose, onDone, startSide = "home", startOutgoing }: {
   session: MatchSession;
   onClose: () => void;
+  /** The team and the player going off, when the coach tapped that player on the court (one step less). */
+  startSide?: Side;
+  startOutgoing?: PlayerID;
   /** After the substitution, with a line to confirm it ("#15 on for #12"). */
   onDone: (text: string) => void;
 }) {
   const dispatch = useMatch((s) => s.dispatch);
-  const [side, setSide] = useState<Side>("home");
-  const [outgoing, setOutgoing] = useState<PlayerID | null>(null);
+  // A player tapped on the court goes straight to "who comes on", unless the rules already say no.
+  const startRefusal = startOutgoing ? session.state.substitutionRefusal(startSide, startOutgoing) : undefined;
+  const [side, setSide] = useState<Side>(startSide);
+  const [outgoing, setOutgoing] = useState<PlayerID | null>(startOutgoing && !startRefusal ? startOutgoing : null);
   const [typed, setTyped] = useState("");
   const [typing, setTyping] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(startOutgoing && startRefusal ? refusalText(session, startRefusal, startOutgoing) : "");
   const st = session.state, m = st.match, team = m.current[side];
   const ours = side === "home";
   const names: Record<Side, string> = { home: st.setup.homeName ?? "Us", opponent: st.setup.opponentName ?? "Them" };

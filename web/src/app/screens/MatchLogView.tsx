@@ -47,8 +47,8 @@ export function MatchLogView({ matchId }: { matchId: string }) {
     </button>
   );
 
-  if (session === "missing") return <div className="screen"><Bar title="Match log">{deleteBtn}</Bar><div className="empty" style={{ flex: 1 }}>This match could not be opened.</div></div>;
-  if (!session) return <div className="screen"><Bar title="Match log" /><div className="empty" style={{ flex: 1 }}>Opening…</div></div>;
+  if (session === "missing") return <div className="screen"><Bar title="Match log" back={{ to: { name: "season" }, label: "Season" }}>{deleteBtn}</Bar><div className="empty" style={{ flex: 1 }}>This match could not be opened.</div></div>;
+  if (!session) return <div className="screen"><Bar title="Match log" back={{ to: { name: "season" }, label: "Season" }} /><div className="empty" style={{ flex: 1 }}>Opening…</div></div>;
   const st = session.state;
   const rows = MatchLog.rows(st, session.records);
   const sets = [...new Set(rows.map((r) => r.rally.setNumber))];
@@ -59,7 +59,7 @@ export function MatchLogView({ matchId }: { matchId: string }) {
   const last = inSet.length ? RallyRecord.scoreAfter(inSet[inSet.length - 1].rally) : undefined;
   return (
     <div className="screen">
-      <Bar title={`${home} vs ${away}`}>
+      <Bar title={`${home} vs ${away}`} back={{ to: { name: "season" }, label: "Season" }}>
         {deleteBtn}
         {!st.match.isOver && <button className="btn primary" onClick={() => go({ name: "live", matchId })}><Icon name="play" /> Back to match</button>}
       </Bar>

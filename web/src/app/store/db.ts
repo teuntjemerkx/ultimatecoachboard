@@ -102,8 +102,9 @@ export interface Backup {
   local?: Record<string, string>;
 }
 
-/** The localStorage keys a backup carries. */
+/** The localStorage keys a backup carries, and the prefix of the match notes it carries too. */
 const localKeys = ["coachboard.settings", "coachboard.schedule", "coachboard.lastSetup", "video.markView"];
+const notesPrefix = "coachboard.notes.";
 
 async function blobToDataURL(b: Blob): Promise<string> {
   const bytes = new Uint8Array(await b.arrayBuffer());
@@ -156,6 +157,11 @@ export async function makeBackup(withVideos = true): Promise<Backup> {
   const local: Record<string, string> = {};
   try {
     for (const k of localKeys) { const v = localStorage.getItem(k); if (v !== null) local[k] = v; }
+    // The coach's notes per match.
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith(notesPrefix)) local[k] = localStorage.getItem(k) ?? "";
+    }
   } catch { /* private browsing: no settings to carry */ }
   return { format: "coachboard-backup/1", createdAt: new Date().toISOString(), stores, local };
 }
@@ -208,7 +214,7 @@ export async function restoreBackup(b: Backup): Promise<number> {
     }
   });
   try {
-    for (const [k, v] of Object.entries(b.local ?? {})) if (localKeys.includes(k) && typeof v === "string") localStorage.setItem(k, v);
+    for (const [k, v] of Object.entries(b.local ?? {})) if ((localKeys.includes(k) || k.startsWith(notesPrefix)) && typeof v === "string") localStorage.setItem(k, v);
   } catch { /* private browsing: the settings stay as they are */ }
   return writes.length;
 }
