@@ -1,0 +1,133 @@
+demo screen launcher
+demo screen setup
+demo screen live
+glyph atlas 768x288, 22 glyphs
+demo screen advanced
+glyph atlas 768x288, 22 glyphs
+demo screen setbreak
+glyph atlas 768x288, 22 glyphs
+demo screen log
+glyph atlas 768x288, 22 glyphs
+demo screen studio
+studio: scene ready
+studio: 4 zones: tipAlert circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | noFly rect(center: CoachBoardCore.FloorPoint(x: 3.0, z: 7.5), halfWidth: 1.5, halfDepth: 1.5, angle: 0.0) | serveTarget ellipse(center: CoachBoardCore.FloorPoint(x: -3.0, z: -7.5), a: 1.0, b: 0.5, angle: 0.0007115668145294352) | freeBall freeform([CoachBoardCore.FloorPoint(x: 1.1185123616657742, z: 4.6), CoachBoardCore.FloorPoint(x: 0.9925840748386112, z: 5.004299504017586), CoachBoardCore.FloorPoint(x: 0.670011745304196, z: 5.285122759387957), CoachBoardCore.FloorPoint(x: 0.26758763448002343, z: 5.435924965527255), CoachBoardCore.FloorPoint(x: -0.16111292526027957, z: 5.4676643528873266), CoachBoardCore.FloorPoint(x: -0.5779562666131237, z: 5.366172057407048), CoachBoardCore.FloorPoint(x: -0.9174792553730352, z: 5.107094821809095), CoachBoardCore.FloorPoint(x: -1.0781492911086754, z: 4.713201418307113), CoachBoardCore.FloorPoint(x: -1.0095675026547146, z: 4.292033188373071), CoachBoardCore.FloorPoint(x: -0.7526416851563664, z: 3.950484627044117), CoachBoardCore.FloorPoint(x: -0.37221644803970577, z: 3.753971484186001), CoachBoardCore.FloorPoint(x: 0.054893270463685695, z: 3.7141937549065127), CoachBoardCore.FloorPoint(x: 0.4713158698764714, z: 3.8190557123323545), CoachBoardCore.FloorPoint(x: 0.8332667986877079, z: 4.049915481922571), CoachBoardCore.FloorPoint(x: 1.0775168958227228, z: 4.400259314623105), CoachBoardCore.FloorPoint(x: 1.0863937744528664, z: 4.82315080916374)])
+ball: S FLOAT · 16 m/s · 0.43 m over the tape · 1.17 s | #2 PASS · apex 4.2 m · 1.52 s | #8 HIGH SET · apex 5.7 m · 1.62 s | #12 ATTACK · 25 m/s · 0.58 m over the tape · 0.31 s
+tip zone keys: set circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | attack rect(center: CoachBoardCore.FloorPoint(x: 2.4999999999999996, z: -5.999999999999999), halfWidth: 1.2484943202564656, halfDepth: 1.248494320256465, angle: -0.2454369260617008)
+timeline at 2.2: morphs 1, posture blends 1, keys S:["receive"] OH1:["set", "attack"]
+glyph atlas 768x288, 22 glyphs
+zone pass: 4 zones, 192 vertices, kinds [1, 0, 2, 3]
+demo screen studio3d
+studio: scene ready
+studio: 4 zones: tipAlert circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | noFly rect(center: CoachBoardCore.FloorPoint(x: 3.0, z: 7.5), halfWidth: 1.5, halfDepth: 1.5, angle: 0.0) | serveTarget ellipse(center: CoachBoardCore.FloorPoint(x: -3.0, z: -7.5), a: 1.0, b: 0.5, angle: 0.0007115668145294352) | freeBall freeform([CoachBoardCore.FloorPoint(x: 1.1185123616657742, z: 4.6), CoachBoardCore.FloorPoint(x: 0.9925840748386112, z: 5.004299504017586), CoachBoardCore.FloorPoint(x: 0.670011745304196, z: 5.285122759387957), CoachBoardCore.FloorPoint(x: 0.26758763448002343, z: 5.435924965527255), CoachBoardCore.FloorPoint(x: -0.16111292526027957, z: 5.4676643528873266), CoachBoardCore.FloorPoint(x: -0.5779562666131237, z: 5.366172057407048), CoachBoardCore.FloorPoint(x: -0.9174792553730352, z: 5.107094821809095), CoachBoardCore.FloorPoint(x: -1.0781492911086754, z: 4.713201418307113), CoachBoardCore.FloorPoint(x: -1.0095675026547146, z: 4.292033188373071), CoachBoardCore.FloorPoint(x: -0.7526416851563664, z: 3.950484627044117), CoachBoardCore.FloorPoint(x: -0.37221644803970577, z: 3.753971484186001), CoachBoardCore.FloorPoint(x: 0.054893270463685695, z: 3.7141937549065127), CoachBoardCore.FloorPoint(x: 0.4713158698764714, z: 3.8190557123323545), CoachBoardCore.FloorPoint(x: 0.8332667986877079, z: 4.049915481922571), CoachBoardCore.FloorPoint(x: 1.0775168958227228, z: 4.400259314623105), CoachBoardCore.FloorPoint(x: 1.0863937744528664, z: 4.82315080916374)])
+ball: S FLOAT · 16 m/s · 0.43 m over the tape · 1.17 s | #2 PASS · apex 4.2 m · 1.52 s | #8 HIGH SET · apex 5.7 m · 1.62 s | #12 ATTACK · 25 m/s · 0.58 m over the tape · 0.31 s
+tip zone keys: set circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | attack rect(center: CoachBoardCore.FloorPoint(x: 2.4999999999999996, z: -5.999999999999999), halfWidth: 1.2484943202564656, halfDepth: 1.248494320256465, angle: -0.2454369260617008)
+timeline at 2.2: morphs 1, posture blends 4, keys S:["receive"] OH1:["set", "attack"] OPP:["attack"] MB1:["attack"] OH1:["attack"]
+studio3d: postures 8:set 12:pass 4:ready 9:ready 14:pass 2:pass OPP:blockReady MB1:blockReady OH1:blockReady OH2:ready L:ready S:standing
+studio3d gaze: Ball · peripheral 40° · 100% visible | S head · peripheral 73° · 100% visible through net | OPP hitting shoulder · central 22° · 100% visible through net | MB1 hitting shoulder · central 25° · 100% visible through net | OH1 hitting shoulder · central 29° · 100% visible through net
+3D frame: 12 avatars, 190 quads, 168 wall panels, 4 zones, camera pitch 77° distance 465.4 m, 5 gaze rays
+demo screen pov
+studio: scene ready
+studio: 4 zones: tipAlert circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | noFly rect(center: CoachBoardCore.FloorPoint(x: 3.0, z: 7.5), halfWidth: 1.5, halfDepth: 1.5, angle: 0.0) | serveTarget ellipse(center: CoachBoardCore.FloorPoint(x: -3.0, z: -7.5), a: 1.0, b: 0.5, angle: 0.0007115668145294352) | freeBall freeform([CoachBoardCore.FloorPoint(x: 1.1185123616657742, z: 4.6), CoachBoardCore.FloorPoint(x: 0.9925840748386112, z: 5.004299504017586), CoachBoardCore.FloorPoint(x: 0.670011745304196, z: 5.285122759387957), CoachBoardCore.FloorPoint(x: 0.26758763448002343, z: 5.435924965527255), CoachBoardCore.FloorPoint(x: -0.16111292526027957, z: 5.4676643528873266), CoachBoardCore.FloorPoint(x: -0.5779562666131237, z: 5.366172057407048), CoachBoardCore.FloorPoint(x: -0.9174792553730352, z: 5.107094821809095), CoachBoardCore.FloorPoint(x: -1.0781492911086754, z: 4.713201418307113), CoachBoardCore.FloorPoint(x: -1.0095675026547146, z: 4.292033188373071), CoachBoardCore.FloorPoint(x: -0.7526416851563664, z: 3.950484627044117), CoachBoardCore.FloorPoint(x: -0.37221644803970577, z: 3.753971484186001), CoachBoardCore.FloorPoint(x: 0.054893270463685695, z: 3.7141937549065127), CoachBoardCore.FloorPoint(x: 0.4713158698764714, z: 3.8190557123323545), CoachBoardCore.FloorPoint(x: 0.8332667986877079, z: 4.049915481922571), CoachBoardCore.FloorPoint(x: 1.0775168958227228, z: 4.400259314623105), CoachBoardCore.FloorPoint(x: 1.0863937744528664, z: 4.82315080916374)])
+ball: S FLOAT · 16 m/s · 0.43 m over the tape · 1.17 s | #2 PASS · apex 4.2 m · 1.52 s | #8 HIGH SET · apex 5.7 m · 1.62 s | #12 ATTACK · 25 m/s · 0.58 m over the tape · 0.31 s
+tip zone keys: set circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | attack rect(center: CoachBoardCore.FloorPoint(x: 2.4999999999999996, z: -5.999999999999999), halfWidth: 1.2484943202564656, halfDepth: 1.248494320256465, angle: -0.2454369260617008)
+timeline at 2.2: morphs 1, posture blends 4, keys S:["receive"] OH1:["set", "attack"] OPP:["attack"] MB1:["attack"] OH1:["attack"]
+pov gaze: Ball · central 30° · 81% visible — blocked by OH1 left upper arm | #8 head · outside 113° · 13% visible — blocked by MB1 left upper arm | #12 hitting shoulder · central 18° · 0% visible — blocked by OH1 left upper arm | #4 hitting shoulder · central 10° · 100% visible through net | #9 hitting shoulder · central 4° · 13% visible — blocked by OH1 left upper arm
+3D frame: 12 avatars, 199 quads, 72 wall panels, 4 zones, camera pitch 38° distance 22.9 m, POV, 5 gaze rays
+demo screen rally
+rally: S FLOAT · 16 m/s · 0.25 m over the tape · 1.13 s | #14 PASS · apex 4.4 m · 1.55 s | #8 HIGH SET · apex 5.9 m · 1.63 s | #12 ATTACK · 25 m/s · 0.47 m over the tape · 0.42 s | L DIG · apex 3.6 m · 1.36 s
+rally facing at 2.7: 8:260 12:104 4:240 9:257 14:217 2:184 oOPP:62 oMB1:44 oOH1:-55 oOH2:-13 oL:-37 oS:10
+3D frame: 12 avatars, 229 quads, 0 wall panels, 0 zones, camera pitch 86° distance 978.8 m, 0 gaze rays
+demo screen rallyeye
+rally: S FLOAT · 16 m/s · 0.25 m over the tape · 1.13 s | #14 PASS · apex 4.4 m · 1.55 s | #8 HIGH SET · apex 5.9 m · 1.63 s | #12 ATTACK · 25 m/s · 0.47 m over the tape · 0.42 s | L DIG · apex 3.6 m · 1.36 s
+rally facing at 2.7: 8:262 12:114 4:247 9:258 14:226 2:211 oOPP:48 oMB1:14 oOH1:-58 oOH2:-18 oL:-41 oS:4
+3D frame: 12 avatars, 251 quads, 0 wall panels, 0 zones, camera pitch 38° distance 22.9 m, POV, 7 gaze rays
+demo screen gallery
+gallery: 1=standing/OH1 2=readyHigh/S 3=ready/OH1 4=lowDefence/L 5=pass/L 6=angledPass/OH2 7=overheadPass/L 8=dig/L 9=sprawl/L 10=set/S 11=backSet/S 12=jumpSet/S 13=approach/OH1 14=armCock/OH1 15=attack/OH1 16=quickAttack/MB1 17=landing/OPP 18=blockReady/MB1 19=block/MB1 20=blockLanding/MB2 21=floatServe/S 22=jumpServe/OPP 23=cover/OH2 24=reach/MB1
+posture library: libero 15, middle_blocker 21, opposite 25, outside_hitter 21, setter 19
+3D frame: 24 avatars, 39 quads, 0 wall panels, 0 zones, camera pitch 86° distance 968.6 m, 0 gaze rays
+demo screen videomark
+videomark: fit rough lines 60
+demo screen videowatch
+video: 12 players, 7 ball flights, 6.0 s, clip clip.mp4, built in 9.0 s
+videowatch markers: 2 4 8 9 14 12 C B D F A E
+demo screen video3d
+video: 12 players, 7 ball flights, 6.0 s, clip clip.mp4, built in 8.3 s
+videowatch markers: 2 4 8 9 14 12 C B D F A E
+3D frame: 12 avatars, 191 quads, 0 wall panels, 0 zones, camera pitch 83° distance 840.3 m, 0 gaze rays
+demo screen videoeye
+video: 12 players, 7 ball flights, 6.0 s, clip clip.mp4, built in 8.5 s
+videowatch markers: 2 4 9 8 12 14 C D B F A E
+3D frame: 12 avatars, 193 quads, 0 wall panels, 0 zones, camera pitch 22° distance 17.4 m, POV, 3 gaze rays
+demo screen launcher
+demo screen live
+glyph atlas 768x288, 22 glyphs
+demo screen studio
+studio: scene ready
+studio: 4 zones: tipAlert circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | noFly rect(center: CoachBoardCore.FloorPoint(x: 3.0, z: 7.5), halfWidth: 1.5, halfDepth: 1.5, angle: 0.0) | serveTarget ellipse(center: CoachBoardCore.FloorPoint(x: -3.0, z: -7.5), a: 1.0, b: 0.5, angle: 0.0007115668145294352) | freeBall freeform([CoachBoardCore.FloorPoint(x: 1.1185123616657742, z: 4.6), CoachBoardCore.FloorPoint(x: 0.9925840748386112, z: 5.004299504017586), CoachBoardCore.FloorPoint(x: 0.670011745304196, z: 5.285122759387957), CoachBoardCore.FloorPoint(x: 0.26758763448002343, z: 5.435924965527255), CoachBoardCore.FloorPoint(x: -0.16111292526027957, z: 5.4676643528873266), CoachBoardCore.FloorPoint(x: -0.5779562666131237, z: 5.366172057407048), CoachBoardCore.FloorPoint(x: -0.9174792553730352, z: 5.107094821809095), CoachBoardCore.FloorPoint(x: -1.0781492911086754, z: 4.713201418307113), CoachBoardCore.FloorPoint(x: -1.0095675026547146, z: 4.292033188373071), CoachBoardCore.FloorPoint(x: -0.7526416851563664, z: 3.950484627044117), CoachBoardCore.FloorPoint(x: -0.37221644803970577, z: 3.753971484186001), CoachBoardCore.FloorPoint(x: 0.054893270463685695, z: 3.7141937549065127), CoachBoardCore.FloorPoint(x: 0.4713158698764714, z: 3.8190557123323545), CoachBoardCore.FloorPoint(x: 0.8332667986877079, z: 4.049915481922571), CoachBoardCore.FloorPoint(x: 1.0775168958227228, z: 4.400259314623105), CoachBoardCore.FloorPoint(x: 1.0863937744528664, z: 4.82315080916374)])
+ball: S FLOAT · 16 m/s · 0.43 m over the tape · 1.17 s | #2 PASS · apex 4.2 m · 1.52 s | #8 HIGH SET · apex 5.7 m · 1.62 s | #12 ATTACK · 25 m/s · 0.58 m over the tape · 0.31 s
+tip zone keys: set circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | attack rect(center: CoachBoardCore.FloorPoint(x: 2.4999999999999996, z: -5.999999999999999), halfWidth: 1.2484943202564656, halfDepth: 1.248494320256465, angle: -0.2454369260617008)
+timeline at 2.2: morphs 1, posture blends 1, keys S:["receive"] OH1:["set", "attack"]
+glyph atlas 768x288, 22 glyphs
+zone pass: 4 zones, 192 vertices, kinds [1, 0, 2, 3]
+demo screen rally
+rally: S FLOAT · 16 m/s · 0.25 m over the tape · 1.13 s | #14 PASS · apex 4.4 m · 1.55 s | #8 HIGH SET · apex 5.9 m · 1.63 s | #12 ATTACK · 25 m/s · 0.47 m over the tape · 0.42 s | L DIG · apex 3.6 m · 1.36 s
+rally facing at 2.7: 8:260 12:104 4:240 9:257 14:217 2:184 oOPP:62 oMB1:44 oOH1:-55 oOH2:-13 oL:-37 oS:10
+3D frame: 12 avatars, 229 quads, 0 wall panels, 0 zones, camera pitch 81° distance 648.9 m, 0 gaze rays
+demo screen realmark
+real: still 600x338, fit good, 1.9 s
+demo screen realvideo
+real: still 600x338, fit good, 1.7 s
+real: built in 65.8 s: body pose unavailable, boxes only; calibration good rms 0.02 px, camera 9.4 m up 38.9 m back, fovY 11.1 deg; 101 frames, people per frame 0-1 (with pose 0-0), detections on court 4, ball points 730
+real: failed("No players were found. Try a clip where the whole court is in view.")
+demo screen realeye
+real: still 600x338, fit good, 2.2 s
+real: built in 61.0 s: body pose unavailable, boxes only; calibration good rms 0.02 px, camera 9.4 m up 38.9 m back, fovY 11.1 deg; 101 frames, people per frame 0-1 (with pose 0-0), detections on court 4, ball points 734
+real: failed("No players were found. Try a clip where the whole court is in view.")
+demo screen launcher
+demo screen live
+glyph atlas 768x288, 22 glyphs
+demo screen studio3d
+studio: scene ready
+studio: 4 zones: tipAlert circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | noFly rect(center: CoachBoardCore.FloorPoint(x: 3.0, z: 7.5), halfWidth: 1.5, halfDepth: 1.5, angle: 0.0) | serveTarget ellipse(center: CoachBoardCore.FloorPoint(x: -3.0, z: -7.5), a: 1.0, b: 0.5, angle: 0.0007115668145294352) | freeBall freeform([CoachBoardCore.FloorPoint(x: 1.1185123616657742, z: 4.6), CoachBoardCore.FloorPoint(x: 0.9925840748386112, z: 5.004299504017586), CoachBoardCore.FloorPoint(x: 0.670011745304196, z: 5.285122759387957), CoachBoardCore.FloorPoint(x: 0.26758763448002343, z: 5.435924965527255), CoachBoardCore.FloorPoint(x: -0.16111292526027957, z: 5.4676643528873266), CoachBoardCore.FloorPoint(x: -0.5779562666131237, z: 5.366172057407048), CoachBoardCore.FloorPoint(x: -0.9174792553730352, z: 5.107094821809095), CoachBoardCore.FloorPoint(x: -1.0781492911086754, z: 4.713201418307113), CoachBoardCore.FloorPoint(x: -1.0095675026547146, z: 4.292033188373071), CoachBoardCore.FloorPoint(x: -0.7526416851563664, z: 3.950484627044117), CoachBoardCore.FloorPoint(x: -0.37221644803970577, z: 3.753971484186001), CoachBoardCore.FloorPoint(x: 0.054893270463685695, z: 3.7141937549065127), CoachBoardCore.FloorPoint(x: 0.4713158698764714, z: 3.8190557123323545), CoachBoardCore.FloorPoint(x: 0.8332667986877079, z: 4.049915481922571), CoachBoardCore.FloorPoint(x: 1.0775168958227228, z: 4.400259314623105), CoachBoardCore.FloorPoint(x: 1.0863937744528664, z: 4.82315080916374)])
+ball: S FLOAT · 16 m/s · 0.43 m over the tape · 1.17 s | #2 PASS · apex 4.2 m · 1.52 s | #8 HIGH SET · apex 5.7 m · 1.62 s | #12 ATTACK · 25 m/s · 0.58 m over the tape · 0.31 s
+tip zone keys: set circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | attack rect(center: CoachBoardCore.FloorPoint(x: 2.4999999999999996, z: -5.999999999999999), halfWidth: 1.2484943202564656, halfDepth: 1.248494320256465, angle: -0.2454369260617008)
+timeline at 2.2: morphs 1, posture blends 4, keys S:["receive"] OH1:["set", "attack"] OPP:["attack"] MB1:["attack"] OH1:["attack"]
+studio3d: postures 8:set 12:pass 4:ready 9:ready 14:pass 2:pass OPP:blockReady MB1:blockReady OH1:blockReady OH2:ready L:ready S:standing
+studio3d gaze: Ball · peripheral 40° · 100% visible | S head · peripheral 73° · 100% visible through net | OPP hitting shoulder · central 22° · 100% visible through net | MB1 hitting shoulder · central 25° · 100% visible through net | OH1 hitting shoulder · central 29° · 100% visible through net
+3D frame: 12 avatars, 190 quads, 168 wall panels, 4 zones, camera pitch 84° distance 813.8 m, 5 gaze rays
+demo screen launcher
+demo screen live
+glyph atlas 768x288, 22 glyphs
+demo screen studio3d
+studio: scene ready
+studio: 4 zones: tipAlert circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | noFly rect(center: CoachBoardCore.FloorPoint(x: 3.0, z: 7.5), halfWidth: 1.5, halfDepth: 1.5, angle: 0.0) | serveTarget ellipse(center: CoachBoardCore.FloorPoint(x: -3.0, z: -7.5), a: 1.0, b: 0.5, angle: 0.0007115668145294352) | freeBall freeform([CoachBoardCore.FloorPoint(x: 1.1185123616657742, z: 4.6), CoachBoardCore.FloorPoint(x: 0.9925840748386112, z: 5.004299504017586), CoachBoardCore.FloorPoint(x: 0.670011745304196, z: 5.285122759387957), CoachBoardCore.FloorPoint(x: 0.26758763448002343, z: 5.435924965527255), CoachBoardCore.FloorPoint(x: -0.16111292526027957, z: 5.4676643528873266), CoachBoardCore.FloorPoint(x: -0.5779562666131237, z: 5.366172057407048), CoachBoardCore.FloorPoint(x: -0.9174792553730352, z: 5.107094821809095), CoachBoardCore.FloorPoint(x: -1.0781492911086754, z: 4.713201418307113), CoachBoardCore.FloorPoint(x: -1.0095675026547146, z: 4.292033188373071), CoachBoardCore.FloorPoint(x: -0.7526416851563664, z: 3.950484627044117), CoachBoardCore.FloorPoint(x: -0.37221644803970577, z: 3.753971484186001), CoachBoardCore.FloorPoint(x: 0.054893270463685695, z: 3.7141937549065127), CoachBoardCore.FloorPoint(x: 0.4713158698764714, z: 3.8190557123323545), CoachBoardCore.FloorPoint(x: 0.8332667986877079, z: 4.049915481922571), CoachBoardCore.FloorPoint(x: 1.0775168958227228, z: 4.400259314623105), CoachBoardCore.FloorPoint(x: 1.0863937744528664, z: 4.82315080916374)])
+ball: S FLOAT · 16 m/s · 0.43 m over the tape · 1.17 s | #2 PASS · apex 4.2 m · 1.52 s | #8 HIGH SET · apex 5.7 m · 1.62 s | #12 ATTACK · 25 m/s · 0.58 m over the tape · 0.31 s
+tip zone keys: set circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | attack rect(center: CoachBoardCore.FloorPoint(x: 2.4999999999999996, z: -5.999999999999999), halfWidth: 1.2484943202564656, halfDepth: 1.248494320256465, angle: -0.2454369260617008)
+timeline at 2.2: morphs 1, posture blends 4, keys S:["receive"] OH1:["set", "attack"] OPP:["attack"] MB1:["attack"] OH1:["attack"]
+studio3d: postures 8:set 12:pass 4:ready 9:ready 14:pass 2:pass OPP:blockReady MB1:blockReady OH1:blockReady OH2:ready L:ready S:standing
+studio3d gaze: Ball · peripheral 40° · 100% visible | S head · peripheral 73° · 100% visible through net | OPP hitting shoulder · central 22° · 100% visible through net | MB1 hitting shoulder · central 25° · 100% visible through net | OH1 hitting shoulder · central 29° · 100% visible through net
+3D frame: 12 avatars, 190 quads, 168 wall panels, 4 zones, camera pitch 84° distance 837.3 m, 5 gaze rays
+demo screen launcher
+demo screen live
+glyph atlas 768x288, 22 glyphs
+demo screen studio3d
+studio: scene ready
+studio: 4 zones: tipAlert circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | noFly rect(center: CoachBoardCore.FloorPoint(x: 3.0, z: 7.5), halfWidth: 1.5, halfDepth: 1.5, angle: 0.0) | serveTarget ellipse(center: CoachBoardCore.FloorPoint(x: -3.0, z: -7.5), a: 1.0, b: 0.5, angle: 0.0007115668145294352) | freeBall freeform([CoachBoardCore.FloorPoint(x: 1.1185123616657742, z: 4.6), CoachBoardCore.FloorPoint(x: 0.9925840748386112, z: 5.004299504017586), CoachBoardCore.FloorPoint(x: 0.670011745304196, z: 5.285122759387957), CoachBoardCore.FloorPoint(x: 0.26758763448002343, z: 5.435924965527255), CoachBoardCore.FloorPoint(x: -0.16111292526027957, z: 5.4676643528873266), CoachBoardCore.FloorPoint(x: -0.5779562666131237, z: 5.366172057407048), CoachBoardCore.FloorPoint(x: -0.9174792553730352, z: 5.107094821809095), CoachBoardCore.FloorPoint(x: -1.0781492911086754, z: 4.713201418307113), CoachBoardCore.FloorPoint(x: -1.0095675026547146, z: 4.292033188373071), CoachBoardCore.FloorPoint(x: -0.7526416851563664, z: 3.950484627044117), CoachBoardCore.FloorPoint(x: -0.37221644803970577, z: 3.753971484186001), CoachBoardCore.FloorPoint(x: 0.054893270463685695, z: 3.7141937549065127), CoachBoardCore.FloorPoint(x: 0.4713158698764714, z: 3.8190557123323545), CoachBoardCore.FloorPoint(x: 0.8332667986877079, z: 4.049915481922571), CoachBoardCore.FloorPoint(x: 1.0775168958227228, z: 4.400259314623105), CoachBoardCore.FloorPoint(x: 1.0863937744528664, z: 4.82315080916374)])
+ball: S FLOAT · 16 m/s · 0.43 m over the tape · 1.17 s | #2 PASS · apex 4.2 m · 1.52 s | #8 HIGH SET · apex 5.7 m · 1.62 s | #12 ATTACK · 25 m/s · 0.58 m over the tape · 0.31 s
+tip zone keys: set circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | attack rect(center: CoachBoardCore.FloorPoint(x: 2.4999999999999996, z: -5.999999999999999), halfWidth: 1.2484943202564656, halfDepth: 1.248494320256465, angle: -0.2454369260617008)
+timeline at 2.2: morphs 1, posture blends 4, keys S:["receive"] OH1:["set", "attack"] OPP:["attack"] MB1:["attack"] OH1:["attack"]
+studio3d: postures 8:set 12:pass 4:ready 9:ready 14:pass 2:pass OPP:blockReady MB1:blockReady OH1:blockReady OH2:ready L:ready S:standing
+studio3d gaze: Ball · peripheral 40° · 100% visible | S head · peripheral 73° · 100% visible through net | OPP hitting shoulder · central 22° · 100% visible through net | MB1 hitting shoulder · central 25° · 100% visible through net | OH1 hitting shoulder · central 29° · 100% visible through net
+3D frame: 12 avatars, 190 quads, 168 wall panels, 4 zones, camera pitch 85° distance 872.1 m, 5 gaze rays
+demo screen launcher
+demo screen live
+glyph atlas 768x288, 22 glyphs
+demo screen studio3d
+studio: scene ready
+studio: 4 zones: tipAlert circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | noFly rect(center: CoachBoardCore.FloorPoint(x: 3.0, z: 7.5), halfWidth: 1.5, halfDepth: 1.5, angle: 0.0) | serveTarget ellipse(center: CoachBoardCore.FloorPoint(x: -3.0, z: -7.5), a: 1.0, b: 0.5, angle: 0.0007115668145294352) | freeBall freeform([CoachBoardCore.FloorPoint(x: 1.1185123616657742, z: 4.6), CoachBoardCore.FloorPoint(x: 0.9925840748386112, z: 5.004299504017586), CoachBoardCore.FloorPoint(x: 0.670011745304196, z: 5.285122759387957), CoachBoardCore.FloorPoint(x: 0.26758763448002343, z: 5.435924965527255), CoachBoardCore.FloorPoint(x: -0.16111292526027957, z: 5.4676643528873266), CoachBoardCore.FloorPoint(x: -0.5779562666131237, z: 5.366172057407048), CoachBoardCore.FloorPoint(x: -0.9174792553730352, z: 5.107094821809095), CoachBoardCore.FloorPoint(x: -1.0781492911086754, z: 4.713201418307113), CoachBoardCore.FloorPoint(x: -1.0095675026547146, z: 4.292033188373071), CoachBoardCore.FloorPoint(x: -0.7526416851563664, z: 3.950484627044117), CoachBoardCore.FloorPoint(x: -0.37221644803970577, z: 3.753971484186001), CoachBoardCore.FloorPoint(x: 0.054893270463685695, z: 3.7141937549065127), CoachBoardCore.FloorPoint(x: 0.4713158698764714, z: 3.8190557123323545), CoachBoardCore.FloorPoint(x: 0.8332667986877079, z: 4.049915481922571), CoachBoardCore.FloorPoint(x: 1.0775168958227228, z: 4.400259314623105), CoachBoardCore.FloorPoint(x: 1.0863937744528664, z: 4.82315080916374)])
+ball: S FLOAT · 16 m/s · 0.43 m over the tape · 1.17 s | #2 PASS · apex 4.2 m · 1.52 s | #8 HIGH SET · apex 5.7 m · 1.62 s | #12 ATTACK · 25 m/s · 0.58 m over the tape · 0.31 s
+tip zone keys: set circle(center: CoachBoardCore.FloorPoint(x: 3.0, z: -4.5), radius: 1.25) | attack rect(center: CoachBoardCore.FloorPoint(x: 2.4999999999999996, z: -5.999999999999999), halfWidth: 1.2484943202564656, halfDepth: 1.248494320256465, angle: -0.2454369260617008)
+timeline at 2.2: morphs 1, posture blends 4, keys S:["receive"] OH1:["set", "attack"] OPP:["attack"] MB1:["attack"] OH1:["attack"]
+studio3d: postures 8:set 12:pass 4:ready 9:ready 14:pass 2:pass OPP:blockReady MB1:blockReady OH1:blockReady OH2:ready L:ready S:standing
+studio3d gaze: Ball · peripheral 40° · 100% visible | S head · peripheral 73° · 100% visible through net | OPP hitting shoulder · central 22° · 100% visible through net | MB1 hitting shoulder · central 25° · 100% visible through net | OH1 hitting shoulder · central 29° · 100% visible through net
+3D frame: 12 avatars, 190 quads, 168 wall panels, 4 zones, camera pitch 84° distance 799.2 m, 5 gaze rays
