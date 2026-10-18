@@ -32,6 +32,8 @@ export class RallyTracker extends PlayerTracker {
   }
 
   override track(input: readonly VideoFrameObservation[], camera?: VideoCamera): TrackedPlayer[] {
+    // Players the app already followed in the picture (a build with taps): one track each.
+    if (input.some((f) => f.detections.some((d) => d.player))) return this.fromAssigned(input);
     if (camera && this.locks.length > 0) {
       // In the picture when the frames carry everyone's boxes (a build), else on the floor.
       return input.some((f) => f.people && f.people.length > 0)

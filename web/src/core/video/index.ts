@@ -24,3 +24,4 @@ export {
   type VideoMarker, type VideoSceneJSON, type ReconstructionStage,
 } from "./videoScene";
 export { PictureTracker, defaultPictureTracker, anchorOf, boxOverlap, type PictureBox, type PersonBox, type PictureFrame, type PictureKey, type PictureTrackerSettings } from "./pictureTracking";
+export { RealPose, type WorldPose, type WorldPoint, type WorldJoint } from "./realPose";

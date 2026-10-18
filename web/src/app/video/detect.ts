@@ -17,6 +17,12 @@ export interface DetectedPerson {
   box: { x: number; y: number; w: number; h: number };
   score: number;
   keypoints: Partial<Record<BodyKeypoint, Keypoint>>;
+  /**
+   * The pose model's 33 landmarks in 3D (metres about the hips, the crop's camera axes) and the centre of the crop it
+   * read, when the pose model ran on this person.
+   */
+  world?: { x: number; y: number; z: number; visibility?: number }[];
+  cropCentre?: { x: number; y: number };
 }
 
 export interface FrameDetections {
@@ -77,6 +83,8 @@ export class Detector {
 
   /** The detector's input for a zoomed tile, reused. */
   private tile?: HTMLCanvasElement;
+  /** The pose model's input crop, reused. */
+  private crop?: HTMLCanvasElement;
   /** Whether the object detector reports every class (`objectsIn`) instead of people and balls. */
   private everything = false;
 
@@ -109,25 +117,40 @@ export class Detector {
   detect(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number,
     wantsPose?: (box: DetectedPerson["box"]) => boolean, band?: ZoomBand): FrameDetections {
     const { people, balls } = this.objects(frame, width, height, band);
-    // Pose from a square crop around each person, about 256 px tall.
-    const crop = canvas(256, 256);
-    const g = crop.getContext("2d")!;
-    for (const p of people) {
-      if (wantsPose && !wantsPose(p.box)) continue;
-      const { x, y, w, h } = p.box;
-      const side = Math.max(w, h) * 1.5, cx = x + w / 2, cy = y + h / 2;
-      g.clearRect(0, 0, 256, 256);
-      g.drawImage(frame, cx - side / 2, cy - side / 2, side, side, 0, 0, 256, 256);
-      const r = this.pose.detect(crop);
-      const lm = r.landmarks[0];
-      if (!lm) continue;
-      const at = (i: number): Keypoint => ({ x: cx - side / 2 + lm[i].x * side, y: cy - side / 2 + lm[i].y * side, confidence: lm[i].visibility ?? 0.5 });
-      for (const [name, i] of LANDMARKS) p.keypoints[name] = at(i);
-      const mid = (a: Keypoint, b: Keypoint): Keypoint => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, confidence: Math.min(a.confidence, b.confidence) });
-      p.keypoints.neck = mid(at(11), at(12));
-      p.keypoints.root = mid(at(23), at(24));
-    }
+    for (const p of people) if (!wantsPose || wantsPose(p.box)) this.poseOf(frame, p);
     return { people, balls };
+  }
+
+  /** The pose model on the given boxes only (the players being followed), each a person with keypoints. */
+  poseFor(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, boxes: readonly DetectedPerson["box"][]): DetectedPerson[] {
+    return boxes.map((box) => this.poseOf(frame, { box: { ...box }, score: 1, keypoints: {} }));
+  }
+
+  /**
+   * The pose model on one person, from a square crop around their box about 256 px tall: their keypoints (frame
+   * pixels) and the 3D landmarks with the crop's centre. Returns the person, filled in where the model found them.
+   */
+  private poseOf(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, p: DetectedPerson): DetectedPerson {
+    this.crop ??= canvas(256, 256);
+    const g = this.crop.getContext("2d", { willReadFrequently: false })!;
+    const { x, y, w, h } = p.box;
+    const side = Math.max(w, h) * 1.5, cx = x + w / 2, cy = y + h / 2;
+    g.clearRect(0, 0, 256, 256);
+    g.drawImage(frame, cx - side / 2, cy - side / 2, side, side, 0, 0, 256, 256);
+    const r = this.pose.detect(this.crop);
+    const lm = r.landmarks[0];
+    if (!lm) return p;
+    const at = (i: number): Keypoint => ({ x: cx - side / 2 + lm[i].x * side, y: cy - side / 2 + lm[i].y * side, confidence: lm[i].visibility ?? 0.5 });
+    for (const [name, i] of LANDMARKS) p.keypoints[name] = at(i);
+    const mid = (a: Keypoint, b: Keypoint): Keypoint => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, confidence: Math.min(a.confidence, b.confidence) });
+    p.keypoints.neck = mid(at(11), at(12));
+    p.keypoints.root = mid(at(23), at(24));
+    const world = r.worldLandmarks?.[0];
+    if (world) {
+      p.world = world.map((q, i) => ({ x: q.x, y: q.y, z: q.z, visibility: lm[i]?.visibility ?? q.visibility }));
+      p.cropCentre = { x: cx, y: cy };
+    }
+    return p;
   }
 
   /**

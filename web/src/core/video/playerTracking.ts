@@ -4,7 +4,8 @@ import { CourtFrame, Side, type FloorPoint } from "../match/court";
 import { V3 } from "../spatial/math3d";
 import { newUUID } from "../spatial/swiftCompat";
 import type { VideoCamera } from "./courtCalibration";
-import { PictureTracker, boxOverlap, type PersonBox, type PictureBox, type PictureKey } from "./pictureTracking";
+import { PictureTracker, boxOverlap, type PersonBox, type PictureBox, type PictureFrame, type PictureKey } from "./pictureTracking";
+import type { WorldPose } from "./realPose";
 import { Hungarian, ImagePoint } from "./videoMath";
 
 /**
@@ -50,6 +51,10 @@ export interface PersonDetection {
   appearance?: number[];
   /** Web addition: the detector's box around the person, which the picture tracker follows. */
   box?: PictureBox;
+  /** Web addition: the pose model's 3D body points on the court's axes (the player's own joint angles). */
+  world?: WorldPose;
+  /** Web addition: the tapped player the app found this to be, following them in the picture. */
+  player?: { id: number; side: Side };
 }
 
 export const PersonDetection = {
@@ -136,6 +141,8 @@ export interface TrackSample {
   footImage?: ImagePoint;
   keypoints?: Keypoints;
   boxHeight?: number;
+  /** Web addition: the pose model's 3D body points, when it read them. */
+  world?: WorldPose;
   /** Not detected in this frame: the position is interpolated. */
   occluded: boolean;
 }
@@ -744,18 +751,40 @@ export class PlayerTracker {
   }
 
   /**
-   * Web addition: follows the players the coach tapped in the picture (`PictureTracker`): through every frame that
-   * carries the people's boxes (`VideoFrameObservation.people`, 30 a second), by the middle of the body, and makes
-   * each player's track from the detections of their boxes in the pose frames. Locks with the same `player` are one
-   * player tapped at different moments. A tap is the box it was on (`lock.box`: the best overlapping box in the
-   * nearest frame read), or, without one, the box standing on the tapped feet, else a box as tall as a person standing
-   * there. A player keeps to their side of the net (as `track`). Falls back to `follow` (on the floor) when no frame
-   * carries boxes.
+   * Web addition: tracks of players the app already followed in the picture, one per `PersonDetection.player`: their
+   * detections in every frame read (30 a second), smoothed and spanning the clip like `follow`'s.
    */
-  followInPicture(input: readonly VideoFrameObservation[], locks: readonly TrackLock[], camera: VideoCamera): TrackedPlayer[] {
-    const frames = input.filter((f) => f.people && f.people.length > 0).sort((a, b) => a.time - b.time);
-    if (frames.length === 0) return this.follow(input, locks, camera).tracks;
-    const pictures = frames.map((f) => ({ time: f.time, people: [...f.people!] }));
+  fromAssigned(input: readonly VideoFrameObservation[]): TrackedPlayer[] {
+    const frames = input.filter((f) => f.detections.length > 0).sort((a, b) => a.time - b.time);
+    const times = frames.map((f) => f.time);
+    const r = this.settings.measurementNoise * this.settings.measurementNoise;
+    const byPlayer = new Map<number, { side: Side; found: { frame: number; det: PersonDetection }[] }>();
+    frames.forEach((f, k) => {
+      for (const d of f.detections) {
+        if (!d.player) continue;
+        const entry = byPlayer.get(d.player.id) ?? { side: d.player.side, found: [] };
+        entry.found.push({ frame: k, det: d });
+        byPlayer.set(d.player.id, entry);
+      }
+    });
+    return [...byPlayer.entries()].map(([id, { side, found }]) => {
+      const w = new Work(side, found[0].det, found[0].frame, times[found[0].frame], r);
+      w.detections = found;
+      return { ...this.smooth(w, times, Infinity), id: `tap-${id}` };
+    });
+  }
+
+  /**
+   * Web addition: the taps on the boxes they were on, and each tapped player's box in every frame (`PictureTracker`).
+   * A tap is the box it was on (`lock.box`: the best overlapping box in the nearest frame), or, without one, the box
+   * standing on the tapped feet, else a box as tall as a person standing there (added to that frame's `pictures`).
+   * Locks with the same `player` are one player; `ids` are their numbers, `sides` their teams (as the coach set them,
+   * else from where they were first tapped). A player keeps to their side of the net (as `track`; a team the coach set
+   * with 2.5 m of slack, their jersey keeping them from the other team).
+   */
+  pictureAssignment(frames: readonly PictureFrame[], locks: readonly TrackLock[], camera: VideoCamera):
+    { ids: number[]; sides: Side[]; pictures: { time: number; people: PersonBox[] }[]; assignment: number[][] } {
+    const pictures = frames.map((f) => ({ time: f.time, people: [...f.people] }));
     const ids = [...new Set(locks.map((l, i) => l.player ?? -1 - i))];
     const keys = ids.map(() => [] as PictureKey[]);
     const sides = ids.map(() => "home" as Side);
@@ -764,6 +793,7 @@ export class PlayerTracker {
     const bottom = (b: PictureBox) => ({ x: b.x + b.w / 2, y: b.y + b.h });
     locks.forEach((lock, i) => {
       const p = ids.indexOf(lock.player ?? -1 - i);
+      if (pictures.length === 0) return;
       let k = 0;
       pictures.forEach((f, m) => { if (Math.abs(f.time - lock.time) < Math.abs(pictures[k].time - lock.time)) k = m; });
       const people = pictures[k].people;
@@ -800,11 +830,26 @@ export class PlayerTracker {
     const assignment = PictureTracker.follow(pictures, keys.map((k) => ({ keys: k })), undefined, (p, _k, b) => {
       const foot = bottom(b), floor = camera.floorPoint(foot);
       if (floor === undefined) return false;
-      // A team the coach set holds even where the feet read a little across the net (a player at the net, in the air):
-      // 2.5 m of slack; the jersey colour keeps the player from the other team.
       if (set[p]) return sides[p] === "home" ? floor.z > -2.5 : floor.z < 2.5;
       return this.allowed(sides[p], PersonDetection.create(floor, foot), camera);
     });
+    return { ids, sides, pictures, assignment };
+  }
+
+  /**
+   * Web addition: follows the players the coach tapped in the picture (`PictureTracker`): through every frame that
+   * carries the people's boxes (`VideoFrameObservation.people`, 30 a second), by the middle of the body, and makes
+   * each player's track from the detections of their boxes in the pose frames. Locks with the same `player` are one
+   * player tapped at different moments. A tap is the box it was on (`lock.box`: the best overlapping box in the
+   * nearest frame read), or, without one, the box standing on the tapped feet, else a box as tall as a person standing
+   * there. A player keeps to their side of the net (as `track`). Falls back to `follow` (on the floor) when no frame
+   * carries boxes.
+   */
+  followInPicture(input: readonly VideoFrameObservation[], locks: readonly TrackLock[], camera: VideoCamera): TrackedPlayer[] {
+    const frames = input.filter((f) => f.people && f.people.length > 0).sort((a, b) => a.time - b.time);
+    if (frames.length === 0) return this.follow(input, locks, camera).tracks;
+    const { ids, sides, pictures, assignment } = this.pictureAssignment(frames.map((f) => ({ time: f.time, people: f.people! })), locks, camera);
+    const bottom = (b: PictureBox) => ({ x: b.x + b.w / 2, y: b.y + b.h });
     // The pose frames, numbered as `track` and `smooth` number them.
     const poseFrames = input.filter((f) => f.detections.length > 0).sort((a, b) => a.time - b.time);
     const times = poseFrames.map((f) => f.time);
@@ -1000,6 +1045,7 @@ export class PlayerTracker {
         sample.footImage = d.footImage;
         sample.keypoints = d.keypoints;
         if (d.boxHeight !== undefined) sample.boxHeight = d.boxHeight;
+        if (d.world) sample.world = d.world;
       }
       samples.push(sample);
     }

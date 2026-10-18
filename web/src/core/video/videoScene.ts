@@ -1,9 +1,10 @@
 // Port of Video/VideoScene.swift: a scene reconstructed from a rally video and the video-to-3D pipeline
 // (Section 4.6). Swift's `VideoScene` is a class here; `encode`/`decode` give its Codable JSON shape.
 import { TrackCleanup, defaultTrackCleanup } from "./trackCleanup";
+import { RealPose } from "./realPose";
 import { CourtFrame, CourtPosition, Side, type FloorPoint, type LocalPoint } from "../match/court";
 import { Stride, strideEnvelope, strideParams } from "../spatial/gait";
-import { V3 } from "../spatial/math3d";
+import { Quat, V3 } from "../spatial/math3d";
 import { PoseParams } from "../spatial/postureLibrary";
 import { PosedPlayer } from "../spatial/povAnalysis";
 import { BodyMetrics, Joint, Posture, SkeletonModel } from "../spatial/skeleton";
@@ -31,6 +32,12 @@ export interface VideoPlayerSample {
   confidence: number;
   /** Not seen in this frame (position interpolated). */
   occluded: boolean;
+  /**
+   * Web addition: the player's own joint rotations read from the video (`RealPose.pack`: 17 quaternions) and how sure
+   * they are (0...1); the 3D body follows them instead of the posture where they are sure enough.
+   */
+  joints?: number[];
+  jointsConfidence?: number;
 }
 
 export const VideoPlayerSample = {
@@ -105,6 +112,8 @@ export class VideoFrame {
   confidence = new Map<string, number>();
   /** Velocity on the floor and step phase per token (web addition, see videoMotion.ts). */
   motion = new Map<string, PlayerMotion>();
+  /** The player's own joint rotations read from the video and how sure they are, per token (web addition). */
+  joints = new Map<string, { rotations: Map<Joint, Quat>; confidence: number }>();
   ball?: V3;
 
   /**
@@ -126,10 +135,15 @@ export class VideoFrame {
       const inAir = params.airborne || (j !== undefined && j > 0.02);
       const doubt = Math.max(0, Math.min(1, (0.4 - (this.confidence.get(t.id) ?? 1)) / 0.2));
       if (doubt > 0 && !inAir) params = PoseParams.blend(params, Posture.params("ready", s, t.role), doubt);
+      // The player's own joints where the video shows them clearly enough (confidence 0.35 to 0.7 fades them in).
+      const real = this.joints.get(t.id);
+      const own = real ? Math.max(0, Math.min(1, (real.confidence - 0.35) / 0.35)) : 0;
+      if (own > 0) params = PoseParams.blend(params, new PoseParams(real!.rotations, params.jump), own);
       if (j !== undefined && (params.airborne || j > 0.02)) params.jump = Math.max(0, j);
       const yaw = this.yaw.get(t.id) ?? SceneToken.facing(t);
       const motion = this.motion.get(t.id);
-      const stride = motion && !inAir && options.stride !== false ? Stride.motion(motion.velocity, yaw, motion.phase) : undefined;
+      // Legs read from the video step by themselves; the made-up stride only where they are not.
+      const stride = motion && !inAir && options.stride !== false && own < 0.5 ? Stride.motion(motion.velocity, yaw, motion.phase) : undefined;
       const envelope = stride ? strideEnvelope(params, s, stride).map((e) => s.pose(e, t.point, yaw, 0)) : [];
       if (stride) params = strideParams(params, s, stride);
       const joints = s.pose(params, t.point, yaw, 0);
@@ -204,6 +218,16 @@ export class VideoScene {
       frame.jump.set(track.id, a.jump + (b.jump - a.jump) * u);
       frame.confidence.set(track.id, a.confidence + (b.confidence - a.confidence) * u);
       if (a.posture !== b.posture && u > 0 && u < 1) frame.postureBlends.set(track.id, { from: a.posture, to: b.posture, t: u });
+      const ja = a.joints ? RealPose.unpack(a.joints) : undefined, jb = b.joints ? RealPose.unpack(b.joints) : undefined;
+      if (ja && jb) {
+        const rotations = new Map<Joint, Quat>();
+        for (const [k, q] of ja) rotations.set(k, q.slerp(jb.get(k) ?? q, u));
+        frame.joints.set(track.id, { rotations, confidence: (a.jointsConfidence ?? 0) + ((b.jointsConfidence ?? 0) - (a.jointsConfidence ?? 0)) * u });
+      } else if (ja || jb) {
+        // Fading out toward the sample without joints.
+        const c = ja ? (a.jointsConfidence ?? 0) * (1 - u) : (b.jointsConfidence ?? 0) * u;
+        frame.joints.set(track.id, { rotations: (ja ?? jb)!, confidence: c });
+      }
       const motion = motionAt(track, t);
       if (motion) frame.motion.set(track.id, motion);
     }
@@ -378,10 +402,18 @@ export const VideoReconstructor = {
       if (placed) fit = fitter.fitTrack(placed, camera, facing);
       // Web addition: positions smoothed through the gaps with the camera's own uncertainty, jumps only where and as
       // long as volleyball jumps happen (TrackCleanup): no gliding, wobbling or flying players.
+      // Web addition: the player's own joints where the pose model read them in 3D, facing as the fit found, smoothed.
+      const own = RealPose.smooth(tr.samples.map((s, k) => (s.world ? RealPose.rotations(s.world, fit.estimates[k].yaw) : undefined)));
       const samples = TrackCleanup.clean(tr.samples.map((s, k) => {
         const e = fit.estimates[k];
-        return VideoPlayerSample.create(s.time, fit.floor[k].x, fit.floor[k].z, e.yaw, e.posture,
+        const sample = VideoPlayerSample.create(s.time, fit.floor[k].x, fit.floor[k].z, e.yaw, e.posture,
           { jump: e.jump, confidence: e.confidence, occluded: s.occluded });
+        const o = own[k];
+        if (o) {
+          sample.joints = RealPose.pack(o.rotations);
+          sample.jointsConfidence = Math.round(o.confidence * 100) / 100;
+        }
+        return sample;
       }), defaultTrackCleanup, camera);
       players.push(VideoPlayerTrack.create({ id: tr.id, side: tr.side, label, role, samples }));
       progress?.(0.2 + (0.6 * (n + 1)) / Math.max(tracked.length, 1), "Reading body positions");

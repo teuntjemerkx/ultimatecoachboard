@@ -1,9 +1,11 @@
 import { BallFlight, V3 } from "../../core/spatial";
 import {
-  PersonDetection, VideoScene, type ImagePoint, type Keypoints, type PersonBox, type TrackLock, type VideoCamera, type VideoFrameObservation,
+  PersonDetection, RealPose, VideoScene, type ImagePoint, type Keypoints, type PersonBox, type TrackLock, type VideoCamera,
+  type VideoFrameObservation,
 } from "../../core/video";
 import { grabFrame, SEEK_INTO_FRAME, type Clip } from "./clip";
 import { Detector, zoomTiles, type BallCandidate, type FrameDetections, type ZoomBand } from "./detect";
+import { RallyTracker } from "./rallyTracker";
 import type { RebuildReply, RebuildRequest } from "./rebuild.worker";
 
 /** The MediaPipe models, loaded once per session (about 20 MB, cached for offline use). */
@@ -82,20 +84,30 @@ export function observation(time: number, d: FrameDetections, camera: VideoCamer
   appearance?: readonly (number[] | undefined)[]): VideoFrameObservation {
   const detections: PersonDetection[] = [];
   for (const [i, p] of d.people.entries()) {
-    const kp: Keypoints = {};
-    const mx = 0.25 * p.box.w, my = 0.08 * p.box.h;
-    for (const [name, k] of Object.entries(p.keypoints) as [keyof Keypoints, { x: number; y: number; confidence: number }][]) {
-      const inBox = k.x >= p.box.x - mx && k.x <= p.box.x + p.box.w + mx && k.y >= p.box.y - my && k.y <= p.box.y + p.box.h + my;
-      if (k.confidence > 0.1 && inBox) kp[name] = { point: { x: k.x, y: k.y }, confidence: k.confidence };
-    }
-    const det = PersonDetection.fromKeypoints(kp, p.score, camera, {
-      boxHeight: p.box.h, boxBottom: { x: p.box.x + p.box.w / 2, y: p.box.y + p.box.h }, appearance: appearance?.[i], minConfidence: 0.3,
-      box: p.box,
-    });
+    const det = personDetection(p, camera, appearance?.[i]);
     if (det) detections.push(det);
   }
   const people = personBoxes(d.people, appearance);
   return ball ? { time, detections, people, ...ballObservation(ball) } : { time, detections, people };
+}
+
+/**
+ * One person as the core's detection: keypoints outside their box (with a little room) left out, the feet from joints
+ * of confidence 0.3 or more, else the bottom of the box; the pose model's 3D points on the court's axes when it read
+ * them. Undefined when there is nothing to stand on.
+ */
+export function personDetection(p: FrameDetections["people"][number], camera: VideoCamera, appearance?: number[]): PersonDetection | undefined {
+  const kp: Keypoints = {};
+  const mx = 0.25 * p.box.w, my = 0.08 * p.box.h;
+  for (const [name, k] of Object.entries(p.keypoints) as [keyof Keypoints, { x: number; y: number; confidence: number }][]) {
+    const inBox = k.x >= p.box.x - mx && k.x <= p.box.x + p.box.w + mx && k.y >= p.box.y - my && k.y <= p.box.y + p.box.h + my;
+    if (k.confidence > 0.1 && inBox) kp[name] = { point: { x: k.x, y: k.y }, confidence: k.confidence };
+  }
+  const det = PersonDetection.fromKeypoints(kp, p.score, camera, {
+    boxHeight: p.box.h, boxBottom: { x: p.box.x + p.box.w / 2, y: p.box.y + p.box.h }, appearance, minConfidence: 0.3, box: p.box,
+  });
+  if (det && p.world && p.cropCentre) det.world = RealPose.fromMediaPipe(p.world, camera, p.cropCentre);
+  return det;
 }
 
 /** People's boxes with their jersey colours, for following tapped players in the picture. */
@@ -514,6 +526,48 @@ async function plateBlob(pixels: Uint8Array, width: number, height: number): Pro
  * they were heads, knee pads and shoes (38 ball points became 52 and 1 flight 2, both false) for 32 s more per 10 s.
  */
 const ZOOM_BALLS = false;
+/**
+ * The tapped players through every frame read (30 a second): followed from box to box in the picture
+ * (`PlayerTracker.pictureAssignment`), then each frame read again and the pose model run on their boxes alone, so
+ * their bodies are read 30 times a second (a spike or a jump takes 0.3 s) while no one else costs a pose. Each
+ * detection carries its player (`PersonDetection.player`) and the 3D body points (`world`); where the pose model
+ * finds no feet, the bottom of the box stands in.
+ */
+async function followTapped(o: {
+  frames: { time: number; seek: number; people: PersonBox[] }[]; locks: TrackLock[]; camera: VideoCamera; clip: Clip; det: Detector;
+  work: HTMLCanvasElement; signal?: AbortSignal; onProgress: (fraction: number, stage: string) => void;
+}): Promise<VideoFrameObservation[]> {
+  const { frames, camera, clip, det, work } = o;
+  const { ids, sides, pictures, assignment } = RallyTracker.forCamera(camera).pictureAssignment(frames, o.locks, camera);
+  const out: VideoFrameObservation[] = [];
+  for (let k = 0; k < pictures.length; k++) {
+    aborted(o.signal);
+    const mine = ids.flatMap((id, p) => {
+      const j = assignment[p][k];
+      return j >= 0 ? [{ id, side: sides[p], box: pictures[k].people[j] }] : [];
+    });
+    if (mine.length === 0) continue;
+    await grabFrame(clip, frames[k].seek, work);
+    const posed = det.poseFor(work, mine.map((m) => m.box));
+    const detections: PersonDetection[] = [];
+    mine.forEach((m, i) => {
+      const box = { x: m.box.x, y: m.box.y, w: m.box.w, h: m.box.h };
+      let d = personDetection(posed[i], camera, m.box.appearance);
+      if (!d) {
+        const foot = { x: box.x + box.w / 2, y: box.y + box.h }, floor = camera.floorPoint(foot);
+        if (!floor) return;
+        d = PersonDetection.create(floor, foot, { confidence: 0.3, boxHeight: box.h, appearance: m.box.appearance, box });
+      }
+      d.player = { id: m.id, side: m.side };
+      detections.push(d);
+    });
+    out.push({ time: pictures[k].time, detections });
+    o.onProgress(0.45 + (0.15 * (k + 1)) / pictures.length, "Following the players");
+    await tick();
+  }
+  return out;
+}
+
 /** Frames read for the ball alone between two pose frames (30 frames a second in all). */
 const BALL_FRAMES_BETWEEN = 2;
 /**
@@ -557,8 +611,13 @@ export async function buildRally(options: {
   print.height = Math.max(1, Math.round((print.width * clip.height) / clip.width));
   const prg = print.getContext("2d", { willReadFrequently: true })!;
   let previous: Uint8ClampedArray | undefined;
-  const sampled: { time: number; detections: FrameDetections; appearance: (number[] | undefined)[]; repeat: boolean }[] = [];
-  const ballOnly: { time: number; balls: BallCandidates; people: PersonBox[] }[] = [];
+  const sampled: { time: number; seek: number; detections: FrameDetections; appearance: (number[] | undefined)[]; repeat: boolean }[] = [];
+  const ballOnly: { time: number; seek: number; balls: BallCandidates; people: PersonBox[] }[] = [];
+  // With players tapped, the first reading finds everyone's box only; the pose model then reads the tapped players
+  // alone, in every frame (`followTapped`).
+  const tapped = (options.locks?.length ?? 0) > 0;
+  /** The share of the progress bar the first reading takes (the second takes 0.45 to 0.6 when players are tapped). */
+  const firstShare = tapped ? 0.41 : 0.56;
   let repeats = 0;
   // Every read's seek time and whether it repeated the frame before, for the clip's own frame grid (on the seek times,
   // its phase is where the clip's frames come up).
@@ -584,17 +643,17 @@ export async function buildRally(options: {
         const found = det.detectBoxes(work, clip.width, clip.height, band);
         const near = found.people.filter((p) => nearCourt(p.box));
         const pixels = work.getContext("2d", { willReadFrequently: true })!.getImageData(0, 0, clip.width, clip.height).data;
-        ballOnly.push({ time: s.time, balls: found.balls,
+        ballOnly.push({ time: s.time, seek: s.seek, balls: found.balls,
           people: personBoxes(near, near.map((p) => jerseyColour(p, pixels, clip.width, clip.height))) });
       }
-      onProgress(0.04 + (0.56 * done) / total, "Finding players and the ball");
+      onProgress(0.04 + (firstShare * done) / total, "Finding players and the ball");
       await tick();
       continue;
     }
     const i = sampled.length;
-    const d = det.detect(work, clip.width, clip.height, nearCourt, band);
+    const d = det.detect(work, clip.width, clip.height, tapped ? () => false : nearCourt, band);
     const pixels = work.getContext("2d", { willReadFrequently: true })!.getImageData(0, 0, clip.width, clip.height).data;
-    sampled.push({ time: s.time, detections: d, repeat,
+    sampled.push({ time: s.time, seek: s.seek, detections: d, repeat,
       appearance: d.people.map((p) => jerseyColour(p, pixels, clip.width, clip.height)) });
     if (i >= nextPlate && plateFrames.length < plateCount) {
       nextPlate += plateEvery;
@@ -611,9 +670,21 @@ export async function buildRally(options: {
       }
       plateMasks.push(mask);
     }
-    onProgress(0.04 + (0.56 * done) / total, "Finding players and the ball");
+    onProgress(0.04 + (firstShare * done) / total, "Finding players and the ball");
     await tick();
   }
+
+  // The tapped players through every frame read: followed in the picture, then the pose model on their boxes alone.
+  const followed = tapped ? await followTapped({
+    frames: [
+      ...sampled.filter((f) => !f.repeat).map((f) => {
+        const near = f.detections.people.flatMap((p, i) => (nearCourt(p.box) ? [{ p, a: f.appearance[i] }] : []));
+        return { time: f.time - start, seek: f.seek, people: personBoxes(near.map((q) => q.p), near.map((q) => q.a)) };
+      }),
+      ...ballOnly.map((f) => ({ time: f.time - start, seek: f.seek, people: f.people })),
+    ].sort((a, b) => a.time - b.time),
+    locks: options.locks!, camera, clip, det, work, signal, onProgress,
+  }) : undefined;
 
   // The ball at the time its frame came up in the clip (`frameGrid`), from the start of the rally: a 24 fps frame can be
   // read 33 ms after it came up, in which a spike moves a metre. The players stay at the read times (they move a few
@@ -660,9 +731,18 @@ export async function buildRally(options: {
     if (f.pose >= 0 && !grid) ballAt.set(f.pose, ball);
     else observations.push({ time: f.time, detections: [], ...ballObservation(ball) });
   });
-  observations.push(...sampled.map((f, k) => observation(f.time - start, f.detections, camera, ballAt.get(k), f.appearance)));
-  // The boxes of the frames read for the ball alone, at their read times.
-  observations.push(...ballOnly.map((f) => ({ time: f.time - start, detections: [], people: f.people })));
+  if (followed) {
+    // The tapped players' own detections; the pose frames keep only their ball.
+    observations.push(...followed);
+    sampled.forEach((f, k) => {
+      const ball = ballAt.get(k);
+      if (ball) observations.push({ time: f.time - start, detections: [], ...ballObservation(ball) });
+    });
+  } else {
+    observations.push(...sampled.map((f, k) => observation(f.time - start, f.detections, camera, ballAt.get(k), f.appearance)));
+    // The boxes of the frames read for the ball alone, at their read times.
+    observations.push(...ballOnly.map((f) => ({ time: f.time - start, detections: [], people: f.people })));
+  }
   observations.sort((a, b) => a.time - b.time);
   if (import.meta.env.DEV) {
     (globalThis as { __videoDebug?: unknown }).__videoDebug = { observations, camera: camera.encode(), locks: options.locks, start, grid,
