@@ -186,3 +186,4 @@
   position: absolute; top: -6px; right: -6px; min-width: 18px; padding: 0 4px; border-radius: 9px;
   font: 800 11px/18px var(--font); color: var(--c-bg); background: var(--c-text);
 }
+.video-team { display: inline-flex; gap: 6px; margin-left: 6px; padding-left: 12px; border-left: 1px solid var(--c-hairline); }

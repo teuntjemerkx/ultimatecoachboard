@@ -114,4 +114,23 @@ describe("tracks from the picture", () => {
       expect(Math.hypot(s.floor.x - p.x, s.floor.z - p.z), `t ${s.time.toFixed(1)}`).toBeLessThan(0.3);
     }
   });
+  it("keeps a player on the team the coach set, also where her feet read across the net", () => {
+    const camera = VideoCamera.lookingAt(new V3(0, 2.2, 14), new V3(0, 0, 0), 1100, 1280, 720);
+    const foot = (x: number, z: number) => camera.project(V3.fromFloor({ x, z }, 0))!;
+    const boxAt = (x: number, z: number) => {
+      const f = foot(x, z), head = camera.project(V3.fromFloor({ x, z }, 1.75))!;
+      return body(f.x, f.y, f.y - head.y, orange);
+    };
+    // Our blocker at the net, read 0.8 m on their side all along (her feet in the air, or misread).
+    const frames: VideoFrameObservation[] = Array.from({ length: 2 * fps }, (_, k) => {
+      const t = k / fps, z = -0.8 + 0.1 * Math.sin(t), people = [boxAt(1, z)];
+      return { time: t, detections: k % 3 === 0 ? [PersonDetection.create({ x: 1, z }, foot(1, z), { box: people[0] })] : [], people };
+    });
+    const tap = { time: 0, foot: foot(1, -0.8), box: boxAt(1, -0.8), player: 1 };
+    const read = new PlayerTracker().followInPicture(frames, [tap], camera);
+    expect(read[0].side, "from where she stands").toBe("opponent");
+    const [set] = new PlayerTracker().followInPicture(frames, [{ ...tap, side: "home" as const }], camera);
+    expect(set.side).toBe("home");
+    expect(TrackedPlayer.observedCount(set)).toBe(20);
+  });
 });

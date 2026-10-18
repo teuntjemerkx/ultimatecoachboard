@@ -150,6 +150,8 @@ export interface TrackLock {
   box?: PictureBox;
   /** Taps with the same number are one player at different moments (a correction); without, each tap is a player. */
   player?: number;
+  /** The player's team as the coach set it; without, the side of the net the tap stands on. */
+  side?: Side;
 }
 
 /** A player followed through the clip. */
@@ -465,7 +467,7 @@ export class PlayerTracker {
     const times = frames.map((f) => f.time);
     const r = settings.measurementNoise * settings.measurementNoise, q = settings.accelerationNoise;
     const radius = Math.max(12, 0.03 * camera.width);
-    const seeds: { frame: number; det: PersonDetection }[] = [];
+    const seeds: { frame: number; det: PersonDetection; side?: Side }[] = [];
     for (const lock of locks) {
       let frame = 0;
       times.forEach((t, k) => { if (Math.abs(t - lock.time) < Math.abs(times[frame] - lock.time)) frame = k; });
@@ -475,14 +477,14 @@ export class PlayerTracker {
         // A second tap on the same person is the same player.
         if (taken.has(near.d)) continue;
         taken.add(near.d);
-        seeds.push({ frame, det: near.d });
+        seeds.push({ frame, det: near.d, side: lock.side });
         continue;
       }
       if (seeds.some((s) => s.frame === frame && ImagePoint.distance(s.det.footImage, lock.foot) < radius / 2)) continue;
       const floor = camera.floorPoint(lock.foot);
-      if (floor) seeds.push({ frame, det: PersonDetection.create(floor, lock.foot, { confidence: 0.3 }) });
+      if (floor) seeds.push({ frame, det: PersonDetection.create(floor, lock.foot, { confidence: 0.3 }), side: lock.side });
     }
-    const locked = seeds.map((s) => new Work(CourtFrame.side(s.det.floor), s.det, s.frame, times[s.frame], r));
+    const locked = seeds.map((s) => new Work(s.side ?? CourtFrame.side(s.det.floor), s.det, s.frame, times[s.frame], r));
     const found = seeds.map(() => [] as { frame: number; det: PersonDetection }[]);
     const forbidden = 1e9;
     const miss = settings.missGate + 2 * Math.log(0.15 * 0.15);
@@ -757,6 +759,8 @@ export class PlayerTracker {
     const ids = [...new Set(locks.map((l, i) => l.player ?? -1 - i))];
     const keys = ids.map(() => [] as PictureKey[]);
     const sides = ids.map(() => "home" as Side);
+    /** Players whose team the coach set: their side is not read from where they stand. */
+    const set = ids.map(() => false);
     const bottom = (b: PictureBox) => ({ x: b.x + b.w / 2, y: b.y + b.h });
     locks.forEach((lock, i) => {
       const p = ids.indexOf(lock.player ?? -1 - i);
@@ -785,14 +789,21 @@ export class PlayerTracker {
         j = people.length - 1;
       }
       keys[p].push({ frame: k, box: j });
-      if (keys[p].length === 1) {
+      if (lock.side) {
+        sides[p] = lock.side;
+        set[p] = true;
+      } else if (keys[p].length === 1 && !set[p]) {
         const floor = camera.floorPoint(bottom(people[j]));
         if (floor) sides[p] = CourtFrame.side(floor);
       }
     });
     const assignment = PictureTracker.follow(pictures, keys.map((k) => ({ keys: k })), undefined, (p, _k, b) => {
       const foot = bottom(b), floor = camera.floorPoint(foot);
-      return floor !== undefined && this.allowed(sides[p], PersonDetection.create(floor, foot), camera);
+      if (floor === undefined) return false;
+      // A team the coach set holds even where the feet read a little across the net (a player at the net, in the air):
+      // 2.5 m of slack; the jersey colour keeps the player from the other team.
+      if (set[p]) return sides[p] === "home" ? floor.z > -2.5 : floor.z < 2.5;
+      return this.allowed(sides[p], PersonDetection.create(floor, foot), camera);
     });
     // The pose frames, numbered as `track` and `smooth` number them.
     const poseFrames = input.filter((f) => f.detections.length > 0).sort((a, b) => a.time - b.time);

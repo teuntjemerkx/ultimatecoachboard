@@ -18,14 +18,17 @@ export interface TapKey {
 /** A player the coach tapped, at one moment or more (each later tap puts them right there). */
 export interface TappedPlayer {
   id: number;
+  /** Their team: from where they were first tapped, or as the coach set it (`sideSet`). */
   side: Side;
+  sideSet?: boolean;
   keys: TapKey[];
 }
 
 /** The taps as the build takes them. */
 export function locksOf(players: readonly TappedPlayer[]): TrackLock[] {
-  return players.flatMap((p) => p.keys.map((k) => (k.box ? { time: k.time, foot: k.foot, box: k.box, player: p.id }
-    : { time: k.time, foot: k.foot, player: p.id })));
+  return players.flatMap((p) => p.keys.map((k): TrackLock => ({
+    time: k.time, foot: k.foot, player: p.id, ...(k.box ? { box: k.box } : {}), ...(p.sideSet ? { side: p.side } : {}),
+  })));
 }
 
 /** Taps kept with a rebuilt video, as players again. */
@@ -36,7 +39,7 @@ export function playersOf(locks: readonly TrackLock[], camera: VideoCamera): Tap
     let p = out.find((q) => q.id === id);
     if (!p) {
       const floor = camera.floorPoint(l.foot);
-      p = { id, side: floor ? CourtFrame.side(floor) : "home", keys: [] };
+      p = l.side ? { id, side: l.side, sideSet: true, keys: [] } : { id, side: floor ? CourtFrame.side(floor) : "home", keys: [] };
       out.push(p);
     }
     p.keys.push(l.box ? { time: l.time, foot: l.foot, box: l.box } : { time: l.time, foot: l.foot });
@@ -85,13 +88,17 @@ export function preselect(people: Found, camera: VideoCamera): number[] {
   return picked;
 }
 
-/** The label a tapped player goes by: ours 1, 2, 3 ... and theirs A, B, C ... in the order they were tapped. */
+/**
+ * The label a tapped player goes by: after a build the one the 3D gave them; else ours 1, 2, 3 ... and theirs A, B,
+ * C ... in the order they were tapped, with a "+" after a build (tapped since, or moved to the other team since).
+ */
 function labelsOf(players: readonly TappedPlayer[], scene?: VideoScene): Map<number, string> {
   const out = new Map<number, string>();
+  const mark = scene ? "+" : "";
   let ours = 0, theirs = 0;
   for (const p of players) {
-    const rebuilt = scene?.players.find((q) => q.id === trackIdOf(p.id));
-    out.set(p.id, rebuilt?.label ?? (p.side === "home" ? String(++ours) : String.fromCharCode(65 + theirs++)));
+    const rebuilt = scene?.players.find((q) => q.id === trackIdOf(p.id) && q.side === p.side);
+    out.set(p.id, rebuilt?.label ?? (p.side === "home" ? `${mark}${++ours}` : `${mark}${String.fromCharCode(65 + theirs++)}`));
   }
   return out;
 }
@@ -220,7 +227,7 @@ export function PlayerTaps({ clip, start, length, camera, players, onPlayers, sc
         <strong>Tap the players to follow</strong>
         <span className="muted">
           {chosen
-            ? `Taps now put ${labels.get(chosen.id)} right at this moment. Slide to where the 3D lost them and tap where they really are.`
+            ? `Taps now put ${labels.get(chosen.id)} right at this moment: slide to where the 3D lost them and tap where they really are. Wrong colour? Set Ours or Theirs.`
             : "Only the players you tap are rebuilt. Slide to any moment and tap a player there: one who comes in later too. Tap a picked box again to take it back."}
         </span>
       </div>
@@ -241,10 +248,20 @@ export function PlayerTaps({ clip, start, length, camera, players, onPlayers, sc
           {list.map((p) => (
             <button key={p.id} className={`video-chip ${p.side}${active === p.id ? " on" : ""}`} aria-pressed={active === p.id}
                     onClick={() => setActive(active === p.id ? undefined : p.id)}
-                    aria-label={`Player ${labels.get(p.id)}, ${p.keys.length} tap${p.keys.length === 1 ? "" : "s"}`}>
+                    aria-label={`Player ${labels.get(p.id)}, ${p.side === "home" ? "ours" : "theirs"}, ${p.keys.length} tap${p.keys.length === 1 ? "" : "s"}`}>
               {labels.get(p.id)}{p.keys.length > 1 && <span className="video-chip-n">{p.keys.length}</span>}
             </button>
           ))}
+          {chosen && (
+            <div className="video-team" role="group" aria-label={`Team of ${labels.get(chosen.id)}`}>
+              {(["home", "opponent"] as const).map((side) => (
+                <button key={side} className={`video-chip ${side}${chosen.side === side ? " on" : ""}`} aria-pressed={chosen.side === side}
+                        onClick={() => onPlayers(list.map((p) => (p === chosen ? { ...p, side, sideSet: true } : p)))}>
+                  {side === "home" ? "Ours" : "Theirs"}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       <div className="video-mark-foot">
