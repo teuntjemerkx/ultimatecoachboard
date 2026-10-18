@@ -1,6 +1,6 @@
 import { BallFlight, V3 } from "../../core/spatial";
 import {
-  PersonDetection, VideoScene, type ImagePoint, type Keypoints, type TrackLock, type VideoCamera, type VideoFrameObservation,
+  PersonDetection, VideoScene, type ImagePoint, type Keypoints, type PersonBox, type TrackLock, type VideoCamera, type VideoFrameObservation,
 } from "../../core/video";
 import { grabFrame, SEEK_INTO_FRAME, type Clip } from "./clip";
 import { Detector, zoomTiles, type BallCandidate, type FrameDetections, type ZoomBand } from "./detect";
@@ -90,10 +90,20 @@ export function observation(time: number, d: FrameDetections, camera: VideoCamer
     }
     const det = PersonDetection.fromKeypoints(kp, p.score, camera, {
       boxHeight: p.box.h, boxBottom: { x: p.box.x + p.box.w / 2, y: p.box.y + p.box.h }, appearance: appearance?.[i], minConfidence: 0.3,
+      box: p.box,
     });
     if (det) detections.push(det);
   }
-  return ball ? { time, detections, ...ballObservation(ball) } : { time, detections };
+  const people = personBoxes(d.people, appearance);
+  return ball ? { time, detections, people, ...ballObservation(ball) } : { time, detections, people };
+}
+
+/** People's boxes with their jersey colours, for following tapped players in the picture. */
+export function personBoxes(people: FrameDetections["people"], appearance?: readonly (number[] | undefined)[]): PersonBox[] {
+  return people.map((p, i) => {
+    const a = appearance?.[i];
+    return a ? { ...p.box, appearance: a } : { ...p.box };
+  });
 }
 
 type BallCandidates = FrameDetections["balls"];
@@ -548,7 +558,7 @@ export async function buildRally(options: {
   const prg = print.getContext("2d", { willReadFrequently: true })!;
   let previous: Uint8ClampedArray | undefined;
   const sampled: { time: number; detections: FrameDetections; appearance: (number[] | undefined)[]; repeat: boolean }[] = [];
-  const ballOnly: { time: number; balls: BallCandidates }[] = [];
+  const ballOnly: { time: number; balls: BallCandidates; people: PersonBox[] }[] = [];
   let repeats = 0;
   // Every read's seek time and whether it repeated the frame before, for the clip's own frame grid (on the seek times,
   // its phase is where the clip's frames come up).
@@ -569,7 +579,14 @@ export async function buildRally(options: {
     done += s.pose ? 1 : BALL_FRAME_COST;
     if (!s.pose) {
       // The ball alone; a repeated frame adds nothing (its ball was seen at the earlier time).
-      if (!repeat) ballOnly.push({ time: s.time, balls: det.detectBalls(work, clip.width, clip.height, band) });
+      if (!repeat) {
+        // The ball, and everyone's box with their jersey colour (tapped players are followed from box to box).
+        const found = det.detectBoxes(work, clip.width, clip.height, band);
+        const near = found.people.filter((p) => nearCourt(p.box));
+        const pixels = work.getContext("2d", { willReadFrequently: true })!.getImageData(0, 0, clip.width, clip.height).data;
+        ballOnly.push({ time: s.time, balls: found.balls,
+          people: personBoxes(near, near.map((p) => jerseyColour(p, pixels, clip.width, clip.height))) });
+      }
       onProgress(0.04 + (0.56 * done) / total, "Finding players and the ball");
       await tick();
       continue;
@@ -644,6 +661,8 @@ export async function buildRally(options: {
     else observations.push({ time: f.time, detections: [], ...ballObservation(ball) });
   });
   observations.push(...sampled.map((f, k) => observation(f.time - start, f.detections, camera, ballAt.get(k), f.appearance)));
+  // The boxes of the frames read for the ball alone, at their read times.
+  observations.push(...ballOnly.map((f) => ({ time: f.time - start, detections: [], people: f.people })));
   observations.sort((a, b) => a.time - b.time);
   if (import.meta.env.DEV) {
     (globalThis as { __videoDebug?: unknown }).__videoDebug = { observations, camera: camera.encode(), locks: options.locks, start, grid,

@@ -10,7 +10,7 @@ export type Route =
   | { name: "log"; matchId: string }
   | { name: "season" }
   | { name: "studio"; boardId?: string }
-  | { name: "video" }
+  | { name: "video"; /** A rebuilt video to put its players right in, at a moment of it. */ fix?: { videoId: string; time?: number } }
   | { name: "watch"; videoId: string };
 
 interface Nav {

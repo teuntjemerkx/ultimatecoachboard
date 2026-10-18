@@ -57,6 +57,37 @@ export async function toPlayers() {
   return document.querySelector(".video-mark-foot .video-badge")?.textContent;
 }
 
+/** On the players step: shows the moment `t` (seconds into the rally) and waits until its people are found. */
+export async function moment(t) {
+  const range = document.querySelector(".video-time input[type=range]");
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(range, String(t));
+  range.dispatchEvent(new Event("input", { bubbles: true }));
+  range.dispatchEvent(new Event("change", { bubbles: true }));
+  await wait(400);
+  while (document.querySelector(".video-finding")?.textContent.startsWith("Finding")) await wait(300);
+  return [...document.querySelectorAll(".video-people rect")].map((r) => ({
+    box: ["x", "y", "width", "height"].map((a) => Math.round(+r.getAttribute(a))), cls: r.getAttribute("class") }));
+}
+
+/** On the players step: a tap at a pixel of the frame (the clip's working size `w` x `h`). */
+export async function tap(x, y, w = 1280, h = 720) {
+  const box = document.querySelector(".video-still-box");
+  const r = document.querySelector(".video-still").getBoundingClientRect();
+  box.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 9, isPrimary: true,
+    clientX: r.left + (x / w) * r.width, clientY: r.top + (y / h) * r.height }));
+  await wait(200);
+  return document.querySelector(".video-mark-foot .video-badge")?.textContent.trim();
+}
+
+/** On the players step: who the next taps are for, by chip label ("New" for a new player). */
+export async function tapsFor(label) {
+  const chip = [...document.querySelectorAll(".video-chip")].find((c) => c.textContent.trim().replace(/\d+$/, "") === label
+    || c.textContent.trim().startsWith(label));
+  if (chip && chip.getAttribute("aria-pressed") !== "true") chip.click();
+  await wait(100);
+  return [...document.querySelectorAll(".video-chip")].map((c) => `${c.textContent.trim()}${c.getAttribute("aria-pressed") === "true" ? "*" : ""}`);
+}
+
 /** Builds with the players picked (from the court step: those inside the lines). */
 export async function build() {
   await toPlayers();

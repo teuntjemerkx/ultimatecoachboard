@@ -206,6 +206,10 @@ function Watch({ data }: { data: Loaded }) {
           <button aria-pressed={!threeD} onClick={backToVideo}>VIDEO</button>
           <button aria-pressed={mode === "court" && !pov} onClick={showCourt}>COURT</button>
         </div>
+        {data.stored.clip && (
+          <button className="btn quiet" onClick={() => go({ name: "video", fix: { videoId: data.stored.id, time } })}
+                  aria-label="Put the players right at this moment"><Icon name="pen" /> Fix players</button>
+        )}
       </header>
       <div className="video-stage" ref={stageRef}>
         {threeD && (

@@ -1,8 +1,10 @@
 // Port of Video/PlayerTracking.swift: body keypoints, person detections and multi-player tracking on the floor
 // (Section 4.2).
 import { CourtFrame, Side, type FloorPoint } from "../match/court";
+import { V3 } from "../spatial/math3d";
 import { newUUID } from "../spatial/swiftCompat";
 import type { VideoCamera } from "./courtCalibration";
+import { PictureTracker, boxOverlap, type PersonBox, type PictureBox, type PictureKey } from "./pictureTracking";
 import { Hungarian, ImagePoint } from "./videoMath";
 
 /**
@@ -46,14 +48,17 @@ export interface PersonDetection {
    * torso. When present the tracker uses it to keep identities apart where players nearly collide.
    */
   appearance?: number[];
+  /** Web addition: the detector's box around the person, which the picture tracker follows. */
+  box?: PictureBox;
 }
 
 export const PersonDetection = {
   create(floor: FloorPoint, footImage: ImagePoint, options: { keypoints?: Keypoints; confidence?: number; boxHeight?: number;
-    appearance?: number[] } = {}): PersonDetection {
+    appearance?: number[]; box?: PictureBox } = {}): PersonDetection {
     const d: PersonDetection = { floor, footImage, keypoints: options.keypoints ?? {}, confidence: options.confidence ?? 1 };
     if (options.boxHeight !== undefined) d.boxHeight = options.boxHeight;
     if (options.appearance !== undefined) d.appearance = options.appearance;
+    if (options.box !== undefined) d.box = options.box;
     return d;
   },
 
@@ -63,7 +68,7 @@ export const PersonDetection = {
    * the bounding box is used. Undefined when there is nothing to stand on.
    */
   fromKeypoints(keypoints: Keypoints, confidence: number, camera: VideoCamera, options: { boxHeight?: number;
-    boxBottom?: ImagePoint; appearance?: number[]; minConfidence?: number } = {}): PersonDetection | undefined {
+    boxBottom?: ImagePoint; appearance?: number[]; minConfidence?: number; box?: PictureBox } = {}): PersonDetection | undefined {
     const minConfidence = options.minConfidence ?? 0.1;
     const kp = (k: BodyKeypoint): Keypoint2D | undefined => {
       const p = keypoints[k];
@@ -96,7 +101,8 @@ export const PersonDetection = {
     if (!foot) return undefined;
     const floor = camera.floorPoint(foot, footHeight);
     if (!floor) return undefined;
-    return PersonDetection.create(floor, foot, { keypoints, confidence, boxHeight: options.boxHeight, appearance: options.appearance });
+    return PersonDetection.create(floor, foot, { keypoints, confidence, boxHeight: options.boxHeight, appearance: options.appearance,
+      box: options.box });
   },
 };
 
@@ -112,6 +118,12 @@ export interface VideoFrameObservation {
   ball?: ImagePoint;
   /** Web addition: the ball's apparent diameter in pixels (the detector's box), when the box was whole. */
   ballSize?: number;
+  /**
+   * Web addition: everyone the detector boxed in this frame read, also in the frames read for the ball alone (30 a
+   * second), for following tapped players in the picture (`PlayerTracker.followInPicture`). In a pose frame the
+   * detections' `box` are among them.
+   */
+  people?: PersonBox[];
 }
 
 /** One frame of a tracked player. */
@@ -134,6 +146,10 @@ export interface TrackLock {
   time: number;
   /** The player's feet in that frame, pixels. */
   foot: ImagePoint;
+  /** The box tapped, when the tap was on one (the picture tracker starts from it). */
+  box?: PictureBox;
+  /** Taps with the same number are one player at different moments (a correction); without, each tap is a player. */
+  player?: number;
 }
 
 /** A player followed through the clip. */
@@ -723,6 +739,88 @@ export class PlayerTracker {
     if (taller.length < 2 || !(farther > 0)) return false;
     taller.sort((x, y) => x - y);
     return taller[Math.floor(taller.length / 2)] >= 0.25 * farther;
+  }
+
+  /**
+   * Web addition: follows the players the coach tapped in the picture (`PictureTracker`): through every frame that
+   * carries the people's boxes (`VideoFrameObservation.people`, 30 a second), by the middle of the body, and makes
+   * each player's track from the detections of their boxes in the pose frames. Locks with the same `player` are one
+   * player tapped at different moments. A tap is the box it was on (`lock.box`: the best overlapping box in the
+   * nearest frame read), or, without one, the box standing on the tapped feet, else a box as tall as a person standing
+   * there. A player keeps to their side of the net (as `track`). Falls back to `follow` (on the floor) when no frame
+   * carries boxes.
+   */
+  followInPicture(input: readonly VideoFrameObservation[], locks: readonly TrackLock[], camera: VideoCamera): TrackedPlayer[] {
+    const frames = input.filter((f) => f.people && f.people.length > 0).sort((a, b) => a.time - b.time);
+    if (frames.length === 0) return this.follow(input, locks, camera).tracks;
+    const pictures = frames.map((f) => ({ time: f.time, people: [...f.people!] }));
+    const ids = [...new Set(locks.map((l, i) => l.player ?? -1 - i))];
+    const keys = ids.map(() => [] as PictureKey[]);
+    const sides = ids.map(() => "home" as Side);
+    const bottom = (b: PictureBox) => ({ x: b.x + b.w / 2, y: b.y + b.h });
+    locks.forEach((lock, i) => {
+      const p = ids.indexOf(lock.player ?? -1 - i);
+      let k = 0;
+      pictures.forEach((f, m) => { if (Math.abs(f.time - lock.time) < Math.abs(pictures[k].time - lock.time)) k = m; });
+      const people = pictures[k].people;
+      let j = -1, best = 0.3;
+      if (lock.box) people.forEach((b, m) => { const o = boxOverlap(b, lock.box!); if (o > best) { best = o; j = m; } });
+      if (j < 0) {
+        // The box standing on the tapped feet.
+        let gap = Infinity;
+        people.forEach((b, m) => {
+          const f = bottom(b), g = Math.hypot(f.x - lock.foot.x, (f.y - lock.foot.y) / 2);
+          if (Math.abs(f.x - lock.foot.x) <= 0.6 * b.w + 6 && lock.foot.y >= b.y + 0.5 * b.h && lock.foot.y <= b.y + 1.15 * b.h && g < gap) {
+            gap = g;
+            j = m;
+          }
+        });
+      }
+      if (j < 0) {
+        const floor = camera.floorPoint(lock.foot);
+        const head = floor ? camera.project(V3.fromFloor(floor, 1.75)) : undefined;
+        if (!floor || !head) return;
+        const h = Math.max(8, lock.foot.y - head.y);
+        people.push({ x: lock.foot.x - 0.2 * h, y: lock.foot.y - h, w: 0.4 * h, h });
+        j = people.length - 1;
+      }
+      keys[p].push({ frame: k, box: j });
+      if (keys[p].length === 1) {
+        const floor = camera.floorPoint(bottom(people[j]));
+        if (floor) sides[p] = CourtFrame.side(floor);
+      }
+    });
+    const assignment = PictureTracker.follow(pictures, keys.map((k) => ({ keys: k })), undefined, (p, _k, b) => {
+      const foot = bottom(b), floor = camera.floorPoint(foot);
+      return floor !== undefined && this.allowed(sides[p], PersonDetection.create(floor, foot), camera);
+    });
+    // The pose frames, numbered as `track` and `smooth` number them.
+    const poseFrames = input.filter((f) => f.detections.length > 0).sort((a, b) => a.time - b.time);
+    const times = poseFrames.map((f) => f.time);
+    const poseIndex = new Map(poseFrames.map((f, i) => [f, i] as const));
+    const r = this.settings.measurementNoise * this.settings.measurementNoise;
+    const same = (a: PictureBox, b: PictureBox) => Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.w - b.w) < 0.5
+      && Math.abs(a.h - b.h) < 0.5;
+    const tracks: TrackedPlayer[] = [];
+    assignment.forEach((row, p) => {
+      const found: { frame: number; det: PersonDetection }[] = [];
+      row.forEach((j, k) => {
+        const i = poseIndex.get(frames[k]);
+        if (j < 0 || i === undefined) return;
+        const box = pictures[k].people[j];
+        const det = poseFrames[i].detections.find((d) => d.box && same(d.box, box));
+        if (det) { found.push({ frame: i, det }); return; }
+        // A box the detections do not have: a tap where the detector found no one.
+        const foot = bottom(box), floor = camera.floorPoint(foot);
+        if (floor && j >= frames[k].people!.length) found.push({ frame: i, det: PersonDetection.create(floor, foot, { confidence: 0.3, box }) });
+      });
+      if (found.length === 0 || times.length === 0) return;
+      const w = new Work(sides[p], found[0].det, found[0].frame, times[found[0].frame], r);
+      w.detections = found;
+      // Named after the tapped player, so the app can show where the build had them.
+      tracks.push({ ...this.smooth(w, times, Infinity), id: `tap-${ids[p]}` });
+    });
+    return tracks;
   }
 
   /**

@@ -23,3 +23,4 @@ export {
   VideoPlayerSample, VideoPlayerTrack, VideoFrame, VideoScene, VideoReconstructor,
   type VideoMarker, type VideoSceneJSON, type ReconstructionStage,
 } from "./videoScene";
+export { PictureTracker, defaultPictureTracker, anchorOf, boxOverlap, type PictureBox, type PersonBox, type PictureFrame, type PictureKey, type PictureTrackerSettings } from "./pictureTracking";

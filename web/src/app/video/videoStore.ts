@@ -1,4 +1,4 @@
-import { VideoScene, type VideoSceneJSON } from "../../core/video";
+import { VideoScene, type TrackLock, type VideoSceneJSON } from "../../core/video";
 import { all, get, put, remove } from "../store/db";
 
 /**
@@ -15,6 +15,8 @@ export interface StoredVideo {
   clip?: Blob;
   /** The clean plate (the empty hall as the camera saw it), JPEG. */
   plate?: Blob;
+  /** The players the coach tapped for the build (to put a player right and build again). */
+  locks?: TrackLock[];
 }
 
 export async function listVideos(): Promise<StoredVideo[]> {
@@ -28,12 +30,13 @@ export async function loadVideo(id: string): Promise<{ stored: StoredVideo; scen
   return { stored, scene: VideoScene.decode(stored.scene) };
 }
 
-export async function saveVideo(scene: VideoScene, clip: Blob | undefined, plate: Blob | undefined): Promise<StoredVideo> {
+export async function saveVideo(scene: VideoScene, clip: Blob | undefined, plate: Blob | undefined, locks?: TrackLock[]): Promise<StoredVideo> {
   const item: StoredVideo = {
     id: scene.id, title: scene.title, createdAt: new Date().toISOString(), duration: scene.duration, scene: scene.encode(),
   };
   if (clip) item.clip = clip;
   if (plate) item.plate = plate;
+  if (locks && locks.length > 0) item.locks = locks;
   await put("videos", item);
   return item;
 }

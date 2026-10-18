@@ -154,3 +154,35 @@
   background: color-mix(in srgb, var(--c-bg) 82%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   color: var(--c-text); font-weight: 600; text-align: center; pointer-events: none;
 }
+/* Where the last build had each tapped player, and the labels on the still */
+.video-people ellipse.ring { fill: none; stroke-width: 2.5; stroke-dasharray: 6 4; }
+.video-people ellipse.ring.home { stroke: var(--c-home); }
+.video-people ellipse.ring.opponent { stroke: var(--c-opponent); }
+.video-tag {
+  position: absolute; transform: translate(-50%, -115%); min-width: 22px; padding: 1px 6px; border-radius: 999px; pointer-events: none;
+  font: 800 13px/1.35 var(--font); text-align: center; color: var(--c-onHome); background: var(--c-home);
+}
+.video-tag.opponent { color: var(--c-onOpponent); background: var(--c-opponent); }
+.video-tag.ring { transform: translate(-50%, 20%); background: transparent; color: var(--c-home); border: 2px dashed currentColor; }
+.video-tag.ring.opponent { color: var(--c-opponent); }
+/* The moment shown and who a tap is for */
+.video-taps { display: flex; flex-direction: column; gap: 8px; }
+.video-time { display: flex; align-items: center; gap: 6px; }
+.video-time input[type=range] { flex: 1; min-width: 0; accent-color: var(--c-led); height: 44px; }
+.video-time .btn { min-width: 52px; }
+.video-time-at { min-width: 64px; text-align: right; font: 700 18px/1 var(--font-num, var(--font)); font-variant-numeric: tabular-nums; }
+.video-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.video-chip {
+  position: relative; min-width: 52px; min-height: 44px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font: 800 17px/1 var(--font); color: var(--c-text); background: var(--glass, var(--c-surface2)); border: 2px solid var(--c-hairline);
+}
+.video-chip.home { border-color: var(--c-home); }
+.video-chip.opponent { border-color: var(--c-opponent); }
+.video-chip.on { color: var(--c-onHome); background: var(--c-home); border-color: var(--c-home); }
+.video-chip.opponent.on { color: var(--c-onOpponent); background: var(--c-opponent); border-color: var(--c-opponent); }
+.video-chip.new.on { color: var(--c-onPrimary); background: var(--c-primary); border-color: var(--c-primary); }
+.video-chip-n {
+  position: absolute; top: -6px; right: -6px; min-width: 18px; padding: 0 4px; border-radius: 9px;
+  font: 800 11px/18px var(--font); color: var(--c-bg); background: var(--c-text);
+}

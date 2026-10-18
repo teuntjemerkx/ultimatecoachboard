@@ -40,7 +40,7 @@ function screen(route: Route) {
     case "log": return <MatchLogView key={route.matchId} matchId={route.matchId} />;
     case "season": return <Season />;
     case "studio": return <Studio boardId={route.boardId} />;
-    case "video": return <VideoImport />;
+    case "video": return <VideoImport key={route.fix?.videoId ?? "new"} fix={route.fix} />;
     case "watch": return <VideoWatch key={route.videoId} videoId={route.videoId} />;
     default: return <div className="screen"><Bar title="Coming next" /><div className="empty">This part is being built.</div></div>;
   }

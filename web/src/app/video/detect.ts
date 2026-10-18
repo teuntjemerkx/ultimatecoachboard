@@ -130,9 +130,13 @@ export class Detector {
     return { people, balls };
   }
 
-  /** The ball candidates in a frame, best first: the object detector alone, for the frames between the pose frames. */
-  detectBalls(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number, band?: ZoomBand): FrameDetections["balls"] {
-    return this.objects(frame, width, height, band?.balls ? band : undefined).balls;
+  /**
+   * The people's boxes (no pose) and the ball candidates in a frame: the object detector alone, for the frames between
+   * the pose frames (the boxes keep tapped players followed 30 times a second). The band is read again only when its
+   * ball candidates count.
+   */
+  detectBoxes(frame: HTMLCanvasElement | HTMLVideoElement | ImageBitmap, width: number, height: number, band?: ZoomBand): FrameDetections {
+    return this.objects(frame, width, height, band?.balls ? band : undefined);
   }
 
   /**

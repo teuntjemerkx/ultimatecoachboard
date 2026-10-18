@@ -5,7 +5,8 @@ import {
 
 /**
  * The core's tracker with what real footage needs. When the coach tapped players (`locks`), exactly those are followed,
- * through the whole clip (`PlayerTracker.follow`), and no one else: whoever was not tapped (the coach by the sideline,
+ * through the whole clip, from box to box in the picture (`PlayerTracker.followInPicture`; on the floor with
+ * `PlayerTracker.follow` when the frames carry no boxes), and no one else: whoever was not tapped (the coach by the sideline,
  * a line judge) is not in the rally. Without taps the players are found automatically: a person who is seldom on the
  * court during the clip (a coach walking the sideline, an official by the post) is not one of the twelve, even when
  * they stand within the tracker's court margin. Tracks are made without the six-per-side limit; a track seen inside
@@ -31,7 +32,11 @@ export class RallyTracker extends PlayerTracker {
   }
 
   override track(input: readonly VideoFrameObservation[], camera?: VideoCamera): TrackedPlayer[] {
-    if (camera && this.locks.length > 0) return this.follow(input, this.locks, camera).tracks;
+    if (camera && this.locks.length > 0) {
+      // In the picture when the frames carry everyone's boxes (a build), else on the floor.
+      return input.some((f) => f.people && f.people.length > 0)
+        ? this.followInPicture(input, this.locks, camera) : this.follow(input, this.locks, camera).tracks;
+    }
     const limit = this.settings.maxPlayersPerSide;
     const all = new PlayerTracker({ ...this.settings, maxPlayersPerSide: 1000 }).track(input, camera);
     const seen = (t: TrackedPlayer) => TrackedPlayer.observedCount(t);
